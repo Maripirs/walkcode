@@ -1,6 +1,7 @@
 import { curriculum } from './curriculum.js';
 import { easyWalkthroughTitles, hardWalkthroughTitles } from './difficulty.js';
 import { codeExercises, drillContext, drillDifficultyByTitle, extraCodeDrills } from './drills.js';
+import { supplementalCodeDrills } from './supplemental-drills.js';
 import { pythonExercises, pythonSolutions } from './languages.js';
 import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
 
@@ -93,5 +94,5 @@ export function drillItems() {
     index,
     difficulty: difficultyFor(title),
   })));
-  return [...lessonDrills, ...extraCodeDrills];
+  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills];
 }

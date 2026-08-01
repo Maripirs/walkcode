@@ -24,3 +24,5 @@ Serve the repository with any static file server, then open `index.html` through
 ## Publishing
 
 Deploy the repository root as a static site. GitHub Pages is sufficient; push only when you are ready to publish your local changes.
+
+The production custom domain is `walkcode.maripi.net`. The root-level `CNAME` file keeps that setting attached to GitHub Pages. In the DNS provider for `maripi.net`, point `walkcode` to `maripirs.github.io` with a CNAME record; do not create an A record for the subdomain.

@@ -1,4 +1,5 @@
 import { difficultyTag, feedback, languagePicker, shuffle, topBar } from '../lib/ui.js';
+import { sourceLink } from '../lib/problem-source.js';
 
 const stepLabels = ['1 Recognize', '2 Algorithm', '3 Code fixes', '4 Complexity', '5 Review'];
 
@@ -112,6 +113,7 @@ export function renderLesson({ state, card, lesson, difficulty, randomNavigation
       <div class="stages">${stepLabels.map((label, index) => `<button class="stage ${state.lessonStep === index ? 'active' : ''}" data-lesson-step="${index}">${label}</button>`).join('')}</div>
       <section class="content">${panel}</section>
       ${state.lessonStep === 2 && lesson.exercises.length ? '' : `<div class="bottom"><button data-previous-step ${state.lessonStep === 0 ? 'disabled' : ''}>← Previous step</button><button class="next" data-next-step>${state.lessonStep === 4 ? 'Finish lesson ✓' : 'Next step →'}</button></div>`}
+      ${sourceLink(card.title)}
     </article>`;
 }
 

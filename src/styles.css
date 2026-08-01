@@ -17,6 +17,8 @@
 
 /* A drill's blank must be immediately recognizable in both snippets. */
 .code .code-blank{display:inline-block;padding:0 5px;border-radius:4px;background:#ffdb8a;color:#172337;font-weight:900;box-shadow:0 0 0 1px #f0b742}
+.code .code-masked-answer{display:inline-block;padding:0 5px;border-radius:4px;background:#f5e9bf;color:#5d4a16;font:inherit;font-weight:800}
+.problem-source{margin-top:20px;padding-top:13px;border-top:1px solid var(--line);font-size:13px;font-weight:800}.problem-source a{color:var(--teal)}
 @media(max-width:640px){main{padding:12px}.topbar{align-items:center;gap:8px}.topbar [data-home]{order:1;flex:0 0 auto}.topbar>span{order:2;flex:1 1 0}.topbar .language-picker{order:3;flex:1 1 100%;justify-content:space-between;margin:0}.topbar .difficulty-picker{order:4;flex:1 1 100%;justify-content:space-between}.topbar>button:not([data-home]){order:5;flex:1 1 calc(50% - 4px);min-width:0;white-space:normal}}
 
 /* A code drill has one primary action. Give it its own clear row rather than

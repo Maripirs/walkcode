@@ -1,4 +1,5 @@
 import { difficultyTag, feedback, shuffle, topBar } from '../lib/ui.js';
+import { sourceLink } from '../lib/problem-source.js';
 
 // The context reveal is deliberately not a solution reveal. Keep the line the
 // learner is being asked about blank while leaving enough surrounding code to
@@ -29,10 +30,14 @@ function flexibleCodePattern(code) {
   )).join('');
 }
 
-function answerAppearsIn(line, answer) {
-  return new RegExp(
+function maskAnswerElsewhere(line, answer) {
+  const answerPattern = new RegExp(
     `(^|[^A-Za-z0-9_$])${flexibleCodePattern(answer)}(?=$|[^A-Za-z0-9_$])`,
-  ).test(line);
+    'g',
+  );
+  const marker = '__WALKCODE_MASKED_ANSWER__';
+  const masked = line.replace(answerPattern, (_, prefix) => `${prefix}${marker}`);
+  return escapeCode(masked).replaceAll(marker, '<mark class="code-masked-answer">answer hidden</mark>');
 }
 
 export function redactedCodeContext(fullCode, exercise) {
@@ -42,9 +47,7 @@ export function redactedCodeContext(fullCode, exercise) {
   if (!blankLine) return null;
 
   const [beforeBlank, afterBlank] = blankLine.split('___');
-  const completedSnippet = normalizeCode(exercise.code.replace('___', exercise.correct));
   const lines = fullCode.split('\n');
-  const compactFullCode = normalizeCode(fullCode);
   const targetLineIndex = lines.findIndex((line) => normalizeCode(line).includes(
     normalizeCode(`${beforeBlank}${exercise.correct}${afterBlank}`),
   ));
@@ -53,9 +56,7 @@ export function redactedCodeContext(fullCode, exercise) {
   // segment of a meaningfully larger solution—not merely a related line.
   if (
     targetLineIndex < 0
-    || !compactFullCode.includes(completedSnippet)
-    || compactFullCode.length - completedSnippet.length < 32
-    || lines.some((line, index) => index !== targetLineIndex && answerAppearsIn(line, exercise.correct))
+    || normalizeCode(fullCode).length - normalizeCode(blankLine).length < 32
   ) return null;
 
   const focusPattern = new RegExp(
@@ -67,9 +68,9 @@ export function redactedCodeContext(fullCode, exercise) {
   return lines.map((line, index) => (
     index === targetLineIndex
       ? highlightBlank(focusedLine)
-      // Eligibility already ruled out a context that would leak the answer,
-      // so every surrounding line can remain exactly as authored.
-      : escapeCode(line)
+      // The same value can occur elsewhere in a real solution. Keep its
+      // context without quietly revealing the answer before a choice is made.
+      : maskAnswerElsewhere(line, exercise.correct)
   )).join('\n');
 }
 
@@ -100,12 +101,13 @@ export function renderDrill({ state, drill, lesson, exercise }) {
     </section>
     <p class="drill-prompt">${exercise.prompt}</p>
     <pre class="code">${highlightBlank(exercise.code)}</pre>
-    ${codeContext ? `<details class="drill-full-code"><summary>Reveal full code context</summary>
-      <p>See the surrounding method. The exact line you are solving is highlighted and stays blank.</p>
+    ${codeContext ? `<details class="drill-full-code"><summary>Reveal full solution (blank preserved)</summary>
+      <p>See the complete solution around this line. Your blank stays highlighted; matching answer text elsewhere is hidden too.</p>
       <pre class="code">${codeContext}</pre>
     </details>` : ''}
     <div class="choice-list">${choices.map((choice) => `<button class="drill-choice" data-drill-choice="${encodeURIComponent(choice)}">${choice}</button>`).join('')}</div>
     <div data-drill-feedback></div>
+    ${sourceLink(drill.title)}
   </article>`;
 }
 
