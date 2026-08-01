@@ -1,15 +1,716 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>walkcode</title><style>
-body{margin:0;background:#fbfaf6;color:#1b2533;font:16px Arial,sans-serif}main{max-width:560px;margin:auto;padding:22px}h1{font-size:44px;margin:30px 0 8px;letter-spacing:-2px}h2{margin:16px 0 8px}em{font-family:Georgia;color:#df6b57}.tag{color:#137a78;font-size:12px;font-weight:bold;letter-spacing:1px}.card{background:white;border:1px solid #e5e2d9;border-radius:18px;padding:20px;margin-top:24px;box-shadow:0 8px 24px #2332}.meta{color:#68716f;font-size:14px;line-height:1.45}pre{overflow:auto;padding:14px;border-radius:12px;background:#203238;color:#e4f1ee;font:14px/1.45 ui-monospace,monospace}.options button,.next{width:100%;text-align:left;margin:7px 0;padding:13px;border:1px solid #d5dad4;border-radius:10px;background:white;font:inherit}.options button.selected{background:#eaf5f3;border-color:#137a78}.next{background:#137a78;color:white;border:0;text-align:center;font-weight:bold}.answer{margin-top:12px;padding:12px;background:#eaf5f3;border-radius:10px;line-height:1.4}.answer.bad{background:#fff0e9}.roadmap{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:20px}.roadmap button{padding:10px;border:0;border-radius:9px;background:#f0efe8;text-align:left}.roadmap button b{display:block;color:#137a78}footer{margin:24px 0;color:#68716f;font-size:12px}</style></head>
-<body><main><div class="tag">NEETCODE 150 · DOG-WALK DRILLS</div><h1>Read the code.<br><em>Make the move.</em></h1><p class="meta">A small coding decision first. The explanation comes after your answer.</p><div id="app">Loading your deck…</div><footer>Progress stays on this device.</footer></main><script>
-const featured=[
- {topic:'Arrays & Hashing',title:'Two Sum',question:'Which line saves today’s number so a later number can find its complement?',code:'const seen = new Map();\nfor (let i = 0; i < nums.length; i++) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  // ???\n}',choices:['seen.set(nums[i], i)','seen.set(need, i)','seen.clear()'],correct:'seen.set(nums[i], i)',explain:'Save the current number and its index. A future number can then look up the complement it needs.'},
- {topic:'Two Pointers',title:'Two Sum II',question:'The sorted pair is too large. Which pointer moves?',code:'if (sum === target) return true;\nif (sum < target) left++;\nelse // ???',choices:['right--','left++','both++'],correct:'right--',explain:'Moving right leftward chooses a smaller number, which is the only way to lower a too-large sum.'},
- {topic:'Sliding Window',title:'Longest Substring Without Repeating Characters',question:'A duplicate enters the window. What should happen next?',code:'while (seen.has(char)) {\n  // ???\n}\nseen.add(char);',choices:['seen.delete(s[left++])','seen.delete(char)','right++'],correct:'seen.delete(s[left++])',explain:'Remove from the left edge until the window is valid again, then add the incoming character.'},
- {topic:'Binary Search',title:'Binary Search',question:'The middle value is too small. What is the next search range?',code:'if (nums[mid] < target) {\n  // ???\n}',choices:['left = mid + 1','right = mid - 1','left = mid'],correct:'left = mid + 1',explain:'mid cannot be the answer, and neither can anything before it. Begin just after mid.'},
- {topic:'Stack',title:'Valid Parentheses',question:'Which operation closes the latest unfinished opening?',code:'if (char === "(") stack.push(char);\nelse {\n  // ???\n}',choices:['stack.pop()','stack.shift()','stack.push(char)'],correct:'stack.pop()',explain:'A stack is last-in, first-out: the newest unmatched opener must close first.'},
- {topic:'Graphs',title:'Number of Islands',question:'When is a neighboring cell marked visited?',code:'if (isLand(neighbor) && !visited.has(neighbor)) {\n  // ???\n  queue.push(neighbor);\n}',choices:['visited.add(neighbor)','visited.delete(neighbor)','queue.shift()'],correct:'visited.add(neighbor)',explain:'Mark it before enqueueing so another path cannot add it a second time.'}
-];
-let topics={},cards=[];
-async function boot(){try{const text=await fetch('app/page.tsx').then(r=>r.text());const match=text.match(/const extraProblems:[\s\S]*?= (\{[\s\S]*?\n\});/);topics=Function('return '+match[1])();cards=[...featured,...Object.entries(topics).flatMap(([topic,names])=>names.map(title=>({topic,title,question:`Before coding ${title}, which pattern should you review first?`,code:`function solve(input) {\n  // ${title}\n  // establish the key invariant\n}`,choices:[topic,'Hash map','Two pointers','Dynamic programming','BFS / DFS'].filter((x,n,a)=>a.indexOf(x)===n).slice(0,4),correct:topic,explain:`This problem belongs to the ${topic} set. Use its walkthrough and a small hand-worked example before writing the solution.`})))]}catch{cards=featured}let index=+localStorage.walkcodeIndex||0,choice='';function render(){const c=cards[index%cards.length],answered=choice!=='';document.querySelector('#app').innerHTML=`<article class="card"><div class="tag">${c.topic.toUpperCase()} · ${index+1}/${cards.length}</div><h2>${c.title}</h2><p class="meta"><b>Your task:</b> ${c.question}</p><pre>${c.code}</pre><div class="options">${c.choices.map(x=>`<button data-answer="${x}" class="${choice===x?'selected':''}">${x}</button>`).join('')}</div>${answered?`<div class="answer ${choice===c.correct?'':'bad'}"><b>${choice===c.correct?'Nice — that’s it.':'Not quite.'}</b><br>${c.explain}</div>`:''}</article><button class="next">Next drill →</button><div class="roadmap">${Object.entries(topics).map(([k,v])=>`<button data-topic="${k}">${k}<b>${v.length}</b></button>`).join('')}</div>`;document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{choice=b.dataset.answer;render()});document.querySelector('.next').onclick=()=>{index++;choice='';localStorage.walkcodeIndex=index;render()};document.querySelectorAll('[data-topic]').forEach(b=>b.onclick=()=>{const n=cards.findIndex(x=>x.topic===b.dataset.topic);if(n>=0){index=n;choice='';render();scrollTo(0,0)}})}render()}boot();
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>walkcode</title>
+<style>
+:root{--ink:#172337;--muted:#5e6b75;--paper:#fbfaf6;--line:#e4e1d7;--teal:#117b78;--soft:#eaf5f3;--coral:#dd6a58}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:650px;margin:auto;padding:18px}button{font:inherit;cursor:pointer}.topbar{display:flex;align-items:center;gap:8px;padding:0 0 14px;border-bottom:1px solid var(--line)}.topbar b{color:var(--teal);letter-spacing:-.5px}.topbar span{flex:1}.topbar button,.stage button{border:1px solid var(--line);border-radius:9px;background:white;padding:9px 11px;font-weight:700}.topbar .primary{background:var(--teal);border-color:var(--teal);color:#fff}.home{padding:46px 4px}.home h1{font-size:45px;line-height:1;margin:0 0 12px;letter-spacing:-2px}.home h1 em{font-family:Georgia,serif;color:var(--coral);font-weight:400}.home p{color:var(--muted);line-height:1.5}.groups{display:grid;gap:10px}.group{background:#fff;border:1px solid var(--line);border-radius:13px;overflow:hidden}.group summary{padding:14px;cursor:pointer;font-weight:800}.group summary small{float:right;color:var(--teal)}.problem{width:100%;padding:11px 14px;text-align:left;border:0;border-top:1px solid #f0eee8;background:#fff;color:var(--ink)}.problem:hover{background:var(--soft)}.pill{float:right;padding:2px 7px;border-radius:999px;background:#f0efe8;color:var(--muted);font-size:11px}.lesson{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:17px}.eyebrow{color:var(--teal);font-size:12px;font-weight:900;letter-spacing:1px}.lesson h1{font-size:31px;letter-spacing:-1.2px;margin:10px 0 5px}.brief{color:var(--muted);line-height:1.45;margin:0 0 18px}.stages{display:flex;gap:5px;overflow:auto;margin:0 -2px 16px}.stage{white-space:nowrap;border:0!important;padding:8px 10px!important;color:var(--muted)}.stage.active{background:var(--teal);border-color:var(--teal)!important;color:#fff}.content{border-top:1px solid var(--line);padding-top:18px}.content h2{font-size:20px;margin:0 0 8px}.content p,.content li{line-height:1.48;color:#35434c}.content ul{padding-left:20px}.problem-explanation{margin:14px 0;padding:13px;border-radius:11px;background:#f5f5ef}.problem-explanation h3{margin:0 0 6px;font-size:16px}.problem-explanation p{margin:0}.hint{margin-top:14px;border:1px solid #c7e2dc;border-radius:11px;background:#f3fbf9;padding:11px}.hint summary{color:var(--teal);font-weight:800;cursor:pointer}.code{white-space:pre-wrap;overflow:auto;background:#21343a;color:#edf7f5;border-radius:12px;padding:14px;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}.fix{margin:10px 0;padding:12px;border-left:3px solid var(--coral);background:#fff4f1;border-radius:0 8px 8px 0}.bottom{display:flex;justify-content:space-between;gap:8px;margin-top:18px}.bottom button{padding:11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800}.bottom .next{background:var(--teal);border-color:var(--teal);color:#fff}
+</style></head><body><main><div id="app"></div></main>
+<script>
+const featured={
+ 'Two Sum':{brief:'Given an array of integers and a target, return the indices of two different numbers whose values add up to that target.',concepts:['Complement lookup','Hash map: value → index'],algorithm:['Walk through the array once.','For the current value n, calculate target − n.','If that complement is already saved, return its saved index and the current index.','Otherwise save n and its index for a future match.'],code:'const seen = new Map();\nfor (let i = 0; i < nums.length; i++) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  seen.set(nums[i], i);\n}',fixes:['Save after checking, so you cannot use the same element twice.','Map values to indices—not booleans—because the result needs positions.'],complexity:'Time O(n); space O(n) for the map.'},
+ 'Two Sum II':{brief:'Given a sorted array and a target, return the two positions whose values add up to the target.',concepts:['Sorted order','Two pointers'],algorithm:['Start left at the first value and right at the last.','Compare their sum with target.','Too small: move left rightward. Too large: move right leftward.','A match is the answer.'],code:'let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  if (sum < target) left++; else right--;\n}',fixes:['Move only one pointer per comparison.','The input is already sorted; do not sort it again.'],complexity:'Time O(n); space O(1).'},
+ 'Longest Substring Without Repeating Characters':{brief:'Given a string, find the length of its longest contiguous substring with no repeated characters.',concepts:['Sliding window','Set of characters inside the current window'],algorithm:['Expand the right edge one character at a time.','If the new character already exists, shrink the left edge until it does not.','After the window is valid, update the best length.'],code:'const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}',fixes:['Delete s[left], not the incoming duplicate.','Measure after the window is repaired.'],complexity:'Time O(n); space O(min(n, alphabet size)).'},
+ 'Binary Search':{brief:'Given a sorted list and a target, return its index or -1 without checking every value.',concepts:['Sorted order','Binary search interval'],algorithm:['Keep a left and right boundary for the possible answer.','Check the middle value.','Discard the half that cannot contain target.','Stop when the boundaries cross.'],code:'let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  else right = mid - 1;\n}\nreturn -1;',fixes:['Use left <= right so a single remaining value is checked.','Move past mid; mid was already tested.'],complexity:'Time O(log n); space O(1).'},
+ 'Valid Parentheses':{brief:'Given brackets, decide whether every opening bracket is closed in the correct order.',concepts:['Last-in, first-out order','Stack'],algorithm:['Push every opening bracket.','For a closing bracket, the stack must have the matching opener on top.','Pop that opener; the stack must be empty at the end.'],code:'const pairs = { ")":"(", "]":"[", "}":"{" };\nconst stack = [];\nfor (const ch of s) {\n  if (ch in pairs) { if (stack.pop() !== pairs[ch]) return false; }\n  else stack.push(ch);\n}\nreturn stack.length === 0;',fixes:['Check the result of pop; an empty stack is invalid.','Do not only compare counts—order matters.'],complexity:'Time O(n); space O(n).'},
+ 'Number of Islands':{brief:'Given a grid of land and water, count the distinct groups of connected land.',concepts:['Grid graph','DFS or BFS','Visited set / in-place marking'],algorithm:['Scan every cell.','When you find unvisited land, increment the count.','Flood-fill all connected land so it is not counted again.'],code:'function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== "1") return;\n  grid[r][c] = "0";\n  visit(r+1,c); visit(r-1,c); visit(r,c+1); visit(r,c-1);\n}',fixes:['Mark a cell visited when it is discovered, not later.','Check grid boundaries before indexing.'],complexity:'Time O(rows × cols); space O(rows × cols) in the worst case.'}
+};
+const profiles={
+ 'Arrays & Hashing':{concepts:['Array scan','Set or hash map for constant-time lookup'],algorithm:['Identify what must be remembered from earlier values.','Store only that minimal state.','Update the answer while scanning.'],fixes:['Check before overwriting a map entry.','Treat duplicates and empty input as explicit cases.'],complexity:'Usually O(n) time and O(n) auxiliary space.'},
+ 'Two Pointers':{concepts:['Sorted order or opposing boundaries','Two moving indices'],algorithm:['Define what each pointer represents.','Use a comparison to prove which pointer can move.','Stop when pointers cross.'],fixes:['Move the pointer that can improve the result.','Handle equal values deliberately.'],complexity:'Usually O(n) time and O(1) space.'},
+ 'Sliding Window':{concepts:['Contiguous range','Window validity invariant'],algorithm:['Expand the right edge.','While invalid, shrink left.','Record the best valid window.'],fixes:['Repair before measuring.','Remove the outgoing element before advancing left.'],complexity:'Usually O(n) time and O(k) space.'},
+ 'Stack':{concepts:['Last unfinished item','Stack or monotonic stack'],algorithm:['Push unresolved candidates.','Pop when the current value resolves them.','Use the remaining stack for unresolved work.'],fixes:['Check empty-stack cases.','Choose increasing or decreasing order deliberately.'],complexity:'Usually O(n) time and O(n) space.'},
+ 'Binary Search':{concepts:['Sorted or monotonic answer space','Search interval'],algorithm:['Define the boolean predicate or sorted target.','Test mid.','Discard a proven-impossible half.'],fixes:['Choose inclusive bounds consistently.','Move past mid after testing it.'],complexity:'Usually O(log n) time and O(1) space.'},
+ 'Graphs':{concepts:['Nodes, edges, and visited state','DFS or BFS'],algorithm:['Choose a start state.','Mark visited when discovered.','Explore each neighbor once.'],fixes:['Avoid revisiting nodes.','Use a queue for shortest unweighted paths.'],complexity:'Usually O(V + E) time and O(V) space.'},
+ 'Trees':{concepts:['Recursive subtree result','DFS or BFS'],algorithm:['Write the null base case.','Ask each child for the information you need.','Combine child results at the parent.'],fixes:['Separate global answer from return value when needed.','Handle an empty tree.'],complexity:'Usually O(n) time and O(h) space.'},
+ '1-D Dynamic Programming':{concepts:['State for a prefix or index','Overlapping subproblems'],algorithm:['Define dp[i] in words.','Write its recurrence.','Set base cases and iterate in dependency order.'],fixes:['Do not use a state before it exists.','Consider constant-space compression.'],complexity:'Usually O(n) time and O(n) or O(1) space.'},
+ '2-D Dynamic Programming':{concepts:['Two-dimensional state','Transitions from earlier cells'],algorithm:['Define both state dimensions.','Set first row/column base cases.','Fill in an order that respects dependencies.'],fixes:['Check matrix bounds.','Choose an iteration direction that preserves dependencies.'],complexity:'Often O(m × n) time and space.'}
+};
+const fallback={concepts:['The problem’s input shape','A state that prevents repeated work'],algorithm:['Name the brute-force approach.','Identify the repeated work to avoid.','Choose a data structure or recurrence that preserves the key state.'],fixes:['Check boundary and empty-input cases.','Trace a tiny example before coding.'],complexity:'State the runtime in terms of input size and the memory used beyond the input.'};
+let cards=[],current=0,stage=0;
+
+// Every problem begins with its goal in plain language. This is separate from
+// the input/output example and deliberately does not name the solution pattern.
+const problemExplanations={
+ 'Two Sum':'You receive an array of integers and a target. Find the indices of two different numbers whose values add up to that target.',
+ 'Contains Duplicate':'You receive an array of integers. Decide whether any value appears more than once.',
+ 'Valid Anagram':'You receive two strings. Decide whether they contain exactly the same letters with the same counts, possibly in a different order.',
+ 'Group Anagrams':'You receive a list of strings. Put strings together when they are rearrangements of the same letters.',
+ 'Top K Frequent Elements':'You receive an array of integers and k. Return the k values that occur most often.',
+ 'Encode and Decode Strings':'Design a way to turn a list of strings into one string and recover the exact original list, even when strings contain special characters.',
+ 'Product of Array Except Self':'For each position in an integer array, return the product of every other value without dividing by the current value.',
+ 'Valid Sudoku':'You receive a partially filled 9 by 9 Sudoku board. Decide whether its filled cells obey the row, column, and 3 by 3 box rules.',
+ 'Longest Consecutive Sequence':'You receive an unsorted array of integers. Find the length of the longest run of consecutive values, regardless of their order in the array.',
+ 'Two Sum II':'You receive a sorted array and a target. Find the two 1-indexed positions whose values add up to the target.',
+ 'Valid Palindrome':'You receive a string. Ignore case and non-alphanumeric characters, then decide whether it reads the same forward and backward.',
+ '3Sum':'You receive an integer array. Return every unique group of three values whose sum is zero.',
+ 'Container With Most Water':'You receive vertical line heights. Choose two lines that hold the most water, where width is their distance and height is the shorter line.',
+ 'Trapping Rain Water':'You receive an elevation map. Calculate how much rainwater remains trapped between its bars after raining.',
+ 'Longest Substring Without Repeating Characters':'You receive a string. Find the length of its longest contiguous section that contains no repeated character.',
+ 'Best Time to Buy and Sell Stock':'You receive daily stock prices. Choose one earlier day to buy and one later day to sell for the largest possible profit, or return zero.',
+ 'Longest Repeating Character Replacement':'You receive an uppercase string and a replacement budget k. Find the longest substring that can be made of one repeated letter using at most k changes.',
+ 'Permutation in String':'You receive two strings. Decide whether the second contains a contiguous substring that is a permutation of the first.',
+ 'Minimum Window Substring':'You receive strings s and t. Find the shortest contiguous section of s that contains every character required by t, including repeated characters.',
+ 'Sliding Window Maximum':'You receive an array and a window size k. Return the largest value visible in each consecutive window of k positions.',
+ 'Valid Parentheses':'You receive a string of brackets. Decide whether every opening bracket is closed by the right type in the right nesting order.',
+ 'Min Stack':'Design a stack that supports push, pop, top, and retrieving its current minimum value in constant time.',
+ 'Evaluate Reverse Polish Notation':'You receive arithmetic tokens in postfix order. Evaluate the expression, where an operator uses the two most recent values.',
+ 'Daily Temperatures':'You receive daily temperatures. For each day, report how many days pass before a warmer temperature, or zero if none arrives.',
+ 'Car Fleet':'Cars drive toward one destination at different positions and speeds. Count how many groups arrive together when faster cars cannot pass slower ones.',
+ 'Largest Rectangle in Histogram':'You receive bar heights. Find the largest rectangular area that can be drawn using adjacent bars in the histogram.',
+ 'Binary Search':'You receive a sorted array and a target. Return the target index, or -1 when the target does not occur.',
+ 'Search a 2D Matrix':'You receive a matrix whose rows and row boundaries are sorted. Decide whether a target value is present.',
+ 'Koko Eating Bananas':'Koko must finish piles of bananas within h hours. Find the smallest whole-number eating speed that lets her finish in time.',
+ 'Find Minimum in Rotated Sorted Array':'You receive a sorted array that was rotated at an unknown position. Find its smallest value.',
+ 'Search in Rotated Sorted Array':'You receive a rotated sorted array with distinct values and a target. Return the target index or -1.',
+ 'Time Based Key-Value Store':'Design a store that saves values for a key at timestamps and retrieves the value that existed at or before a requested timestamp.',
+ 'Median of Two Sorted Arrays':'You receive two sorted arrays. Find the median value of all their combined elements without fully merging them.',
+ 'Reverse Linked List':'You receive the head of a singly linked list. Reverse all next pointers and return the new head.',
+ 'Merge Two Sorted Lists':'You receive the heads of two sorted linked lists. Join their existing nodes into one sorted linked list.',
+ 'Reorder List':'You receive a linked list. Rearrange its nodes in first, last, second, second-last order without changing node values.',
+ 'Remove Nth Node From End of List':'You receive a linked list and n. Remove the node that is n positions from the end and return the head.',
+ 'Copy List with Random Pointer':'You receive a linked list where each node also has a random pointer. Create a deep copy with the same next and random relationships.',
+ 'Add Two Numbers':'You receive two linked lists representing non-negative integers in reverse digit order. Add them and return the sum in the same form.',
+ 'Linked List Cycle':'You receive the head of a linked list. Decide whether following next pointers eventually loops back to an earlier node.',
+ 'Find the Duplicate Number':'You receive n + 1 integers from 1 through n with exactly one repeated value. Find that duplicate without changing the array.',
+ 'LRU Cache':'Design a fixed-capacity cache that returns a value by key and discards the least recently used entry when it fills up.',
+ 'Merge K Sorted Lists':'You receive several sorted linked lists. Merge all of their nodes into one sorted linked list.',
+ 'Reverse Nodes in K-Group':'You receive a linked list and k. Reverse each complete block of k nodes, leaving a final smaller block unchanged.',
+ 'Invert Binary Tree':'You receive the root of a binary tree. Swap every node’s left and right children and return the root.',
+ 'Maximum Depth of Binary Tree':'You receive a binary tree. Return the number of nodes on its longest path from the root down to a leaf.',
+ 'Diameter of Binary Tree':'You receive a binary tree. Find the greatest number of edges on any path between two nodes.',
+ 'Balanced Binary Tree':'You receive a binary tree. Decide whether the heights of the left and right subtrees differ by no more than one at every node.',
+ 'Same Tree':'You receive two binary trees. Decide whether they have identical shapes and values at corresponding nodes.',
+ 'Subtree of Another Tree':'You receive two binary trees. Decide whether one tree appears exactly as a full subtree of the other.',
+ 'Lowest Common Ancestor of a Binary Search Tree':'You receive a binary search tree and two nodes. Find their lowest shared ancestor in the tree.',
+ 'Binary Tree Level Order Traversal':'You receive a binary tree. Return its node values grouped by depth from top to bottom.',
+ 'Binary Tree Right Side View':'You receive a binary tree. Return the values visible when looking at it from the right side, one per depth.',
+ 'Count Good Nodes in Binary Tree':'You receive a binary tree. Count nodes whose value is at least every value on the path from the root to that node.',
+ 'Validate Binary Search Tree':'You receive a binary tree. Decide whether it obeys strict binary-search-tree ordering at every subtree.',
+ 'Kth Smallest Element in a BST':'You receive a binary search tree and k. Return its kth smallest value.',
+ 'Construct Binary Tree from Preorder and Inorder Traversal':'You receive preorder and inorder traversals of the same tree with unique values. Rebuild and return that tree.',
+ 'Binary Tree Maximum Path Sum':'You receive a binary tree. Find the largest sum obtainable along any non-empty path between nodes.',
+ 'Serialize and Deserialize Binary Tree':'Design a way to convert a binary tree to a string and reconstruct the identical tree from that string.',
+ 'Kth Largest Element in a Stream':'Design a structure that receives numbers one at a time and returns the kth largest value seen so far.',
+ 'Last Stone Weight':'You receive stone weights. Repeatedly smash the two heaviest stones and return the final weight, or zero when none remains.',
+ 'K Closest Points to Origin':'You receive points on a plane and k. Return any k points with the smallest distance from the origin.',
+ 'Kth Largest Element in an Array':'You receive an unsorted integer array and k. Return the kth largest value in sorted order.',
+ 'Task Scheduler':'You receive repeating task labels and a cooldown n. Find the fewest intervals needed to run all tasks without repeating a label too soon.',
+ 'Design Twitter':'Design a small social feed that posts tweets, follows users, and returns the ten most recent tweets from a user and people they follow.',
+ 'Find Median from Data Stream':'Design a structure that adds numbers from a stream and returns the median after any insertion.',
+ 'Subsets':'You receive distinct integers. Return every possible subset, including the empty subset.',
+ 'Combination Sum':'You receive candidate numbers and a target. Return all unique combinations that add to the target, allowing a candidate to be reused.',
+ 'Permutations':'You receive distinct integers. Return every possible ordering of those integers.',
+ 'Subsets II':'You receive integers that may repeat. Return every distinct subset without duplicate results.',
+ 'Combination Sum II':'You receive candidate numbers that may repeat and a target. Return unique combinations that add to the target, using each input occurrence at most once.',
+ 'Word Search':'You receive a grid of letters and a word. Decide whether the word can be traced through adjacent cells without reusing a cell.',
+ 'Palindrome Partitioning':'You receive a string. Split it into every possible list of substrings where each substring is a palindrome.',
+ 'Letter Combinations of a Phone Number':'You receive digits from 2 through 9. Return every letter string those telephone-keypad digits can represent.',
+ 'N-Queens':'Place n queens on an n by n board so none attack each other, and return every valid board arrangement.',
+ 'Generate Parentheses':'You receive n pairs of parentheses. Return every well-formed string that uses all n pairs.',
+ 'Implement Trie (Prefix Tree)':'Design a prefix tree that inserts words, finds complete words, and checks whether a prefix exists.',
+ 'Design Add and Search Words Data Structure':'Design a word dictionary that adds words and searches patterns where a dot can match any single letter.',
+ 'Word Search II':'You receive a letter grid and a word list. Return every listed word that can be traced through adjacent cells without reusing a cell.',
+ 'Clone Graph':'You receive a reference to a node in a connected graph. Return a deep copy with the same nodes and neighbor links.',
+ 'Number of Islands':'You receive a grid of land and water. Count how many separate groups of horizontally or vertically connected land it contains.',
+ 'Max Area of Island':'You receive a grid of land and water. Find the largest number of connected land cells in any one island.',
+ 'Pacific Atlantic Water Flow':'You receive a height grid. Return cells from which water can reach both the Pacific and Atlantic borders by flowing only downhill or level.',
+ 'Surrounded Regions':'You receive a board of X and O cells. Change only O regions completely surrounded by X into X.',
+ 'Rotting Oranges':'You receive a grid of fresh, rotten, and empty cells. Find the minutes required for rot to spread to all fresh oranges, or report impossible.',
+ 'Walls and Gates':'You receive rooms, walls, gates, and empty spaces. Fill each empty room with its distance to the nearest gate.',
+ 'Course Schedule':'You receive courses and prerequisite pairs. Decide whether it is possible to complete all courses.',
+ 'Course Schedule II':'You receive courses and prerequisite pairs. Return one valid order to take all courses, or an empty list if none exists.',
+ 'Redundant Connection':'You receive edges that form a tree plus one extra edge. Return the edge whose removal restores a tree.',
+ 'Number of Connected Components in an Undirected Graph':'You receive an undirected graph. Count how many disconnected groups of vertices it has.',
+ 'Graph Valid Tree':'You receive an undirected graph with n vertices. Decide whether its edges form exactly one valid tree.',
+ 'Word Ladder':'You receive a start word, end word, and dictionary. Find the fewest one-letter changes needed to reach the end word using dictionary words.',
+ 'Reconstruct Itinerary':'You receive airline tickets. Reconstruct the route that uses every ticket once, starts at JFK, and is lexicographically smallest when choices exist.',
+ 'Min Cost to Connect All Points':'You receive points on a plane. Connect every point with the smallest possible total Manhattan-distance cost.',
+ 'Network Delay Time':'You receive directed travel times, a starting node, and n nodes. Return how long until every node receives the signal, or -1 if one cannot.',
+ 'Swim in Rising Water':'You receive elevation values in a grid. Find the earliest time you can travel from top-left to bottom-right when water reaches that elevation.',
+ 'Alien Dictionary':'You receive words already sorted in an unknown alphabet. Infer one valid ordering of the letters, or report that none is possible.',
+ 'Cheapest Flights Within K Stops':'You receive flights, a source, destination, and a stop limit. Find the cheapest route that uses at most that many stops.',
+ 'Climbing Stairs':'You can take one or two steps at a time. Given n steps, count the different ways to reach the top.',
+ 'Min Cost Climbing Stairs':'You receive a cost for each stair. Find the smallest total cost to reach the top when each move climbs one or two stairs.',
+ 'House Robber':'You receive money in a row of houses. Find the largest amount you can take without taking from adjacent houses.',
+ 'House Robber II':'You receive money in houses arranged in a circle. Find the largest amount you can take without taking from adjacent houses.',
+ 'Longest Palindromic Substring':'You receive a string. Return its longest contiguous substring that reads the same in either direction.',
+ 'Palindromic Substrings':'You receive a string. Count how many of its contiguous substrings are palindromes.',
+ 'Decode Ways':'You receive a digit string where 1 through 26 map to letters. Count the ways to split it into valid letter encodings.',
+ 'Coin Change':'You receive coin denominations and an amount. Return the fewest coins needed to make that amount, or -1 if it is impossible.',
+ 'Maximum Product Subarray':'You receive an integer array. Return the largest product obtainable from a non-empty contiguous subarray.',
+ 'Word Break':'You receive a string and a dictionary. Decide whether the string can be split into one or more dictionary words.',
+ 'Longest Increasing Subsequence':'You receive an integer array. Return the length of its longest strictly increasing subsequence, not necessarily contiguous.',
+ 'Partition Equal Subset Sum':'You receive positive integers. Decide whether they can be split into two subsets with equal sums.',
+ 'Unique Paths':'You receive an m by n grid. Count the paths from top-left to bottom-right when you may move only right or down.',
+ 'Longest Common Subsequence':'You receive two strings. Return the length of the longest sequence of characters they share in the same relative order.',
+ 'Best Time to Buy and Sell Stock with Cooldown':'You receive daily stock prices. Maximize profit with as many trades as you want, but after selling you must wait one day before buying again.',
+ 'Coin Change II':'You receive coin denominations and an amount. Count the unique combinations of coins that make exactly that amount.',
+ 'Target Sum':'You receive integers and a target. Count how many ways assigning plus or minus to each integer reaches the target.',
+ 'Interleaving String':'You receive three strings. Decide whether the third can be built by interleaving the first two while preserving each string’s character order.',
+ 'Longest Increasing Path in a Matrix':'You receive an integer matrix. Return the length of the longest path that moves to adjacent cells with strictly increasing values.',
+ 'Distinct Subsequences':'You receive strings s and t. Count how many subsequences of s equal t.',
+ 'Edit Distance':'You receive two strings. Find the fewest insertions, deletions, or replacements needed to change one into the other.',
+ 'Burst Balloons':'You receive balloon values. Choose a popping order that maximizes the coins earned from each balloon’s current neighbors.',
+ 'Regular Expression Matching':'You receive a string and a pattern using dot and star. Decide whether the whole string matches the pattern.',
+ 'Maximum Subarray':'You receive an integer array. Return the largest sum obtainable from a non-empty contiguous subarray.',
+ 'Jump Game':'You receive maximum jump lengths at each array position. Decide whether you can reach the final index from the first.',
+ 'Jump Game II':'You receive maximum jump lengths at each array position. Return the fewest jumps needed to reach the final index.',
+ 'Gas Station':'You receive circular gas and cost arrays. Return a start station that completes one full circuit, or -1 if none can.',
+ 'Hand of Straights':'You receive cards and a group size. Decide whether they can be rearranged into consecutive groups of that size.',
+ 'Merge Triplets to Form Target Triplet':'You receive integer triplets and a target triplet. Decide whether repeatedly taking coordinate-wise maximum can create the target exactly.',
+ 'Partition Labels':'You receive a string. Divide it into as many parts as possible so each letter appears in at most one part, and return the part lengths.',
+ 'Valid Parenthesis String':'You receive parentheses plus wildcard stars that can act as an opening, closing, or empty character. Decide whether the string can be valid.',
+ 'Insert Interval':'You receive sorted, non-overlapping intervals and one new interval. Insert it and merge any overlaps.',
+ 'Merge Intervals':'You receive intervals that may overlap. Merge every overlapping group and return the non-overlapping result.',
+ 'Non-overlapping Intervals':'You receive intervals. Return the fewest intervals to remove so the remaining intervals do not overlap.',
+ 'Meeting Rooms':'You receive meeting intervals. Decide whether one person can attend every meeting without any overlap.',
+ 'Meeting Rooms II':'You receive meeting intervals. Return the minimum number of rooms needed to hold all meetings.',
+ 'Minimum Interval to Include Each Query':'You receive intervals and query values. For each query, return the length of the smallest interval containing it, or -1.',
+ 'Rotate Image':'You receive an n by n matrix. Rotate it 90 degrees clockwise in place.',
+ 'Spiral Matrix':'You receive a matrix. Return all values in clockwise spiral order from the outside inward.',
+ 'Set Matrix Zeroes':'You receive a matrix. If any cell is zero, set its entire row and column to zero while modifying the matrix in place.',
+ 'Happy Number':'Starting with an integer, repeatedly replace it with the sum of its squared digits. Decide whether this process reaches 1.',
+ 'Plus One':'You receive digits representing a non-negative integer. Return the digits after adding one.',
+ 'Pow(x, n)':'You receive a number x and integer exponent n. Compute x raised to n efficiently.',
+ 'Multiply Strings':'You receive two non-negative integers as strings. Return their product as a string without converting them to built-in big integers.',
+ 'Detect Squares':'Design a structure that adds points and counts how many axis-aligned squares can be formed with a given query point.',
+ 'Single Number':'You receive integers where every value appears twice except one. Return the value that appears only once.',
+ 'Number of 1 Bits':'You receive an unsigned integer. Return how many bits in its binary representation are 1.',
+ 'Counting Bits':'For every number from 0 through n, return how many 1 bits appear in its binary representation.',
+ 'Reverse Bits':'You receive a 32-bit unsigned integer. Return the integer made by reversing all 32 bits.',
+ 'Missing Number':'You receive n distinct values from the range 0 through n. Return the one value that is missing.',
+ 'Sum of Two Integers':'You receive two integers. Return their sum without using the plus or minus operator.',
+ 'Reverse Integer':'You receive a signed 32-bit integer. Reverse its digits, returning zero if the reversed result overflows the 32-bit range.'
+};
+function lessonFor(card){const lesson=featured[card.title]||{brief:`Solve ${card.title}.`,...(profiles[card.topic]||fallback),code:`// ${card.title}\nfunction solve(input) {\n  // preserve the key invariant\n}`,};return {...lesson,explanation:problemExplanations[card.title]||lesson.brief};}
+function state(id){return JSON.parse(localStorage.getItem('walkcode-states')||'{}')[id]||'Unseen'}function mark(id,value){const x=JSON.parse(localStorage.getItem('walkcode-states')||'{}');x[id]=value;localStorage.setItem('walkcode-states',JSON.stringify(x))}
+function home(){document.querySelector('#app').innerHTML=`<section class="home"><h1>Practice the pattern.<br><em>Then write the code.</em></h1><p>Pick a problem. Each lesson moves from recognition to an algorithm, two code checks, and a complexity review.</p><div class="groups">${Object.entries(grouped()).map(([topic,list])=>`<details class="group"><summary>${topic}<small>${list.length} problems</small></summary>${list.map(c=>`<button class="problem" data-id="${c.id}">${c.title}<span class="pill">${state(c.id)}</span></button>`).join('')}</details>`).join('')}</div></section>`;document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{current=cards.findIndex(c=>c.id===b.dataset.id);stage=0;render()})}
+function grouped(){return cards.reduce((x,c)=>((x[c.topic]??=[]).push(c),x),{})}
+function render(){const card=cards[current],d=lessonFor(card);mark(card.id,state(card.id)==='Unseen'?'Seen':state(card.id));const labels=['1 Recognize','2 Algorithm','3 Code fixes','4 Complexity'];const panels=[`<h2>Recognize the usable structure</h2><section class="problem-explanation"><h3>What you’re solving</h3><p>${d.explanation}</p></section><h3>What to notice</h3><ul>${d.concepts.map(x=>`<li>${x}</li>`).join('')}</ul><details class="hint"><summary>Need a hint?</summary><p>Start by naming the input’s shape: ordered, contiguous, hierarchical, connected, or repetitive. That points to the tool you need.</p></details>`,`<h2>Design the algorithm</h2><ol>${d.algorithm.map(x=>`<li>${x}</li>`).join('')}</ol><details class="hint"><summary>Need a hint?</summary><p>Write down the invariant—the statement that remains true after each loop or recursive call.</p></details>`,`<h2>Code snippets and fixes</h2><div class="code">${d.code||'Write the smallest version of the algorithm first.'}</div>${d.fixes.map((x,i)=>`<div class="fix"><b>Code check ${i+1}:</b> ${x}</div>`).join('')}`,`<h2>Time and space complexity</h2><p>${d.complexity}</p><details class="hint"><summary>How to verify it</summary><p>Count how many times each input element can be processed, then list every data structure whose size grows with the input.</p></details>`];document.querySelector('#app').innerHTML=`<nav class="topbar"><button data-home>All problems</button><span><b>${current+1}/150</b></span><button data-prev>← Previous</button><button class="primary" data-next>Next problem →</button></nav><article class="lesson"><div class="eyebrow">${card.topic.toUpperCase()}</div><h1>${card.title}</h1><div class="stages">${labels.map((x,i)=>`<button class="stage ${stage===i?'active':''}" data-stage="${i}">${x}</button>`).join('')}</div><section class="content">${panels[stage]}</section><div class="bottom"><button data-back ${stage===0?'disabled':''}>← Previous step</button><button class="next" data-forward>${stage===3?'Finish lesson ✓':'Next step →'}</button></div></article>`;document.querySelector('[data-home]').onclick=home;document.querySelector('[data-prev]').onclick=()=>{current=(current-1+cards.length)%cards.length;stage=0;render()};document.querySelector('[data-next]').onclick=()=>{current=(current+1)%cards.length;stage=0;render()};document.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>{stage=+b.dataset.stage;render()});document.querySelector('[data-back]').onclick=()=>{stage=Math.max(0,stage-1);render()};document.querySelector('[data-forward]').onclick=()=>{if(stage===3){mark(card.id,'Solved');current=(current+1)%cards.length;stage=0}else stage++;render()}}
+async function boot(){try{const t=await fetch('https://raw.githubusercontent.com/Maripirs/walkcode/main/app/page.tsx').then(r=>r.text());const m=t.match(/const extraProblems:[\s\S]*?= (\{[\s\S]*?\n\});/);const lists=Function('return '+m[1])();const listed=Object.entries(lists).flatMap(([topic,names])=>names.map(title=>({id:`${topic}:${title}`,topic,title})));const topics={'Two Sum':'Arrays & Hashing','Two Sum II':'Two Pointers','Longest Substring Without Repeating Characters':'Sliding Window','Binary Search':'Binary Search','Valid Parentheses':'Stack','Number of Islands':'Graphs'};const missingFeatured=Object.keys(featured).filter(title=>!listed.some(card=>card.title===title)).map(title=>({id:`featured:${title}`,topic:topics[title]||'Arrays & Hashing',title}));cards=[...listed,...missingFeatured];}catch{cards=Object.keys(featured).slice(0,6).map((title,i)=>({id:`f:${i}`,topic:'Core patterns',title}))}home()}boot();
+</script><script>
+const briefs = {
+  'Two Sum':['nums: an integer array; target: an integer.','Return two indices whose values sum to target.','Input: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]'],
+  'Two Sum II':['numbers: a sorted integer array; target: an integer.','Return the two 1-indexed positions.','Input: [2, 7, 11, 15], target = 9\nOutput: [1, 2]'],
+  'Longest Substring Without Repeating Characters':['s: a string.','Return the longest valid substring length.','Input: "abcabcbb"\nOutput: 3, from "abc"'],
+  'Binary Search':['nums: sorted integer array; target: an integer.','Return the target index or -1.','Input: [-1, 0, 3, 5, 9], target = 9\nOutput: 4'],
+  'Valid Parentheses':['s: a bracket string.','Return true when every opening bracket closes in order.','Input: "([])"\nOutput: true'],
+  'Number of Islands':['grid: a matrix of "1" land and "0" water.','Return the number of connected land groups.','Input: [["1","1","0"],["0","1","0"],["1","0","1"]]\nOutput: 3']
+};
+setInterval(() => {
+  const content = document.querySelector('.content');
+  const title = document.querySelector('.lesson h1')?.textContent;
+  if (!content || !title || content.dataset.briefReady || !content.querySelector('h2')?.textContent.includes('Recognize')) return;
+  content.dataset.briefReady = 'true';
+  const d = briefs[title] || ['The exact input types and constraints for this problem.','The required return value.','Example: trace a smallest valid input and write its expected output.'];
+  const block = document.createElement('section');
+  block.style.cssText = 'margin:14px 0;padding:13px;border-radius:11px;background:#f5f5ef';
+  block.innerHTML = `<b>Input</b><p>${d[0]}</p><b>Output</b><p>${d[1]}</p><b>Example</b><pre class="code">${d[2]}</pre>`;
+  (content.querySelector('.problem-explanation') || content.querySelector('h2')).after(block);
+},100);
+</script><script>
+const conceptChoices = {
+  'Two Sum':['Hash map / complement lookup','Two pointers only','Binary search'],
+  'Two Sum II':['Two pointers','Dynamic programming','Trie'],
+  'Longest Substring Without Repeating Characters':['Sliding window + set','Heap','Union-find'],
+  'Binary Search':['Binary search interval','Depth-first search','Prefix sums'],
+  'Valid Parentheses':['Stack','Queue','Hash map'],
+  'Number of Islands':['Grid DFS/BFS + visited state','Binary search','Monotonic stack']
+};
+setInterval(() => {
+  const content = document.querySelector('.content');
+  const title = document.querySelector('.lesson h1')?.textContent;
+  const topic = document.querySelector('.eyebrow')?.textContent || '';
+  if (!content || !title || content.dataset.conceptQuiz || !content.querySelector('h2')?.textContent.includes('Recognize')) return;
+  content.dataset.conceptQuiz = 'true';
+  const correct = conceptChoices[title]?.[0] || topic.split(' · ')[0];
+  const choices = conceptChoices[title] || [correct,'Hash map','Two pointers','Dynamic programming'].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4);
+  const quiz = document.createElement('section');
+  quiz.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1px solid #e4e1d7';
+  quiz.innerHTML = `<b>Concept check</b><p>Which data structure or concept is most important for solving this problem?</p><div>${choices.map(c=>`<button data-concept="${c}" style="display:block;width:100%;margin-top:7px;padding:10px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left">${c}</button>`).join('')}</div><p class="concept-feedback" hidden></p>`;
+  content.appendChild(quiz);
+  quiz.querySelectorAll('[data-concept]').forEach(button => button.onclick = () => {
+    const ok = button.dataset.concept === correct;
+    const feedback = quiz.querySelector('.concept-feedback');
+    feedback.hidden = false;
+    feedback.textContent = ok ? `Correct — ${correct} is the core tool here.` : `Not quite. Look for ${correct}.`;
+    feedback.style.cssText = `margin-top:10px;padding:10px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;
+  });
+},100);
+</script><script>
+// Author real Step-1 content rather than exposing category-template answers.
+briefs['Contains Duplicate'] = ['nums: an array of integers.','Return true if any value appears at least twice; otherwise return false.','Input: nums = [1, 2, 3, 1]\nOutput: true, because 1 appears more than once.'];
+conceptChoices['Contains Duplicate'] = ['Hash set','Two pointers','Binary search'];
+briefs['Reverse Linked List'] = ['head: the first node of a singly linked list. Each node has a value and a next pointer.','Return the head of the same nodes in reverse order.','Input: 1 → 2 → 3 → null\nOutput: 3 → 2 → 1 → null'];
+conceptChoices['Reverse Linked List'] = ['Pointer rewiring with prev / current / next','Hash map','Two pointers'];
+briefs['Invert Binary Tree'] = ['root: the root node of a binary tree. Each node has left and right children.','Return the root after every node’s left and right subtrees have been swapped.','Input:    4\n       / \\ \n      2   7\nOutput:   4\n       / \\ \n      7   2'];
+conceptChoices['Invert Binary Tree'] = ['Tree DFS with child swapping','Hash map','Two pointers'];
+setInterval(() => {
+  const content = document.querySelector('.content');
+  if (!content || !content.querySelector('h2')?.textContent.includes('Recognize')) return;
+  const notice = [...content.querySelectorAll('h3')].find(node => node.textContent === 'What to notice');
+  if (notice) { notice.nextElementSibling?.remove(); notice.remove(); }
+  [...content.children].filter(node => node.tagName === 'P' && node.textContent.startsWith('Problem:')).forEach(node => node.remove());
+}, 100);
+</script><script>
+const answerWhy = {
+  'Contains Duplicate':'A hash set is right because it records each value you have already seen. When a value is already in the set, you have found a duplicate in constant average time.',
+  'Two Sum':'A hash map is right because it lets you look up the complement—target minus the current value—while retaining the index you must return.',
+  'Two Sum II':'Two pointers are right because sorted order tells you exactly which direction can make a pair sum larger or smaller.',
+  'Longest Substring Without Repeating Characters':'A sliding window with a set is right because the answer must be contiguous and the set tells you whether the current window has a duplicate.',
+  'Binary Search':'Binary search is right because the input is sorted, so one comparison proves half of the remaining values cannot be the target.',
+  'Valid Parentheses':'A stack is right because the latest unmatched opening bracket is always the one a closing bracket must match next.',
+  'Number of Islands':'Grid DFS or BFS is right because each island is a connected component: visit all connected land once, then count the next unvisited island.',
+  'Reverse Linked List':'Pointer rewiring is right because the task is to change each node’s next link. You must preserve the unvisited next node before turning the link backward.',
+  'Invert Binary Tree':'Tree DFS is right because every node must perform the same local swap, and recursion naturally visits each subtree after handling its root.'
+};
+document.addEventListener('click', event => {
+  const choice = event.target.closest('[data-concept]');
+  if (!choice) return;
+  setTimeout(() => {
+    const title = document.querySelector('.lesson h1')?.textContent;
+    const feedback = document.querySelector('.concept-feedback');
+    if (!feedback) return;
+    const explanation = answerWhy[title] || 'The right answer is the concept that removes the repeated work in the brute-force approach while preserving the information needed for the next step.';
+    feedback.textContent += ` Why: ${explanation}`;
+  }, 0);
+});
+</script><script>
+const goodFor = {
+  'Hash map':'fast lookups, frequency counts, or finding a value’s complement.',
+  'Hash set':'testing whether an item has appeared before or maintaining uniqueness.',
+  'Two pointers':'sorted arrays, palindrome checks, or shrinking a search interval from both ends.',
+  'Binary search':'sorted data or an answer space with a monotonic yes/no condition.',
+  'Sliding window + set':'contiguous subarrays or substrings whose validity changes as the edges move.',
+  'Stack':'last-in, first-out work such as nested brackets or next-greater-element problems.',
+  'Grid DFS/BFS + visited state':'exploring all connected cells or finding shortest unweighted paths.',
+  'Pointer rewiring with prev / current / next':'changing a linked list in place while keeping the remaining nodes reachable.',
+  'Dynamic programming':'problems with overlapping subproblems and a reusable optimal state.',
+  'BFS / DFS':'exploring trees, graphs, or connected components.'
+};
+document.addEventListener('click', event => {
+  const choice = event.target.closest('[data-concept]');
+  if (!choice) return;
+  setTimeout(() => {
+    const title = document.querySelector('.lesson h1')?.textContent;
+    const topic = document.querySelector('.eyebrow')?.textContent || '';
+    const expected = conceptChoices[title]?.[0] || topic.split(' · ')[0];
+    if (choice.dataset.concept === expected) return;
+    const feedback = document.querySelector('.concept-feedback');
+    if (!feedback) return;
+    const use = goodFor[choice.dataset.concept] || 'a different family of input constraints than this one.';
+    feedback.textContent = `That choice is not the best fit for this problem. ${choice.dataset.concept} is useful for ${use} Re-read the input and output, then try another concept.`;
+    feedback.style.cssText = 'margin-top:10px;padding:10px;border-radius:8px;color:#7b4537;background:#fff0e9';
+  }, 1);
+});
+</script><script>
+setInterval(() => {
+  const content = document.querySelector('.content');
+  if (!content || content.dataset.algorithmPuzzle || !content.querySelector('h2')?.textContent.includes('Design the algorithm')) return;
+  const list = content.querySelector('ol');
+  if (!list) return;
+  content.dataset.algorithmPuzzle = 'true';
+  const correct = [...list.querySelectorAll('li')].map(x => x.textContent);
+  const shuffled = [...correct].sort(() => Math.random() - .5);
+  list.remove();
+  const puzzle = document.createElement('section');
+  puzzle.innerHTML = `<p><b>Build the algorithm:</b> drag the steps into the order you think will work. On a phone, tap a step, then tap the step you want to swap with it.</p><div class="step-puzzle">${shuffled.map((step,i)=>`<button draggable="true" data-step="${step}" style="display:block;width:100%;margin:7px 0;padding:12px;border:1px solid #d9ded9;border-radius:9px;background:#fff;text-align:left">${i+1}. ${step}</button>`).join('')}</div><button class="check-order" style="margin-top:8px;padding:10px 12px;border:0;border-radius:8px;background:#117b78;color:#fff;font-weight:bold">Check my algorithm</button><p class="order-feedback" hidden></p>`;
+  content.querySelector('h2').after(puzzle);
+  const area = puzzle.querySelector('.step-puzzle'); let dragging=null, selected=null;
+  function renumber(){[...area.children].forEach((node,i)=>node.firstChild.textContent=`${i+1}. `)}
+  area.querySelectorAll('[data-step]').forEach(button => {
+    button.addEventListener('dragstart',()=>dragging=button);
+    button.addEventListener('dragover',e=>e.preventDefault());
+    button.addEventListener('drop',e=>{e.preventDefault();if(dragging&&dragging!==button){area.insertBefore(dragging,button);renumber()}});
+    button.addEventListener('click',()=>{if(!selected){selected=button;button.style.outline='3px solid #8fd0c6';return}if(selected!==button){const marker=document.createTextNode('');area.insertBefore(marker,selected);area.insertBefore(selected,button);area.insertBefore(button,marker);marker.remove();renumber()}selected.style.outline='';selected=null});
+  });
+  puzzle.querySelector('.check-order').onclick=()=>{const attempt=[...area.children].map(x=>x.dataset.step);const inOrder=attempt.every((x,i)=>x===correct[i]);const feedback=puzzle.querySelector('.order-feedback');feedback.hidden=false;feedback.textContent=inOrder?'Nice—this sequence maintains the needed state at every step.':'That order breaks down at some point. Ask: what information must exist before the next step can happen? Try moving the step that creates or updates that state earlier.';feedback.style.cssText=`margin-top:10px;padding:10px;border-radius:8px;color:${inOrder?'#21594e':'#7b4537'};background:${inOrder?'#dff0e9':'#fff0e9'}`;};
+},100);
+</script><script>
+setInterval(() => {
+  const content = document.querySelector('.content');
+  if (!content || content.dataset.algorithmBuilder || !content.querySelector('h2')?.textContent.includes('Design the algorithm')) return;
+  const old = content.querySelector('.step-puzzle')?.closest('section');
+  if (!old || !cards[current]) return;
+  content.dataset.algorithmBuilder = 'true'; old.remove();
+  const correct = lessonFor(cards[current]).algorithm;
+  const extras = ['Sort the input before every operation.', 'Check every possible pair with a nested loop.', 'Reset all saved state after each item.', 'Return before checking the final condition.'];
+  const bank = [...correct, ...extras].sort(() => Math.random() - .5);
+  const builder = document.createElement('section');
+  builder.innerHTML = `<p><b>Build your algorithm:</b> drag only the steps you need from the bank into <em>My algorithm</em>, then arrange them in order.</p><div style="display:grid;gap:14px"><div><b>Step bank</b><div class="step-bank" style="min-height:56px;margin-top:7px;padding:8px;border:1px dashed #aab7b4;border-radius:10px">${bank.map(s=>`<button draggable="true" data-step="${s}" style="display:block;width:100%;margin:5px 0;padding:10px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left">${s}</button>`).join('')}</div></div><div><b>My algorithm</b><div class="answer-algorithm" style="min-height:80px;margin-top:7px;padding:8px;border:2px dashed #117b78;border-radius:10px;background:#f3fbf9"><span style="color:#68716f;font-size:13px">Drag the steps you choose here</span></div></div></div><button class="check-builder" style="margin-top:12px;padding:10px 12px;border:0;border-radius:8px;background:#117b78;color:#fff;font-weight:bold">Check my algorithm</button><p class="builder-feedback" hidden></p>`;
+  content.querySelector('h2').after(builder);
+  const source=builder.querySelector('.step-bank'), answer=builder.querySelector('.answer-algorithm'); let dragging=null, selected=null;
+  function activate(zone){zone.addEventListener('dragover',e=>e.preventDefault());zone.addEventListener('drop',e=>{e.preventDefault();if(dragging){zone.appendChild(dragging);answer.querySelector('span')?.remove()}})}[source,answer].forEach(activate);
+  builder.querySelectorAll('[data-step]').forEach(button=>{button.addEventListener('dragstart',()=>dragging=button);button.onclick=()=>{if(button.parentElement===source){answer.appendChild(button);answer.querySelector('span')?.remove()}else{source.appendChild(button)}}});
+  builder.querySelector('.check-builder').onclick=()=>{const attempt=[...answer.querySelectorAll('[data-step]')].map(x=>x.dataset.step);const correctOrder=attempt.length===correct.length&&attempt.every((x,i)=>x===correct[i]);const feedback=builder.querySelector('.builder-feedback');feedback.hidden=false;feedback.textContent=correctOrder?'Nice—your algorithm includes only the necessary steps in a workable order.':'Not quite. You may have included an unnecessary step, missed a necessary one, or placed a state update after the step that needs it. Re-check the dependencies and try again.';feedback.style.cssText=`margin-top:10px;padding:10px;border-radius:8px;color:${correctOrder?'#21594e':'#7b4537'};background:${correctOrder?'#dff0e9':'#fff0e9'}`;};
+},100);
+</script><script>
+featured['Contains Duplicate'] = {
+  brief:'Given an array of integers, decide whether any number occurs more than once.',
+  concepts:['Hash set','Fast membership lookup'],
+  algorithm:['Create an empty set called seen.','Read the next number from nums.','If seen already contains that number, stop and return true.','Otherwise add the number to seen and continue.','If the loop finishes, return false because no value was repeated.'],
+  code:'const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;',
+  fixes:['Check seen.has(n) before seen.add(n); adding first would make every number look duplicated.','Use a Set, not a nested loop, so each lookup stays constant time on average.'],
+  complexity:'Time O(n): visit each number once. Space O(n): in the worst case, the set stores every distinct number.'
+};
+</script><script>
+setInterval(() => {
+  const answer = document.querySelector('.answer-algorithm');
+  if (!answer || answer.dataset.orderControls) return;
+  answer.dataset.orderControls = 'true';
+  const decorate = () => answer.querySelectorAll('[data-step]:not([data-order-ready])').forEach(step => {
+    step.dataset.orderReady = 'true';
+    step.draggable = false;
+    step.onclick = event => event.stopPropagation();
+    const controls = document.createElement('span');
+    controls.style.cssText = 'display:flex;gap:5px;margin:4px 0 10px';
+    controls.innerHTML = '<button type="button" data-up style="padding:6px 9px;border:1px solid #d5dad4;border-radius:7px;background:#fff">↑ Move up</button><button type="button" data-down style="padding:6px 9px;border:1px solid #d5dad4;border-radius:7px;background:#fff">↓ Move down</button><button type="button" data-remove style="padding:6px 9px;border:1px solid #d5dad4;border-radius:7px;background:#fff">Remove</button>';
+    step.after(controls);
+    const ordered = () => [...answer.querySelectorAll('[data-step]')];
+    controls.querySelector('[data-up]').onclick = () => { const all=ordered(), i=all.indexOf(step); if(i>0){answer.insertBefore(step,all[i-1]);answer.insertBefore(controls,all[i-1]);} };
+    controls.querySelector('[data-down]').onclick = () => { const all=ordered(), i=all.indexOf(step); if(i<all.length-1){const next=all[i+1];answer.insertBefore(next,step);answer.insertBefore(next.nextElementSibling,step);} };
+    controls.querySelector('[data-remove]').onclick = () => { document.querySelector('.step-bank').appendChild(step); controls.remove(); };
+  });
+  new MutationObserver(decorate).observe(answer,{childList:true,subtree:true});
+  decorate();
+},100);
+</script><script>
+setInterval(() => {
+  const answer = document.querySelector('.answer-algorithm');
+  const bank = document.querySelector('.step-bank');
+  if (!answer || !bank || answer.dataset.dragRebuilt) return;
+  answer.dataset.dragRebuilt = 'true';
+  answer.querySelectorAll('span').forEach(node => { if (node.querySelector('[data-up]')) node.remove(); });
+  const prepare = step => {
+    if (step.dataset.liveDrag) return;
+    step.dataset.liveDrag = 'true'; step.draggable = true;
+    step.style.transition = 'transform .14s ease, opacity .14s ease';
+    step.addEventListener('dragstart', () => { window.walkcodeDragging=step; step.style.opacity='.38'; });
+    step.addEventListener('dragend', () => { step.style.opacity='1'; window.walkcodeDragging=null; });
+  };
+  document.querySelectorAll('[data-step]').forEach(prepare);
+  new MutationObserver(() => document.querySelectorAll('[data-step]').forEach(prepare)).observe(document.querySelector('.content'),{childList:true,subtree:true});
+  const position = event => {
+    const target = event.target.closest('[data-step]'); const dragged=window.walkcodeDragging;
+    if (!dragged) return;
+    if (!target || target===dragged) { if (event.currentTarget===answer) answer.appendChild(dragged); return; }
+    const before=event.clientY < target.getBoundingClientRect().top + target.offsetHeight/2;
+    target.parentElement.insertBefore(dragged,before?target:target.nextSibling);
+  };
+  answer.addEventListener('dragover', event => { event.preventDefault(); position(event); });
+  answer.addEventListener('drop', event => { event.preventDefault(); event.stopImmediatePropagation(); position(event); }, true);
+  bank.addEventListener('dragover', event => event.preventDefault());
+  bank.addEventListener('drop', event => { if(window.walkcodeDragging){event.preventDefault();event.stopImmediatePropagation();bank.appendChild(window.walkcodeDragging);} }, true);
+},100);
+</script><script>setInterval(()=>document.querySelectorAll('[data-up]').forEach(button=>button.parentElement.remove()),50);</script><script>
+let pointerStep=null,pointerLast='';
+document.addEventListener('pointerdown',event=>{const step=event.target.closest('[data-step]');if(!step)return;pointerStep=step;step.draggable=false;step.setPointerCapture?.(event.pointerId);step.style.opacity='.45';step.style.pointerEvents='none';event.preventDefault()},true);
+document.addEventListener('pointermove',event=>{if(!pointerStep)return;const below=document.elementFromPoint(event.clientX,event.clientY),target=below?.closest('[data-step]'),answer=document.querySelector('.answer-algorithm'),bank=document.querySelector('.step-bank');if(!answer||!bank)return;if(target&&target!==pointerStep&&target.closest('.answer-algorithm')){const r=target.getBoundingClientRect(),before=event.clientY<r.top+r.height/2,key=`${target.dataset.step}:${before}`;if(key!==pointerLast){pointerLast=key;answer.insertBefore(pointerStep,before?target:target.nextSibling)}}else if(below?.closest('.answer-algorithm')&&pointerLast!=='answer'){pointerLast='answer';answer.appendChild(pointerStep);answer.querySelector('span')?.remove()}else if(below?.closest('.step-bank')&&pointerLast!=='bank'){pointerLast='bank';bank.appendChild(pointerStep)}event.preventDefault()},true);
+document.addEventListener('pointerup',()=>{if(!pointerStep)return;pointerStep.style.opacity='1';pointerStep.style.pointerEvents='';pointerStep=null;pointerLast=''},true);
+</script><script>
+setInterval(() => {
+  const builder = document.querySelector('.check-builder')?.closest('section');
+  if (!builder || builder.dataset.diagnosticReady || !cards[current]) return;
+  builder.dataset.diagnosticReady = 'true';
+  builder.querySelector('.check-builder').onclick = () => {
+    const correct = lessonFor(cards[current]).algorithm;
+    const answer = [...builder.querySelector('.answer-algorithm').querySelectorAll('[data-step]')].map(x=>x.dataset.step);
+    const extra = answer.filter(x=>!correct.includes(x));
+    const missing = correct.filter(x=>!answer.includes(x));
+    const shared = answer.filter(x=>correct.includes(x));
+    const expectedShared = correct.filter(x=>answer.includes(x));
+    const orderWrong = !extra.length && !missing.length && shared.some((x,i)=>x!==expectedShared[i]);
+    const feedback = builder.querySelector('.builder-feedback');
+    feedback.hidden = false;
+    if (!extra.length && !missing.length && !orderWrong) {
+      feedback.innerHTML = '<div style="font-size:22px;font-weight:900;letter-spacing:-.5px">✓ Algorithm correct</div><div style="margin-top:4px">You chose only the needed steps and placed them in a workable order.</div>';
+      feedback.style.cssText = 'margin-top:14px;padding:16px;border:2px solid #117b78;border-radius:12px;color:#174d44;background:#dff0e9';
+      return;
+    }
+    const issues = [extra.length&&'extra step',missing.length&&'missing step',orderWrong&&'wrong order'].filter(Boolean).join(', ');
+    feedback.innerHTML = `<b>Check again:</b> ${issues}. <button type="button" class="more-feedback" style="margin-left:6px;border:0;background:transparent;color:#117b78;text-decoration:underline;font-weight:bold">Show which steps</button><div class="specific-feedback" hidden></div>`;
+    feedback.style.cssText = 'margin-top:10px;padding:10px;border-radius:8px;color:#7b4537;background:#fff0e9';
+    feedback.querySelector('.more-feedback').onclick = () => {
+      const details=[];
+      if(extra.length) details.push(`<b>Extra:</b> ${extra.join(' · ')}`);
+      if(missing.length) details.push(`<b>Missing:</b> ${missing.join(' · ')}`);
+      if(orderWrong) details.push('<b>Order:</b> the steps are all needed, but one or more must happen earlier to create the state needed by the next step.');
+      const specific=feedback.querySelector('.specific-feedback');specific.hidden=false;specific.innerHTML=details.join('<br><br>');feedback.querySelector('.more-feedback').remove();
+    };
+  };
+},100);
+</script><script>
+setInterval(() => {
+  document.querySelectorAll('[data-step]:not([data-intent])').forEach(step => {
+    const text=step.dataset.step||'';
+    const intent=/^Create|^Start|^Initialize/.test(text)?'SETUP':/^Read|^Walk|^Scan|^For each|^Expand/.test(text)?'LOOP':/^If|^Check|^Too /.test(text)?'IF / CHECK':/^Otherwise|^Add|^Move|^Mark|^Update/.test(text)?'UPDATE':'RETURN';
+    step.dataset.intent=intent;
+    step.innerHTML=`<span style="display:block;margin-bottom:4px;color:#117b78;font-size:10px;font-weight:900;letter-spacing:.7px">${intent}</span>${text}`;
+  });
+},100);
+</script><script>
+const codeExercises={
+ 'Contains Duplicate':[
+  {prompt:'Complete the duplicate check before adding the current number.',code:'for (const n of nums) {\n  if (seen.___(n)) return true;\n  seen.add(n);\n}',choices:['has','add','delete'],correct:'has',why:'has checks membership without changing the set. add would mutate the set and always return the set itself.'},
+  {prompt:'Complete the state update after you know this number is new.',code:'if (seen.has(n)) return true;\nseen.___(n);',choices:['add','has','clear'],correct:'add',why:'add records this new number so a later repeat can be detected.'}
+ ],
+ 'Reverse Linked List':[
+  {prompt:'Before reversing current.next, preserve the link to the unvisited part of the list.',code:'while (current) {\n  const next = current.___;\n  current.next = prev;\n}',choices:['next','value','prev'],correct:'next',why:'next saves the only pointer to the rest of the original list before current.next is overwritten.',wrong:{value:'value is the node’s data, not the link to the remaining nodes.',prev:'prev points to the already reversed portion; using it here would lose the unreversed nodes.'}},
+ {prompt:'After pointing current backward, move prev forward to the node you just processed.',code:'const next = current.next;\ncurrent.next = prev;\nprev = ___;\ncurrent = next;',choices:['current','next','head'],correct:'current',why:'current is now the front of the reversed portion, so it becomes prev for the next iteration.',wrong:{next:'next is still the first unprocessed node; assigning it to prev would skip the node you just reversed.',head:'head never advances through the list, so it cannot represent the growing reversed portion.'}}
+ ],
+ 'Two Sum II':[
+  {prompt:'The array is sorted. When the pair sum is too small, choose the move that can make it larger.',code:'const sum = numbers[left] + numbers[right];\nif (sum < target) {\n  ___;\n} else {\n  right--;\n}',choices:['left++','right--','left--'],correct:'left++',why:'Moving left rightward chooses a larger value, so it is the only pointer move that can increase the sum.',wrong:{'right--':'Moving right leftward chooses a smaller value and makes an already too-small sum even smaller.','left--':'left is already at the smallest remaining candidate; moving it left leaves the active search range.'}},
+ {prompt:'The prompt asks for 1-indexed positions, not JavaScript array indexes.',code:'if (sum === target) {\n  return [left + 1, ___];\n}',choices:['right + 1','right','left'],correct:'right + 1',why:'Both stored pointers are zero-indexed array positions, so both need one added before returning.',wrong:{right:'right is zero-indexed; returning it directly is off by one.',left:'left is the first position again, not the right-side match.'}}
+ ],
+ 'Longest Substring Without Repeating Characters':[
+  {prompt:'When the incoming character is already in the window, remove the character at the left edge and advance left.',code:'while (seen.has(s[right])) {\n  seen.delete(s[___]);\n}',choices:['left++','right++','right'],correct:'left++',why:'left++ uses the outgoing character, then moves the left edge forward so the window can become valid again.',wrong:{'right++':'right identifies the incoming duplicate. Removing it would leave the earlier duplicate inside the window.',right:'right is the incoming character, not the character that must leave from the left edge.'}},
+ {prompt:'After repairing the window, measure its inclusive length.',code:'seen.add(s[right]);\nbest = Math.max(best, ___);',choices:['right - left + 1','right - left','best + 1'],correct:'right - left + 1',why:'Both left and right are included in the current substring, so the length needs the +1.',wrong:{'right - left':'That excludes one endpoint, so every non-empty window is counted too short.','best + 1':'The window can change by more than one character between measurements; calculate its actual boundaries.'}}
+ ],
+ 'Valid Parentheses':[
+  {prompt:'A closing bracket must resolve the most recently opened bracket.',code:'if (char in pairs) {\n  if (stack.___() !== pairs[char]) return false;\n}',choices:['pop','push','shift'],correct:'pop',why:'pop removes and returns the most recently pushed opening bracket, which is the only one this closing bracket may match.',wrong:{push:'push adds another item; it does not inspect or resolve the pending opening bracket.',shift:'shift removes the oldest opening bracket, but nested brackets must close in last-in, first-out order.'}},
+ {prompt:'After reading every character, no opening bracket may remain unresolved.',code:'for (const char of s) {\n  // match or push each bracket\n}\nreturn stack.length === ___;',choices:['0','1','s.length'],correct:'0',why:'An empty stack means every opening bracket found a matching closing bracket.',wrong:{'1':'One remaining opening bracket is still unmatched, so the string is invalid.','s.length':'The stack stores only unresolved openings, not every character in the input.'}}
+ ],
+ 'Binary Search':[
+  {prompt:'mid is known to be too small, so remove it and every value to its left from the active interval.',code:'if (nums[mid] < target) {\n  left = ___;\n}',choices:['mid + 1','mid - 1','mid'],correct:'mid + 1',why:'mid was already checked and is too small. The next possible answer begins immediately after it.',wrong:{'mid - 1':'That moves left in the direction of even smaller values, which cannot help after a too-small midpoint.','mid':'Leaving mid in the interval can repeat the same midpoint forever.'}},
+  {prompt:'When mid is too large, keep only values strictly before it.',code:'if (nums[mid] > target) {\n  right = ___;\n}',choices:['mid - 1','mid + 1','mid'],correct:'mid - 1',why:'mid was checked and is too large, so the remaining search interval ends just before it.',wrong:{'mid + 1':'That keeps only values greater than an already too-large midpoint.','mid':'Leaving mid in the interval can stop the bounds from shrinking.'}}
+ ],
+ 'Number of Islands':[
+  {prompt:'As soon as flood fill reaches land, mark it visited so another search cannot count it again.',code:'if (grid[r][c] !== "1") return;\ngrid[r][c] = ___;',choices:['"0"','"1"','r + 1'],correct:'"0"',why:'Changing visited land to water records that this cell already belongs to the island being explored.',wrong:{'"1"':'Leaving the cell as land lets a later scan or recursive path visit it again.','r + 1':'The grid stores cell values; r + 1 is a coordinate, not a visited marker.'}},
+ {prompt:'Flood fill must explore horizontally adjacent land as well as vertically adjacent land.',code:'visit(r + 1, c);\nvisit(r - 1, c);\nvisit(r, c + 1);\nvisit(___, c - 1);',choices:['r','c','r + 1'],correct:'r',why:'Keeping r unchanged and decreasing c visits the left neighbor.',wrong:{c:'c is a column index, but the first argument to visit is the row.', 'r + 1':'That repeats the downward neighbor instead of exploring left.'}}
+ ],
+ 'Invert Binary Tree':[
+  {prompt:'An empty subtree is already inverted, so it provides the recursive base case.',code:'function invertTree(root) {\n  if (!root) return ___;\n}',choices:['null','root','[]'],correct:'null',why:'A missing child stays missing; returning null stops recursion at the edge of the tree.',wrong:{root:'There is no root node when this branch is empty.', '[]':'The function returns tree nodes or null, not an array.'}},
+  {prompt:'Preserve the original left child before replacing root.left with the inverted right subtree.',code:'const oldLeft = root.___;\nroot.left = invertTree(root.right);\nroot.right = invertTree(oldLeft);',choices:['left','right','value'],correct:'left',why:'oldLeft holds the original left subtree so it can become the new right subtree after both sides are inverted.',wrong:{right:'Saving right loses the original left subtree, which still needs to move to the right.',value:'value is the node’s payload; the operation needs a child subtree reference.'}}
+ ]
+};
+setInterval(()=>{
+ const content=document.querySelector('.content'),title=document.querySelector('.lesson h1')?.textContent;
+ if(!content||content.dataset.codeExercise||!content.querySelector('h2')?.textContent.includes('Code snippets')||!codeExercises[title])return;
+ content.dataset.codeExercise='true';let i=0,items=codeExercises[title];
+ function show(){const x=items[i];content.innerHTML=`<h2>Code fix ${i+1} of ${items.length}</h2><p>${x.prompt}</p><pre class="code">${x.code}</pre><div>${x.choices.map(c=>`<button data-code-choice="${c}" style="display:block;width:100%;margin:7px 0;padding:11px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left;font-family:ui-monospace,monospace">${c}</button>`).join('')}</div><p class="code-feedback" hidden></p>${i<items.length-1?'<button class="next-fix" style="display:none;margin-top:10px;padding:10px 12px;border:0;border-radius:8px;background:#117b78;color:#fff;font-weight:bold">Next code fix →</button>':''}`;content.querySelectorAll('[data-code-choice]').forEach(b=>b.onclick=()=>{const ok=b.dataset.codeChoice===x.correct,fb=content.querySelector('.code-feedback');fb.hidden=false;fb.textContent=ok?`✓ Correct. ${x.why}`:`Not quite. ${b.dataset.codeChoice} is useful for ${b.dataset.codeChoice==='add'?'recording a new value':'a different set operation'}, but it does not make this line work.`;fb.style.cssText=`margin-top:10px;padding:11px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;if(ok)content.querySelector('.next-fix')?.style.setProperty('display','inline-block')});content.querySelector('.next-fix')?.addEventListener('click',()=>{i++;show()})}show();
+},100);
+</script><script>
+setInterval(()=>{
+ const content=document.querySelector('.content'),title=document.querySelector('.lesson h1')?.textContent;
+ if(!content||content.dataset.complexityGuide||!content.querySelector('h2')?.textContent.includes('Time and space')||title!=='Contains Duplicate')return;
+ content.dataset.complexityGuide='true';
+ content.innerHTML=`<h2>Analyze the complexity</h2><p>Here is the completed solution. We’ll derive the complexity from what it actually does.</p><pre class="code">const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;</pre><section class="complexity-step"><b>1. Count the work</b><p>In the worst case (no duplicate), how many times can the loop process an array element?</p><button data-time="once">At most once</button><button data-time="nested">Once for every other element</button><p class="time-feedback" hidden></p></section><section class="space-step" hidden><b>2. Count extra memory</b><p>In the worst case, what can grow as the input grows?</p><button data-space="set">The set can hold every distinct number</button><button data-space="constant">Only a fixed number of variables exist</button><p class="space-feedback" hidden></p></section><section class="final-complexity" hidden></section>`;
+ const style='display:block;width:100%;margin:7px 0;padding:11px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left';content.querySelectorAll('button').forEach(b=>b.style.cssText=style);
+ content.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{const ok=b.dataset.time==='once',f=content.querySelector('.time-feedback');f.hidden=false;f.textContent=ok?'Correct. Each element reaches the loop once; set lookup and insertion are O(1) on average.':'That would describe a nested loop. Here there is only one pass through nums.';f.style.cssText=`margin-top:8px;padding:10px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;if(ok)content.querySelector('.space-step').hidden=false});
+ content.querySelectorAll('[data-space]').forEach(b=>b.onclick=()=>{const ok=b.dataset.space==='set',f=content.querySelector('.space-feedback'),final=content.querySelector('.final-complexity');f.hidden=false;f.textContent=ok?'Correct. With no duplicates, seen stores n values.':'The variables are constant-sized, but the set is not.';f.style.cssText=`margin-top:8px;padding:10px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;if(ok){final.hidden=false;final.innerHTML='<div style="margin-top:14px;padding:14px;border:2px solid #117b78;border-radius:11px;background:#dff0e9"><b>✓ Complexity derived</b><p>Time: O(n), because one pass processes at most n elements.</p><p>Space: O(n), because the set may store n distinct values.</p></div>'}});
+},100);
+</script><script>
+setInterval(()=>{
+ const content=document.querySelector('.content');
+ if(!content?.dataset.complexityGuide||content.dataset.bigOChoiceReady)return;
+ const spaceButtons=content.querySelectorAll('[data-space]'); if(!spaceButtons.length)return;
+ content.dataset.bigOChoiceReady='true';
+ spaceButtons.forEach(b=>b.onclick=()=>{
+   const ok=b.dataset.space==='set',f=content.querySelector('.space-feedback'),final=content.querySelector('.final-complexity');
+   f.hidden=false;f.textContent=ok?'Correct. The set can grow with the number of distinct inputs.':'Look again at the set: it is extra memory whose size can grow with the input.';f.style.cssText=`margin-top:8px;padding:10px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;
+   if(!ok)return;
+   final.hidden=false;final.innerHTML='<div style="margin-top:14px;padding:14px;border-radius:11px;background:#f5f5ef"><b>3. State the complexity</b><p>Using your two observations, choose the final bound.</p><button data-big-o="correct">Time O(n), space O(n)</button><button data-big-o="quadratic">Time O(n²), space O(n)</button><button data-big-o="constant">Time O(1), space O(1)</button><p class="big-o-feedback" hidden></p></div>';
+   final.querySelectorAll('button').forEach(x=>{x.style.cssText='display:block;width:100%;margin:7px 0;padding:11px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left';x.onclick=()=>{const right=x.dataset.bigO==='correct',g=final.querySelector('.big-o-feedback');g.hidden=false;g.textContent=right?'✓ Correct—you turned the loop count and growing-memory observation into the final bound.':'Not quite. Revisit how many times the loop can run and whether the set can grow with n, then try another choice.';g.style.cssText=`margin-top:10px;padding:10px;border-radius:8px;color:${right?'#21594e':'#7b4537'};background:${right?'#dff0e9':'#fff0e9'}`}});
+ });
+},100);
+</script><script>
+// Capture these clicks before the older prototype handlers can reveal an answer.
+document.addEventListener('click',event=>{
+ const button=event.target.closest('[data-time],[data-space]'); if(!button)return;
+ event.stopImmediatePropagation(); event.preventDefault();
+ const content=button.closest('.content'); if(!content)return;
+ if(button.dataset.time){
+   const f=content.querySelector('.time-feedback');f.hidden=false;
+   f.textContent=button.dataset.time==='once'?'Good observation. Keep it in mind for the final complexity choice.':'Try tracing one element through the code: is there another loop over the array for it?';
+   f.style.cssText='margin-top:8px;padding:10px;border-radius:8px;background:#f5f5ef;color:#35434c';
+   if(button.dataset.time==='once')content.querySelector('.space-step').hidden=false;
+ }
+ if(button.dataset.space){
+   const f=content.querySelector('.space-feedback');f.hidden=false;
+   f.textContent=button.dataset.space==='set'?'Good observation. Now combine both observations yourself.':'Look at whether the set can contain more values as nums gets longer.';
+   f.style.cssText='margin-top:8px;padding:10px;border-radius:8px;background:#f5f5ef;color:#35434c';
+   if(button.dataset.space==='set'){
+     const final=content.querySelector('.final-complexity');final.hidden=false;
+     final.innerHTML='<div style="margin-top:14px;padding:14px;border-radius:11px;background:#f5f5ef"><b>3. State the complexity</b><p>Choose the final bound from your observations.</p><button data-final="a">Time O(n), space O(n)</button><button data-final="b">Time O(n²), space O(n)</button><button data-final="c">Time O(1), space O(1)</button><p class="final-feedback" hidden></p></div>';
+     final.querySelectorAll('[data-final]').forEach(x=>{x.style.cssText='display:block;width:100%;margin:7px 0;padding:11px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left';x.onclick=()=>{const good=x.dataset.final==='a',g=final.querySelector('.final-feedback');g.hidden=false;g.textContent=good?'✓ Correct.':'Not quite—return to the loop and memory observations, then try again.';g.style.cssText=`margin-top:10px;padding:10px;border-radius:8px;color:${good?'#21594e':'#7b4537'};background:${good?'#dff0e9':'#fff0e9'}`}});
+   }
+ }
+},true);
+</script><script>
+document.addEventListener('click',event=>{
+ const choice=event.target.closest('[data-final]'); if(!choice||choice.dataset.final!=='a')return;
+ setTimeout(()=>{
+   const content=choice.closest('.content'); if(!content||content.querySelector('.lesson-review')||!cards[current])return;
+   const d=lessonFor(cards[current]);
+   const review=document.createElement('section');review.className='lesson-review';
+   review.style.cssText='margin-top:18px;padding-top:18px;border-top:2px solid #117b78';
+   review.innerHTML=`<h2>Review</h2><div style="padding:13px;border-radius:11px;background:#eaf5f3"><b>Most important takeaways</b><ul>${d.concepts.map(x=>`<li>${x}</li>`).join('')}<li>${d.complexity}</li></ul></div><details style="margin-top:12px;border:1px solid #c7e2dc;border-radius:10px;padding:12px"><summary style="cursor:pointer;color:#117b78;font-weight:800">Optional walkthrough of the solution</summary><p><b>1.</b> ${d.algorithm[0]}</p><p><b>2.</b> ${d.algorithm.slice(1,-1).join(' ')}</p><p><b>3.</b> ${d.algorithm.at(-1)}</p><pre class="code">${d.code||'Implement the invariant you identified.'}</pre></details>`;
+   content.appendChild(review);
+ },0);
+});
+</script><script>
+setInterval(()=>{
+ const stages=document.querySelector('.stages'),content=document.querySelector('.content');
+ if(!stages||stages.querySelector('[data-review-stage]'))return;
+ const review=document.createElement('button');review.className='stage';review.dataset.reviewStage='true';review.textContent='5 Review';
+ review.onclick=()=>{const d=lessonFor(cards[current]);const panel=document.createElement('section');panel.className='lesson-review';panel.innerHTML=`<h2>Review</h2><div style="padding:13px;border-radius:11px;background:#eaf5f3"><b>Most important takeaways</b><ul>${d.concepts.map(x=>`<li>${x}</li>`).join('')}<li>${d.complexity}</li></ul></div><details style="margin-top:12px;border:1px solid #c7e2dc;border-radius:10px;padding:12px"><summary style="cursor:pointer;color:#117b78;font-weight:800">Optional walkthrough of the solution</summary><p>${d.algorithm.join(' ')}</p><pre class="code">${d.code||'Implement the invariant you identified.'}</pre></details>`;document.querySelector('.content').replaceChildren(panel);stages.querySelectorAll('.stage').forEach(x=>x.classList.remove('active'));review.classList.add('active')};
+ stages.appendChild(review);
+},100);
+document.addEventListener('click',event=>{if(!event.target.closest('[data-final="a"]'))return;setTimeout(()=>{const review=document.querySelector('[data-review-stage]');if(review){document.querySelectorAll('.stage').forEach(x=>x.classList.remove('active'));review.classList.add('active')}},5)});
+</script><script>
+setInterval(()=>{
+ const review=document.querySelector('.lesson-review');if(!review||review.dataset.explained||!cards[current])return;
+ review.dataset.explained='true';const d=lessonFor(cards[current]);
+ const intro=document.createElement('p');intro.style.cssText='color:#536168;line-height:1.5';intro.textContent='Use this as a memory anchor for the next time you see a similar problem—not as a solution to memorize line-for-line.';review.querySelector('h2').after(intro);
+ const guide=document.createElement('section');guide.style.cssText='margin-top:14px;padding:13px;border:1px solid #e4e1d7;border-radius:11px';guide.innerHTML=`<b>Why this approach fits</b><p>The problem’s constraints point toward ${d.concepts.join(' and ')}. That lets you avoid repeating the brute-force work.</p><b>Common mistakes to avoid</b><ul>${d.fixes.map(x=>`<li>${x}</li>`).join('')}</ul><b>Complexity connection</b><p>${d.complexity}</p>`;review.appendChild(guide);
+},100);
+</script><script>
+// Draft lesson records for the curriculum sweep. They are intentionally not badged
+// until every stage has its own problem-specific exercise.
+Object.assign(featured,{
+ 'Invert Binary Tree':{brief:'Given the root of a binary tree, swap every node’s left and right children and return the root.',concepts:['Tree DFS with child swapping','Recursive base case'],algorithm:['If the current node is null, return null.','Save the original left child.','Recursively invert the original right subtree and assign it to left.','Recursively invert the saved left subtree and assign it to right.','Return the current node.'],code:'function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}',fixes:['Stop immediately at null children so recursion has a base case.','Save the original left child before overwriting root.left.'],complexity:'Time O(n), because every node is visited once. Space O(h) for the recursion stack, where h is the tree height.'},
+ 'Reverse Linked List':{brief:'Given the head of a singly linked list, reverse every next pointer and return the new head.',concepts:['Linked-list pointer rewiring','prev / current / next pointers'],algorithm:['Set prev to null and current to head.','Save current.next before changing any link.','Point current.next at prev.','Advance prev to current and current to the saved next node.','When current is null, return prev.'],code:'let prev = null, current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;',fixes:['Save next before overwriting current.next.','Return prev, because current is null after the loop.'],complexity:'Time O(n); space O(1).'},
+ 'Last Stone Weight':{brief:'Repeatedly take the two heaviest stones, smash them, and return the final remaining weight or zero.',concepts:['Max heap / priority queue'],algorithm:['Put every stone in a max heap.','While at least two stones remain, remove the two largest.','If they differ, add their difference back.','Return the remaining heap value or zero.'],code:'const heap = new MaxHeap(stones);\nwhile (heap.size() > 1) {\n  const a = heap.pop(), b = heap.pop();\n  if (a !== b) heap.push(a - b);\n}\nreturn heap.size() ? heap.pop() : 0;',fixes:['Remove the heaviest two before computing the difference.','Do not reinsert a zero-weight stone.'],complexity:'Time O(n log n); space O(n).'},
+ 'Subsets':{brief:'Given distinct integers, return every possible subset, including the empty subset.',concepts:['Backtracking','Decision tree: include or exclude'],algorithm:['Start with an empty current subset.','At each index, first explore without the value.','Add the value and explore with it.','Remove it before returning to the previous decision.','At the end of the input, save a copy of current.'],code:'function dfs(i, current) {\n  if (i === nums.length) { result.push([...current]); return; }\n  dfs(i + 1, current);\n  current.push(nums[i]);\n  dfs(i + 1, current);\n  current.pop();\n}',fixes:['Save a copy of current, not the mutable array itself.','Undo the choice with pop after the recursive call.'],complexity:'Time O(n × 2ⁿ); space O(n) auxiliary, excluding output.'},
+ 'Implement Trie (Prefix Tree)':{brief:'Build a structure that inserts words, tests full words, and tests prefixes efficiently.',concepts:['Trie nodes','Character → child map','End-of-word flag'],algorithm:['Start at the root for each operation.','For every character, create or follow its child node.','For insert, mark the final node as a word.','For search, require that final flag; for startsWith, only require the path.'],code:'insert(word) {\n  let node = this.root;\n  for (const ch of word) node = node.children[ch] ??= new Node();\n  node.isWord = true;\n}',fixes:['A prefix path is not automatically a complete word.','Restart at root for every operation.'],complexity:'Time O(L) per operation; space proportional to stored characters.'},
+ 'Network Delay Time':{brief:'Given directed weighted travel times and a start node, find when every node has received a signal, or return -1.',concepts:['Weighted graph','Dijkstra’s algorithm','Min heap'],algorithm:['Build an adjacency list.','Put the start node at distance zero in a min heap.','Always expand the smallest known distance next.','Relax each outgoing edge when it improves a neighbor distance.','If every node is reached, return the largest final distance.'],code:'while (heap.size()) {\n  const [time, node] = heap.pop();\n  if (time > dist[node]) continue;\n  for (const [next, cost] of graph[node]) {\n    if (time + cost < dist[next]) { dist[next] = time + cost; heap.push([dist[next], next]); }\n  }\n}',fixes:['Skip stale heap entries.','Use a min heap; BFS only works when all edge weights match.'],complexity:'Time O((V + E) log V); space O(V + E).'},
+ 'Climbing Stairs':{brief:'You can climb one or two steps at a time. Count the distinct ways to reach step n.',concepts:['1-D dynamic programming','Fibonacci recurrence'],algorithm:['Define ways(i) as the ways to reach step i.','The final move came from i−1 or i−2.','So ways(i) = ways(i−1) + ways(i−2).','Keep only the previous two values while iterating.'],code:'let one = 1, two = 1;\nfor (let i = 0; i < n; i++) {\n  const next = one + two;\n  two = one; one = next;\n}\nreturn one;',fixes:['Use base cases for zero and one remaining step.','Update both previous states every iteration.'],complexity:'Time O(n); space O(1).'},
+ 'Unique Paths':{brief:'A robot moves only right or down in an m by n grid. Count paths from the top-left to bottom-right.',concepts:['2-D dynamic programming','Grid recurrence'],algorithm:['Every cell in the first row and column has one path.','For every other cell, add paths from above and left.','The bottom-right value is the answer.'],code:'const dp = Array.from({length:m}, () => Array(n).fill(1));\nfor (let r = 1; r < m; r++)\n  for (let c = 1; c < n; c++) dp[r][c] = dp[r-1][c] + dp[r][c-1];\nreturn dp[m-1][n-1];',fixes:['Initialize the top row and left column to one.','Use values already computed above and left.'],complexity:'Time O(mn); space O(mn), reducible to O(n).'},
+ 'Maximum Subarray':{brief:'Find the contiguous subarray with the largest possible sum.',concepts:['Greedy dynamic programming','Running best sum'],algorithm:['Track the best sum ending at the current element.','If the previous running sum is negative, discard it.','Otherwise extend it with the current value.','Track the largest running sum seen.'],code:'let current = nums[0], best = nums[0];\nfor (let i = 1; i < nums.length; i++) {\n  current = Math.max(nums[i], current + nums[i]);\n  best = Math.max(best, current);\n}\nreturn best;',fixes:['Do not reset to zero when all values are negative.','current means best subarray ending here, not best overall.'],complexity:'Time O(n); space O(1).'},
+ 'Merge Intervals':{brief:'Given intervals, merge every overlapping range and return the non-overlapping result.',concepts:['Sorting intervals','Compare current end with next start'],algorithm:['Sort intervals by start time.','Start the result with the first interval.','For each next interval, compare it with the last merged interval.','If they overlap, extend the end; otherwise start a new interval.'],code:'intervals.sort((a,b) => a[0] - b[0]);\nconst out = [intervals[0]];\nfor (const [start,end] of intervals.slice(1)) {\n  const last = out[out.length - 1];\n  if (start <= last[1]) last[1] = Math.max(last[1], end);\n  else out.push([start,end]);\n}',fixes:['Sort before comparing neighbors.','Touching intervals overlap when start <= last end.'],complexity:'Time O(n log n); space O(n) for output.'},
+ 'Rotate Image':{brief:'Rotate an n by n matrix 90 degrees clockwise in place.',concepts:['Matrix transformation','Transpose then reverse rows'],algorithm:['Transpose the matrix across its main diagonal.','Reverse every row.','The two transformations together create a clockwise rotation.'],code:'for (let r = 0; r < n; r++)\n  for (let c = r + 1; c < n; c++) [matrix[r][c], matrix[c][r]] = [matrix[c][r], matrix[r][c]];\nfor (const row of matrix) row.reverse();',fixes:['Start the inner transpose loop at r + 1 to avoid swapping twice.','Reverse rows, not columns, for clockwise rotation.'],complexity:'Time O(n²); space O(1).'},
+ 'Single Number':{brief:'Every integer appears twice except one. Return the value that appears only once.',concepts:['Bitwise XOR','XOR cancellation'],algorithm:['Start an accumulator at zero.','XOR every number into it.','Equal pairs cancel to zero, leaving the unpaired number.'],code:'let result = 0;\nfor (const n of nums) result ^= n;\nreturn result;',fixes:['Use XOR, not OR; identical XOR values cancel.','Do not sort or use a set when constant extra space is required.'],complexity:'Time O(n); space O(1).'}
+});
+// A Built badge means every learning stage has specific content and interactions.
+// Keep this deliberately conservative: partially drafted lessons stay unmarked.
+const completedLessons = new Set(['Contains Duplicate','Two Sum II','Longest Substring Without Repeating Characters','Valid Parentheses','Binary Search','Reverse Linked List','Invert Binary Tree','Number of Islands']);
+setInterval(()=>document.querySelectorAll('.problem').forEach(button=>{
+  const name=button.childNodes[0]?.textContent.trim();
+  if(!completedLessons.has(name)){button.querySelector('.authored')?.remove();return}
+  if(!button.querySelector('.authored')){const mark=document.createElement('span');mark.className='authored';mark.textContent='✓ Built';mark.style.cssText='float:right;margin-right:8px;color:#117b78;font-size:11px;font-weight:900';button.appendChild(mark)}
+}),250);
+</script><script>
+setInterval(()=>{
+ document.querySelectorAll('.problem').forEach(button=>{
+   const name=button.childNodes[0]?.textContent.trim();
+   if(!completedLessons.has(name)){button.querySelector('.authored')?.remove();return;}
+   if(button.querySelector('.authored'))return;
+   if(completedLessons.has(name)){
+     const mark=document.createElement('span');mark.className='authored';mark.textContent='✓ Built';
+     mark.style.cssText='float:right;margin-right:8px;color:#117b78;font-size:11px;font-weight:900';button.appendChild(mark);
+   }
+ });
+},100);
+</script><script>
+// Tailored code feedback and complexity analysis for completed lessons.
+document.addEventListener('click', event => {
+  const choice = event.target.closest('[data-code-choice]');
+  const title = document.querySelector('.lesson h1')?.textContent;
+  if (!choice || !codeExercises[title]?.some(item=>item.wrong)) return;
+  event.stopImmediatePropagation(); event.preventDefault();
+  const exercise = codeExercises[title].find(item => item.choices.includes(choice.dataset.codeChoice) && choice.closest('.content')?.querySelector('pre')?.textContent === item.code);
+  if (!exercise) return;
+  const ok = choice.dataset.codeChoice === exercise.correct;
+  const feedback = document.querySelector('.code-feedback');
+  feedback.hidden = false;
+  feedback.textContent = ok ? `✓ Correct. ${exercise.why}` : `Not quite. ${exercise.wrong?.[choice.dataset.codeChoice]||'That choice does not make this line work.'}`;
+  feedback.style.cssText = `margin-top:10px;padding:11px;border-radius:8px;color:${ok?'#21594e':'#7b4537'};background:${ok?'#dff0e9':'#fff0e9'}`;
+  if (ok) document.querySelector('.next-fix')?.style.setProperty('display','inline-block');
+}, true);
+
+const complexityLessons={
+ 'Reverse Linked List':{
+  code:'let prev = null, current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;',
+  work:'During the while loop, how many times can a single node become current?',
+  workChoices:[['once','At most once'],['revisit','Once for every other node']],
+  workWhy:'The current pointer moves to the saved next node and never moves backward, so each node is processed once.',
+  memory:'Besides the input list, what storage can grow as the list gets longer?',
+  memoryChoices:[['constant','Only prev, current, and next'],['nodes','A second list of all nodes']],
+  memoryCorrect:'constant',
+  memoryWhy:'The algorithm changes links in the original list and holds only three node references.',
+  final:[['linear-constant','Time O(n), space O(1)'],['quadratic-constant','Time O(n²), space O(1)'],['linear-linear','Time O(n), space O(n)']],
+  finalCorrect:'linear-constant'
+ },
+ 'Two Sum II':{
+  code:'let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  if (sum < target) left++;\n  else right--;\n}',
+  work:'Across the full search, how many times can either pointer move?',
+  workChoices:[['once','At most once per array position'],['nested','Once for every other array position']],
+  workWhy:'left only moves right and right only moves left. Together they can cross the array only once.',
+  memory:'Besides the input array, what storage can grow as the input gets longer?',
+  memoryChoices:[['constant','Only left, right, and sum'],['map','A map of every value']],
+  memoryCorrect:'constant',
+  memoryWhy:'The algorithm keeps a fixed number of variables and uses the sorted input directly.',
+ final:[['linear-constant','Time O(n), space O(1)'],['quadratic-constant','Time O(n²), space O(1)'],['linear-linear','Time O(n), space O(n)']],
+  finalCorrect:'linear-constant'
+ },
+ 'Longest Substring Without Repeating Characters':{
+  code:'const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}\nreturn best;',
+  work:'Although there is a while loop inside the for loop, how many total times can one character leave the window?',
+  workChoices:[['once','At most once'],['nested','Once for every later character']],
+  workWhy:'left only moves forward. Each character is added once and removed at most once, so the two pointers make one total pass.',
+  memory:'In the worst case, what extra storage can grow with the input string?',
+  memoryChoices:[['set','The set of characters in the current window'],['constant','Only left, right, and best']],
+  memoryCorrect:'set',
+  memoryWhy:'When all characters are distinct, the current window and its set can contain the whole string.',
+  final:[['linear-linear','Time O(n), space O(n)'],['quadratic-linear','Time O(n²), space O(n)'],['linear-constant','Time O(n), space O(1)']],
+  finalCorrect:'linear-linear'
+ },
+ 'Valid Parentheses':{
+  code:'const pairs = { ")":"(", "]":"[", "}":"{" };\nconst stack = [];\nfor (const char of s) {\n  if (char in pairs) {\n    if (stack.pop() !== pairs[char]) return false;\n  } else stack.push(char);\n}\nreturn stack.length === 0;',
+  work:'How many times can one bracket be read by the for loop?',
+  workChoices:[['once','At most once'],['nested','Once for every other bracket']],
+  workWhy:'The loop makes one pass through the string, and each stack push or pop is constant time.',
+  memory:'In the worst case, what extra storage can grow with the string?',
+  memoryChoices:[['stack','The stack of unmatched opening brackets'],['constant','Only the pairs object']],
+  memoryCorrect:'stack',
+  memoryWhy:'A string of only opening brackets leaves every bracket on the stack, so the stack can hold n values.',
+ final:[['linear-linear','Time O(n), space O(n)'],['quadratic-linear','Time O(n²), space O(n)'],['linear-constant','Time O(n), space O(1)']],
+  finalCorrect:'linear-linear'
+ },
+ 'Binary Search':{
+  code:'let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  else right = mid - 1;\n}\nreturn -1;',
+  work:'After each unsuccessful comparison, what happens to the remaining search interval?',
+  workChoices:[['halve','It is cut roughly in half'],['one','It loses only one value']],
+  workCorrect:'halve',
+  workWhy:'Each comparison proves an entire half of the sorted interval cannot contain the target.',
+  memory:'Besides the input array, what storage can grow as the array gets longer?',
+  memoryChoices:[['constant','Only left, right, and mid'],['copy','A copy of the remaining half']],
+  memoryCorrect:'constant',
+  memoryWhy:'The active interval is represented by indexes; no new array is created.',
+  final:[['log-constant','Time O(log n), space O(1)'],['linear-constant','Time O(n), space O(1)'],['log-linear','Time O(log n), space O(n)']],
+  finalCorrect:'log-constant'
+ },
+ 'Number of Islands':{
+  code:'function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== "1") return;\n  grid[r][c] = "0";\n  visit(r + 1, c); visit(r - 1, c);\n  visit(r, c + 1); visit(r, c - 1);\n}\nfor (let r = 0; r < rows; r++)\n  for (let c = 0; c < cols; c++)\n    if (grid[r][c] === "1") { count++; visit(r, c); }',
+  work:'Across the scan and all flood fills, how many times can one grid cell be visited as land?',
+  workChoices:[['once','At most once'],['nested','Once for every other cell']],
+  workWhy:'Flood fill marks a land cell the first time it visits it, so later scans and calls skip it.',
+  memory:'What extra storage can grow with the size of the grid in this recursive version?',
+  memoryChoices:[['callstack','The recursion call stack'],['constant','Only the island counter']],
+  memoryCorrect:'callstack',
+  memoryWhy:'A large connected island can create a recursive path containing many cells.',
+  final:[['grid-grid','Time O(rows × cols), space O(rows × cols)'],['quadratic-constant','Time O((rows × cols)²), space O(1)'],['grid-constant','Time O(rows × cols), space O(1)']],
+  finalCorrect:'grid-grid'
+ },
+ 'Invert Binary Tree':{
+  code:'function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}',
+  work:'How many times does the recursive function process a real tree node?',
+  workChoices:[['once','At most once'],['nested','Once for every other node']],
+  workWhy:'Each call handles one node, swaps its two child references, and recurses into each child once.',
+  memory:'What extra storage can grow as the tree gets taller?',
+  memoryChoices:[['stack','The recursion call stack'],['constant','Only oldLeft']],
+  memoryCorrect:'stack',
+  memoryWhy:'The recursive calls wait for child calls to finish. Their depth follows the tree height h.',
+  final:[['tree-height','Time O(n), space O(h)'],['tree-constant','Time O(n), space O(1)'],['quadratic-height','Time O(n²), space O(h)']],
+  finalCorrect:'tree-height'
+ }
+};
+setInterval(()=>{
+ const content=document.querySelector('.content'),title=document.querySelector('.lesson h1')?.textContent,lesson=complexityLessons[title];
+ if(!content||!lesson||content.dataset.tailoredComplexity||!content.querySelector('h2')?.textContent.includes('Time and space'))return;
+ content.dataset.tailoredComplexity='true';
+ const buttons=(attribute,choices)=>choices.map(([id,label])=>`<button ${attribute}="${id}" style="display:block;width:100%;margin:7px 0;padding:11px;border:1px solid #d9ded9;border-radius:8px;background:#fff;text-align:left">${label}</button>`).join('');
+ content.innerHTML=`<h2>Analyze the complexity</h2><p>Here is the completed solution. Use what it does to derive the bound.</p><pre class="code">${lesson.code}</pre><section><b>1. Count the work</b><p>${lesson.work}</p>${buttons('data-tailored-work',lesson.workChoices)}<p class="tailored-work-feedback" hidden></p></section><section class="tailored-memory" hidden><b>2. Count extra memory</b><p>${lesson.memory}</p>${buttons('data-tailored-memory',lesson.memoryChoices)}<p class="tailored-memory-feedback" hidden></p></section><section class="tailored-final" hidden></section>`;
+ const feedback=(node,good,message)=>{node.hidden=false;node.textContent=message;node.style.cssText=`margin-top:10px;padding:10px;border-radius:8px;color:${good?'#21594e':'#7b4537'};background:${good?'#dff0e9':'#fff0e9'}`};
+ content.querySelectorAll('[data-tailored-work]').forEach(button=>button.onclick=()=>{const good=button.dataset.tailoredWork===(lesson.workCorrect||'once');feedback(content.querySelector('.tailored-work-feedback'),good,good?lesson.workWhy:'Trace the loop’s active range after one iteration, then decide whether the same work can happen again.');if(good)content.querySelector('.tailored-memory').hidden=false});
+ content.querySelectorAll('[data-tailored-memory]').forEach(button=>button.onclick=()=>{const good=button.dataset.tailoredMemory===lesson.memoryCorrect;feedback(content.querySelector('.tailored-memory-feedback'),good,good?lesson.memoryWhy:'Look only at additional storage, then ask whether its size can grow with the input.');if(!good)return;const final=content.querySelector('.tailored-final');final.hidden=false;final.innerHTML=`<b>3. State the complexity</b><p>Combine your two observations.</p>${buttons('data-tailored-final',lesson.final)}<p class="tailored-final-feedback" hidden></p>`;final.querySelectorAll('[data-tailored-final]').forEach(button=>button.onclick=()=>{const right=button.dataset.tailoredFinal===lesson.finalCorrect;feedback(final.querySelector('.tailored-final-feedback'),right,right?'✓ Correct. You combined the loop and memory observations into the final bound.':'Not quite. Revisit how much total work the pointers do and which extra storage can grow with the input.')})});
+},100);
 </script></body></html>
