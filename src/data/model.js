@@ -2,6 +2,7 @@ import { curriculum } from './curriculum.js';
 import { easyWalkthroughTitles, hardWalkthroughTitles } from './difficulty.js';
 import { codeExercises, drillContext, drillDifficultyByTitle, extraCodeDrills } from './drills.js';
 import { supplementalCodeDrills } from './supplemental-drills.js';
+import { walkthroughUpgrades } from './walkthrough-upgrades.js';
 import { pythonExercises, pythonSolutions } from './languages.js';
 import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
 
@@ -16,6 +17,21 @@ const featuredTopics = {
 
 const builtTitles = new Set([
   'Contains Duplicate',
+  'Valid Anagram',
+  'Valid Palindrome',
+  'Best Time to Buy and Sell Stock',
+  'Min Stack',
+  'Maximum Depth of Binary Tree',
+  'Group Anagrams',
+  '3Sum',
+  'Daily Temperatures',
+  'Merge Two Sorted Lists',
+  'Climbing Stairs',
+  'Course Schedule',
+  'Diameter of Binary Tree',
+  'Kth Largest Element in an Array',
+  'Coin Change',
+  'Distinct Subsequences',
   'Two Sum II',
   'Longest Substring Without Repeating Characters',
   'Valid Parentheses',
@@ -49,7 +65,7 @@ export function isBuilt(title) {
 }
 
 export function lessonFor(card, language) {
-  const authored = featured[card.title];
+  const authored = featured[card.title] || walkthroughUpgrades[card.title];
   const profile = profiles[card.topic] || fallback;
   const base = authored || {
     brief: problemExplanations[card.title] || `Solve ${card.title}.`,
@@ -63,13 +79,13 @@ export function lessonFor(card, language) {
     title: card.title,
     topic: card.topic,
     explanation: problemExplanations[card.title] || base.brief,
-    code: language === 'Python' && pythonSolutions[card.title]
-      ? pythonSolutions[card.title]
+    code: language === 'Python' && (authored?.pythonCode || pythonSolutions[card.title])
+      ? authored?.pythonCode || pythonSolutions[card.title]
       : base.code,
-    inputOutput: briefs[card.title] || null,
-    conceptChoices: conceptChoices[card.title] || null,
-    exercises: (codeExercises[card.title] || []).map((exercise, index) => localizedExercise(card.title, index, exercise, language)),
-    complexityGuide: complexityLessons[card.title] || null,
+    inputOutput: authored?.inputOutput || briefs[card.title] || null,
+    conceptChoices: authored?.conceptChoices || conceptChoices[card.title] || null,
+    exercises: (authored?.exercises || codeExercises[card.title] || []).map((exercise, index) => localizedExercise(card.title, index, exercise, language)),
+    complexityGuide: authored?.complexityGuide || complexityLessons[card.title] || null,
     drillContext: drillContext[card.title],
     isBuilt: isBuilt(card.title),
   };

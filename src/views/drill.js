@@ -1,9 +1,11 @@
 import { difficultyTag, feedback, shuffle, topBar } from '../lib/ui.js';
 import { sourceLink } from '../lib/problem-source.js';
 
-// The context reveal is deliberately not a solution reveal. Keep the line the
-// learner is being asked about blank while leaving enough surrounding code to
-// understand where it fits.
+export const MAX_DRILL_CONTEXT_LINES = 36;
+
+// Keep the complete short solution visible without revealing the answer: the
+// line the learner is working on stays blank while its surrounding code shows
+// exactly where it fits.
 function escapeCode(value) {
   return value
     .replaceAll('&', '&amp;')
@@ -48,12 +50,13 @@ export function redactedCodeContext(fullCode, exercise) {
 
   const [beforeBlank, afterBlank] = blankLine.split('___');
   const lines = fullCode.split('\n');
+  if (lines.length > MAX_DRILL_CONTEXT_LINES) return null;
   const targetLineIndex = lines.findIndex((line) => normalizeCode(line).includes(
     normalizeCode(`${beforeBlank}${exercise.correct}${afterBlank}`),
   ));
 
-  // A reveal earns its place only when the whole completed preview is a real
-  // segment of a meaningfully larger solution—not merely a related line.
+  // Only use a real, meaningfully larger solution rather than merely a
+  // related line.
   if (
     targetLineIndex < 0
     || normalizeCode(fullCode).length - normalizeCode(blankLine).length < 32
@@ -80,6 +83,43 @@ function difficultyPicker(selected) {
   </select></label>`;
 }
 
+function richText(value) {
+  return escapeCode(value).replaceAll('\n', '<br>');
+}
+
+function problemDetails(lesson, drill) {
+  const details = lesson.inputOutput?.length
+    ? lesson.inputOutput
+    : [
+      lesson.explanation || drill.problemDescription || drill.context,
+      drill.context || lesson.drillContext,
+    ].filter(Boolean);
+  return `<details class="drill-details">
+    <summary>Read more about the problem</summary>
+    <div class="drill-details-body">
+      <ul>${details.map((detail) => `<li>${richText(detail)}</li>`).join('')}</ul>
+    </div>
+  </details>`;
+}
+
+function solutionDetails(lesson) {
+  const concepts = lesson.concepts?.length
+    ? `<p><b>Useful ideas:</b> ${lesson.concepts.map(escapeCode).join(', ')}.</p>`
+    : '';
+  const steps = lesson.algorithm?.length
+    ? `<ol>${lesson.algorithm.map((step) => `<li>${richText(step)}</li>`).join('')}</ol>`
+    : '';
+  const complexity = lesson.complexity
+    ? `<p><b>Complexity:</b> ${richText(lesson.complexity)}</p>`
+    : '';
+  return `<details class="drill-details drill-solution-details">
+    <summary>Read about the solution</summary>
+    <div class="drill-details-body">
+      ${concepts}${steps}${complexity}
+    </div>
+  </details>`;
+}
+
 export function renderDrill({ state, drill, lesson, exercise }) {
   const choices = shuffle(exercise.choices);
   const codeContext = [
@@ -91,37 +131,48 @@ export function renderDrill({ state, drill, lesson, exercise }) {
     title: `Random code drill · ${state.drillIndex + 1}/${state.drillQueue.length}`,
     language: state.language,
     variant: 'drill-topbar',
-    extras: `${difficultyPicker(state.drillDifficulty)}<button class="primary" data-next-drill>Next random drill →</button>`,
+    extras: difficultyPicker(state.drillDifficulty),
   })}
   <article class="drill-card">
     <div class="eyebrow">${(drill.topic || lesson.topic).toUpperCase()}</div>
     <h1>${drill.title}${difficultyTag(drill.difficulty)}</h1>
-    <section class="drill-context"><b>What these names mean</b>
-      <p>${drill.context || lesson.drillContext || lesson.explanation}</p>
+    <section class="drill-context"><b>The problem</b>
+      <p>${lesson.explanation || drill.problemDescription || drill.context}</p>
     </section>
+    ${problemDetails(lesson, drill)}
     <p class="drill-prompt">${exercise.prompt}</p>
-    <pre class="code">${highlightBlank(exercise.code)}</pre>
-    ${codeContext ? `<details class="drill-full-code"><summary>Reveal full solution (blank preserved)</summary>
-      <p>See the complete solution around this line. Your blank stays highlighted; matching answer text elsewhere is hidden too.</p>
-      <pre class="code">${codeContext}</pre>
-    </details>` : ''}
+    <section class="drill-code-context">
+      <pre class="code drill-context-code" tabindex="0">${codeContext || highlightBlank(exercise.code)}</pre>
+    </section>
     <div class="choice-list">${choices.map((choice) => `<button class="drill-choice" data-drill-choice="${encodeURIComponent(choice)}">${choice}</button>`).join('')}</div>
-    <div data-drill-feedback></div>
+    <div data-drill-feedback aria-live="polite"></div>
+    ${solutionDetails(lesson)}
+    <div data-drill-next></div>
     ${sourceLink(drill.title)}
   </article>`;
 }
 
-export function bindDrillAnswer(root, exercise) {
+export function bindDrillAnswer(root, exercise, onNext) {
+  const feedbackSlot = root.querySelector('[data-drill-feedback]');
+  const nextSlot = root.querySelector('[data-drill-next]');
+  const solutionDetailsElement = root.querySelector('.drill-solution-details');
   root.querySelectorAll('[data-drill-choice]').forEach((button) => {
     button.addEventListener('click', () => {
       const choice = decodeURIComponent(button.dataset.drillChoice);
       const correct = choice === exercise.correct;
-      root.querySelector('[data-drill-feedback]').innerHTML = feedback(
+      feedbackSlot.innerHTML = feedback(
         correct
           ? `✓ Correct. ${exercise.why}`
           : `Not quite. ${exercise.wrong?.[choice] || 'That option is useful elsewhere, but it does not make this line work.'}`,
         correct,
       );
+      nextSlot.innerHTML = '';
+      if (correct) {
+        solutionDetailsElement.open = true;
+        nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
+        nextSlot.querySelector('[data-next-drill]').addEventListener('click', onNext);
+      }
+      feedbackSlot.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 }

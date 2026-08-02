@@ -6,6 +6,7 @@ Walkcode is a static site. Keep it lightweight, mobile-friendly, and understanda
 
 - `src/data/curriculum.js` is the roadmap: topic names and problem titles.
 - `src/data/lesson-records.js`, `drills.js`, `supplemental-drills.js`, `languages.js`, and `difficulty.js` together are the content source of truth. Keep explanations, walkthrough records, drills, language variants, and difficulty metadata in their matching file.
+- `src/data/walkthrough-upgrades.js` holds complete lesson records for existing roadmap problems upgraded from Work in progress to Built. Each record needs JavaScript/Python code, input/output/example, concept choices, ordered steps, two code fixes, and guided complexity.
 - `src/views/` renders one screen each. Keep screen-specific markup and event logic in the relevant view.
 - `src/lib/state.js` owns device-local progress and UI state.
 - `src/lib/ui.js` owns shared rendering helpers such as answer shuffling, tags, feedback, and pickers.
@@ -43,7 +44,9 @@ Every problem that is not Built is automatically labeled **Work in progress** in
 - Code-fix exercises automatically feed the randomized drill queue.
 - Standalone drills belong in `extraCodeDrills` or `supplemental-drills.js` and need context, JavaScript and Python variants, and difficulty. Every supplemental drill also needs a JavaScript and Python full solution in `supplemental-solutions.js`; keep the line containing the blank as a real segment of that solution.
 - Every walkthrough and drill renders a LeetCode source link from `src/lib/problem-source.js`. Add an explicit slug override there whenever a title does not match its LeetCode page slug.
-- A full-code context reveal is shown only when the completed blank line is a real segment of a meaningfully larger solution. It must retain that focused line with a visibly highlighted `___`, show the actual surrounding code, and never fake context by repeating the preview. If the answer naturally occurs elsewhere in that real solution, the renderer masks those repeats rather than leaking it.
+- Every drill opens with the plain-language problem description, then directly shows its complete answer-safe code context. The context must retain the focused line with a visibly highlighted `___`, show real surrounding code rather than a repeated preview, and mask any other appearance of the answer.
+- Keep every JavaScript and Python drill solution at or below 36 lines. The complete code context is always visible directly below the prompt and scrolls independently of the choices so learners can inspect it without losing their answers.
+- Drills offer optional **Read more about the problem** and **Read about the solution** sections. Keep the solution section below the answer choices. After a correct answer, open it, scroll the learner to the feedback, and show the only in-flow **Next random drill** button beneath that explanation. Prefer exact `inputOutput`, concepts, algorithms, and complexity supplied by the lesson record; a new built lesson should fill those fields so its optional explanations are problem-specific.
 - Never make answer position part of the answer key. The shared shuffle helper randomizes every multiple-choice display.
 - Correct feedback explains why the answer works. Incorrect feedback explains why that choice does not fit this problem without revealing the correct answer.
 

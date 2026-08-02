@@ -20,6 +20,46 @@ export const featured = {
     ],
     "complexity": "Time O(n); space O(n) in the worst case."
   },
+  "Reverse Linked List": {
+    "brief": "Given the head of a singly linked list, reverse its links in place and return the new head.",
+    "concepts": [
+      "Pointer rewiring",
+      "The prev / current / next invariant"
+    ],
+    "algorithm": [
+      "Start prev at null and current at the original head.",
+      "Save current.next before changing any link.",
+      "Point current.next backward to prev.",
+      "Move prev to current, then move current to the saved next node.",
+      "When current reaches null, prev is the new head."
+    ],
+    "code": "let prev = null;\nlet current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;",
+    "fixes": [
+      "Save next before overwriting current.next, or the unreversed list is lost.",
+      "Return prev, not head: the original head becomes the final node."
+    ],
+    "complexity": "Time O(n); space O(1) for the iterative version."
+  },
+  "Invert Binary Tree": {
+    "brief": "Given a binary tree, swap the left and right child of every node and return the same root.",
+    "concepts": [
+      "Tree DFS",
+      "Recursive child swapping"
+    ],
+    "algorithm": [
+      "An empty subtree needs no work.",
+      "Keep the original left child safe while you recursively invert the right child.",
+      "Assign the inverted right subtree to root.left.",
+      "Assign the inverted original left subtree to root.right.",
+      "Return root after both child links have been replaced."
+    ],
+    "code": "function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}",
+    "fixes": [
+      "Save one child before its reference is overwritten.",
+      "Handle the null base case before reading a child."
+    ],
+    "complexity": "Time O(n); space O(h) for the recursion stack, where h is the tree height."
+  },
   "Two Sum": {
     "brief": "Given an array of integers and a target, return the indices of two different numbers whose values add up to that target.",
     "concepts": [
@@ -67,6 +107,7 @@ export const featured = {
     "algorithm": [
       "Expand the right edge one character at a time.",
       "If the new character already exists, shrink the left edge until it does not.",
+      "Add the incoming character once the window is valid again.",
       "After the window is valid, update the best length."
     ],
     "code": "const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}",
@@ -104,7 +145,8 @@ export const featured = {
     "algorithm": [
       "Push every opening bracket.",
       "For a closing bracket, the stack must have the matching opener on top.",
-      "Pop that opener; the stack must be empty at the end."
+      "Pop that opener after confirming the stack was not empty.",
+      "The stack must be empty at the end."
     ],
     "code": "const pairs = { \")\":\"(\", \"]\":\"[\", \"}\":\"{\" };\nconst stack = [];\nfor (const ch of s) {\n  if (ch in pairs) { if (stack.pop() !== pairs[ch]) return false; }\n  else stack.push(ch);\n}\nreturn stack.length === 0;",
     "fixes": [
@@ -123,7 +165,8 @@ export const featured = {
     "algorithm": [
       "Scan every cell.",
       "When you find unvisited land, increment the count.",
-      "Flood-fill all connected land so it is not counted again."
+      "Flood-fill all connected land so it is not counted again.",
+      "During the fill, stop at water, visited cells, or the grid boundary."
     ],
     "code": "function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  grid[r][c] = \"0\";\n  visit(r+1,c); visit(r-1,c); visit(r,c+1); visit(r,c-1);\n}",
     "fixes": [
@@ -548,6 +591,29 @@ export const conceptChoices = {
 };
 
 export const complexityLessons = {
+  "Contains Duplicate": {
+    "code": "const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;",
+    "work": "Across the for loop, how many times can one array value be checked and added to the set?",
+    "workChoices": [
+      ["once", "At most once"],
+      ["nested", "Once for every other array value"]
+    ],
+    "workCorrect": "once",
+    "workWhy": "The loop advances through nums once. Set membership and insertion are constant time on average, so each value contributes constant work.",
+    "memory": "In the worst case, what extra storage can grow with the array?",
+    "memoryChoices": [
+      ["set", "The set of distinct values seen so far"],
+      ["constant", "Only n and the loop index"]
+    ],
+    "memoryCorrect": "set",
+    "memoryWhy": "If no number repeats, seen stores every input value before the loop finishes.",
+    "final": [
+      ["linear-linear", "Time O(n), space O(n)"],
+      ["quadratic-linear", "Time O(n²), space O(n)"],
+      ["linear-constant", "Time O(n), space O(1)"]
+    ],
+    "finalCorrect": "linear-linear"
+  },
   "Reverse Linked List": {
     "code": "let prev = null, current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;",
     "work": "During the while loop, how many times can a single node become current?",
@@ -561,6 +627,7 @@ export const complexityLessons = {
         "Once for every other node"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "The current pointer moves to the saved next node and never moves backward, so each node is processed once.",
     "memory": "Besides the input list, what storage can grow as the list gets longer?",
     "memoryChoices": [
@@ -604,6 +671,7 @@ export const complexityLessons = {
         "Once for every other array position"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "left only moves right and right only moves left. Together they can cross the array only once.",
     "memory": "Besides the input array, what storage can grow as the input gets longer?",
     "memoryChoices": [
@@ -647,6 +715,7 @@ export const complexityLessons = {
         "Once for every later character"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "left only moves forward. Each character is added once and removed at most once, so the two pointers make one total pass.",
     "memory": "In the worst case, what extra storage can grow with the input string?",
     "memoryChoices": [
@@ -690,6 +759,7 @@ export const complexityLessons = {
         "Once for every other bracket"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "The loop makes one pass through the string, and each stack push or pop is constant time.",
     "memory": "In the worst case, what extra storage can grow with the string?",
     "memoryChoices": [
@@ -777,6 +847,7 @@ export const complexityLessons = {
         "Once for every other cell"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "Flood fill marks a land cell the first time it visits it, so later scans and calls skip it.",
     "memory": "What extra storage can grow with the size of the grid in this recursive version?",
     "memoryChoices": [
@@ -820,6 +891,7 @@ export const complexityLessons = {
         "Once for every other node"
       ]
     ],
+    "workCorrect": "once",
     "workWhy": "Each call handles one node, swaps its two child references, and recurses into each child once.",
     "memory": "What extra storage can grow as the tree gets taller?",
     "memoryChoices": [

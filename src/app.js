@@ -79,8 +79,7 @@ function renderDrillScreen() {
     ? drill.pythonExercise
     : localizedExercise(drill.title, drill.index, drill.exercise, appState.language);
   root.innerHTML = renderDrill({ state: appState, drill, lesson, exercise });
-  bindDrillAnswer(root, exercise);
-  root.querySelector('[data-next-drill]').addEventListener('click', () => { appState.drillIndex += 1; render(); });
+  bindDrillAnswer(root, exercise, () => { appState.drillIndex += 1; render(); });
   root.querySelector('[data-drill-difficulty]').addEventListener('change', (event) => startDrills(event.target.value));
 }
 
