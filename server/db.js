@@ -42,9 +42,11 @@ CREATE TABLE IF NOT EXISTS problems (
   topic text NOT NULL,
   difficulty text NOT NULL,
   is_built boolean NOT NULL DEFAULT false,
+  is_complete boolean NOT NULL DEFAULT false,
   is_card boolean NOT NULL DEFAULT true,
   position integer NOT NULL
 );
+ALTER TABLE problems ADD COLUMN IF NOT EXISTS is_complete boolean NOT NULL DEFAULT false;
 CREATE TABLE IF NOT EXISTS lessons (
   problem_id text NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
   language text NOT NULL,
@@ -61,6 +63,10 @@ CREATE TABLE IF NOT EXISTS drills (
 );
 `;
 
+// Bump when the DB schema/columns change so a redeploy forces a re-seed even if the content
+// version is unchanged (the stored version combines content hash + this schema version).
+const SCHEMA_VERSION = 2;
+
 // Unique topics in card order — the order the library renders groups in.
 function topicsFrom(rich) {
   const seen = new Map();
@@ -70,7 +76,7 @@ function topicsFrom(rich) {
   return [...seen.entries()].map(([name, position]) => ({ name, position }));
 }
 
-async function seedFromBundle(client, rich) {
+async function seedFromBundle(client, rich, storedVersion) {
   await client.query('BEGIN');
   try {
     await client.query('TRUNCATE lessons, drills, problems, topics, content_meta RESTART IDENTITY CASCADE');
@@ -81,8 +87,8 @@ async function seedFromBundle(client, rich) {
 
     for (const problem of rich.problems) {
       await client.query(
-        'INSERT INTO problems (id, title, topic, difficulty, is_built, is_card, position) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [problem.id, problem.title, problem.topic, problem.difficulty, problem.isBuilt, problem.isCard, problem.position],
+        'INSERT INTO problems (id, title, topic, difficulty, is_built, is_complete, is_card, position) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        [problem.id, problem.title, problem.topic, problem.difficulty, problem.isBuilt, Boolean(problem.isComplete), problem.isCard, problem.position],
       );
     }
 
@@ -105,7 +111,7 @@ async function seedFromBundle(client, rich) {
       );
     }
 
-    await client.query('INSERT INTO content_meta (id, version) VALUES (1, $1)', [rich.version]);
+    await client.query('INSERT INTO content_meta (id, version) VALUES (1, $1)', [storedVersion]);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -122,11 +128,12 @@ export async function ensureSeeded() {
   try {
     await client.query(SCHEMA_SQL);
     const rich = assembleBundle();
+    const storedVersion = `${rich.version}#s${SCHEMA_VERSION}`;
     const { rows } = await client.query('SELECT version FROM content_meta WHERE id = 1');
-    if (rows.length && rows[0].version === rich.version) {
+    if (rows.length && rows[0].version === storedVersion) {
       return { seeded: false, version: rich.version };
     }
-    await seedFromBundle(client, rich);
+    await seedFromBundle(client, rich, storedVersion);
     return { seeded: true, version: rich.version };
   } finally {
     client.release();
@@ -138,7 +145,7 @@ export async function ensureSeeded() {
 export async function getContentBundle() {
   const pool = await getPool();
   const [problemRows, lessonRows, drillRows, metaRows] = await Promise.all([
-    pool.query('SELECT id, topic, title, difficulty, is_built, position FROM problems WHERE is_card = true ORDER BY position'),
+    pool.query('SELECT id, topic, title, difficulty, is_built, is_complete, position FROM problems WHERE is_card = true ORDER BY position'),
     pool.query('SELECT problem_id, language, body FROM lessons'),
     pool.query('SELECT body FROM drills ORDER BY position'),
     pool.query('SELECT version FROM content_meta WHERE id = 1'),
@@ -150,6 +157,7 @@ export async function getContentBundle() {
     title: row.title,
     difficulty: row.difficulty,
     isBuilt: row.is_built,
+    isComplete: row.is_complete,
     position: row.position,
   }));
 
@@ -160,7 +168,9 @@ export async function getContentBundle() {
 
   const drills = drillRows.rows.map((row) => row.body);
 
-  return { version: metaRows.rows[0]?.version || '', cards, lessons, drills };
+  // Strip the "#s<schema>" suffix so the client sees the pure content version (same as offline).
+  const version = (metaRows.rows[0]?.version || '').split('#s')[0];
+  return { version, cards, lessons, drills };
 }
 
 // Exposed so the offline/CLI paths and tests can reach the same assembled shapes.
