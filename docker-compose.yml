@@ -1,0 +1,49 @@
+# Local dev parity for Walkcode: the SAME container image as production (Cloud Run),
+# plus a local Postgres, so the M4/M5 backend work runs identically on a laptop.
+#
+#   docker compose up      → app at http://localhost:8088  (/api/health returns {"status":"ok"})
+#   docker compose down    → stop; add -v to also drop the Postgres volume
+#
+# Host port defaults to 8088 (8080 is a common collision — e.g. a local CVAT/Traefik stack).
+# Override with WALKCODE_PORT=9000 docker compose up. The container always listens on 8080.
+services:
+  app:
+    build: .
+    ports:
+      - "${WALKCODE_PORT:-8088}:8080"
+    environment:
+      PORT: 8080
+      # Wired now for parity; the server begins using it in M4/M5 (accounts + progress).
+      DATABASE_URL: postgres://walkcode:walkcode@db:5432/walkcode
+    depends_on:
+      db:
+        condition: service_healthy
+    # Live-edit static + server without rebuilding (dev convenience; prod uses the image's copied files).
+    volumes:
+      - ./index.html:/app/index.html:ro
+      - ./src:/app/src:ro
+      - ./server:/app/server:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: walkcode
+      POSTGRES_PASSWORD: walkcode
+      POSTGRES_DB: walkcode
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U walkcode -d walkcode"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -1,0 +1,11 @@
+# Keep the build context tiny — only server.js, index.html, and src/ are copied.
+.git
+node_modules
+*.md
+CNAME
+outputs
+work
+.DS_Store
+*.pem
+Dockerfile
+.dockerignore
