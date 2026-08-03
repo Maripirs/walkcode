@@ -27,6 +27,51 @@ function lesson(title, details) {
 }
 
 export const walkthroughUpgrades = {
+  'Product of Array Except Self': lesson('Product of Array Except Self', {
+    brief: 'Return an array where each position holds the product of all the other values, without dividing.',
+    concepts: ['Prefix product', 'Suffix product'],
+    intuition: 'Each answer is the product of everything to the left times everything to the right — one forward pass builds the left products and one backward pass folds in the right products, so you never need division.',
+    inputOutput: ['nums: an integer array (may contain zeros).', 'Return an array where each slot is the product of all other values.', 'Input: nums = [1, 2, 3, 4]\nOutput: [24, 12, 8, 6]'],
+    conceptChoices: ['Prefix and suffix products', 'Divide the total product', 'Two pointers'],
+    algorithm: ['Fill a result array with ones.', 'Left-to-right pass: set result[i] to the product of everything before i.', 'Right-to-left pass: multiply result[i] by the product of everything after i.', 'Return the result — no division used.'],
+    fixes: ['Initialize result with ones so the first prefix multiplies cleanly.', 'Use a second pass for suffixes instead of dividing (division breaks on zeros).'],
+    complexity: 'Time O(n); space O(1) beyond the output array.',
+    exercises: [
+      { prompt: 'In the forward pass, which line stores the running product of everything to the left of i?', correct: 'answer[i] = prefix;', choices: ['answer[i] = prefix;', 'answer[i] = postfix;', 'answer[i] = nums[i];'], why: 'Each slot first holds the product of all elements to its left — the prefix so far.' },
+      { prompt: 'In the backward pass, which line grows the running product of everything to the right?', correct: 'postfix *= nums[i];', choices: ['postfix *= nums[i];', 'postfix += nums[i];', 'postfix *= answer[i];'], why: 'postfix accumulates the product of all elements to the right as the scan moves backward.' },
+    ],
+    complexityGuide: { work: 'How many passes over the array does the algorithm make?', workChoices: [['two', 'Two linear passes'], ['nested', 'A pass for every element']], workCorrect: 'two', workWhy: 'One forward pass for prefixes and one backward pass for suffixes — both linear.', memory: 'Besides the output array, what extra storage grows with the input?', memoryChoices: [['constant', 'Only prefix and suffix accumulators'], ['array', 'A second full array']], memoryCorrect: 'constant', memoryWhy: 'Prefixes are written into the output array and only two running products are kept.', final: [['linear-constant', 'Time O(n), space O(1) extra'], ['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n) extra']], finalCorrect: 'linear-constant' },
+  }),
+  'Top K Frequent Elements': lesson('Top K Frequent Elements', {
+    brief: 'Return the k values that occur most often, in any order.',
+    concepts: ['Frequency count', 'Bucket sort by frequency'],
+    intuition: 'A value can appear at most n times, so instead of sorting by count, drop each value into a bucket indexed by its frequency and read the buckets from the top down — linear, no heap or sort.',
+    inputOutput: ['nums: an integer array; k: how many top values to return.', 'Return the k most frequent values (any order).', 'Input: nums = [1,1,1,2,2,3], k = 2\nOutput: [1, 2]'],
+    conceptChoices: ['Bucket sort by frequency', 'Sort the whole array', 'Two pointers'],
+    algorithm: ['Count how many times each value appears.', 'Make buckets indexed by frequency, from 0 to n.', 'Put each value in the bucket for its count.', 'Scan buckets from highest frequency downward, collecting values.', 'Stop once k values are collected.'],
+    fixes: ['Index the buckets by frequency, not by value.', 'Frequencies are bounded by n, so bucketing beats an O(n log n) sort.'],
+    complexity: 'Time O(n); space O(n).',
+    exercises: [
+      { prompt: 'Which line tallies how many times each value appears?', correct: 'for (const num of nums) counts.set(num, (counts.get(num) || 0) + 1);', choices: ['for (const num of nums) counts.set(num, (counts.get(num) || 0) + 1);', 'for (const num of nums) counts.set(num, 1);', 'for (const num of nums) counts.set(num, counts.get(num));'], why: 'Increment each value\'s running count, treating a missing value as zero.' },
+      { prompt: 'Which line groups values by how frequently they occur?', correct: 'for (const [num, count] of counts) buckets[count].push(num);', choices: ['for (const [num, count] of counts) buckets[count].push(num);', 'for (const [num, count] of counts) buckets[num].push(count);', 'for (const [num, count] of counts) buckets[count] = num;'], why: 'Index the bucket by frequency, so all values sharing a count land together.' },
+    ],
+    complexityGuide: { work: 'Counting aside, is the bucket phase linear or a sort?', workChoices: [['linear', 'Linear — build and scan buckets'], ['sort', 'An O(n log n) sort']], workCorrect: 'linear', workWhy: 'Counting, filling buckets, and scanning buckets are each linear — no comparison sort.', memory: 'What extra storage grows with the input?', memoryChoices: [['buckets', 'The counts map plus frequency buckets'], ['constant', 'Only k and a loop index']], memoryCorrect: 'buckets', memoryWhy: 'The map holds every distinct value and the buckets span all possible frequencies.', final: [['linear-linear', 'Time O(n), space O(n)'], ['nlogn-linear', 'Time O(n log n), space O(n)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-linear' },
+  }),
+  'Longest Consecutive Sequence': lesson('Longest Consecutive Sequence', {
+    brief: 'Find the length of the longest run of consecutive integers in an unsorted array.',
+    concepts: ['Hash set membership', 'Counting only from run starts'],
+    intuition: 'Only begin counting from a number whose left neighbor is missing — that makes each consecutive run get walked exactly once, so the whole thing is linear despite the inner loop.',
+    inputOutput: ['nums: an unsorted integer array.', 'Return the length of the longest consecutive run.', 'Input: nums = [100, 4, 200, 1, 3, 2]\nOutput: 4, from 1,2,3,4'],
+    conceptChoices: ['Hash set + run starts', 'Sort then scan', 'Two pointers'],
+    algorithm: ['Put every number in a set for O(1) lookups.', 'For each number, check whether it starts a run (no predecessor).', 'Skip numbers that are not a run start.', 'From a start, extend forward while the next value exists, counting length.', 'Track the longest run seen.'],
+    fixes: ['Only extend from a number whose predecessor is absent.', 'A set gives O(1) membership so the total work stays linear.'],
+    complexity: 'Time O(n); space O(n).',
+    exercises: [
+      { prompt: 'To count each run once, which line skips numbers that are not a run\'s start?', correct: 'if (set.has(n - 1)) continue;', choices: ['if (set.has(n - 1)) continue;', 'if (set.has(n + 1)) continue;', 'if (!set.has(n - 1)) continue;'], why: 'A number starts a run only when n - 1 is absent; if n - 1 exists, skip this number.' },
+      { prompt: 'Which line extends the current run forward?', correct: 'while (set.has(n + length)) length++;', choices: ['while (set.has(n + length)) length++;', 'while (set.has(n - length)) length++;', 'while (set.has(n + length)) length--;'], why: 'From the run\'s start, keep growing while the next consecutive value is present.' },
+    ],
+    complexityGuide: { work: 'The inner while loop looks nested — how many times can it run in total?', workChoices: [['once', 'Each number is extended at most once overall'], ['nested', 'Once for every pair of numbers']], workCorrect: 'once', workWhy: 'Extension only runs from run starts, so each number is counted a single time across its run — linear.', memory: 'What extra storage grows with the input?', memoryChoices: [['set', 'The set of all numbers'], ['constant', 'Only best and length']], memoryCorrect: 'set', memoryWhy: 'The hash set stores every input value for constant-time membership checks.', final: [['linear-linear', 'Time O(n), space O(n)'], ['nlogn-constant', 'Time O(n log n), space O(1)'], ['quadratic-linear', 'Time O(n²), space O(n)']], finalCorrect: 'linear-linear' },
+  }),
   'Valid Anagram': lesson('Valid Anagram', {
     brief: 'Given strings s and t, return true when they have the same character frequencies.',
     concepts: ['Character frequency map', 'Count balance'],

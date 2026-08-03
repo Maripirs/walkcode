@@ -4,6 +4,10 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Longest Consecutive Sequence': solution(
+    lines('function longestConsecutive(nums) {', '  const set = new Set(nums);', '  let best = 0;', '  for (const n of set) {', '    if (set.has(n - 1)) continue;', '    let length = 1;', '    while (set.has(n + length)) length++;', '    best = Math.max(best, length);', '  }', '  return best;', '}'),
+    lines('def longest_consecutive(nums):', '    num_set = set(nums)', '    best = 0', '    for n in num_set:', '        if n - 1 in num_set:', '            continue', '        length = 1', '        while n + length in num_set:', '            length += 1', '        best = max(best, length)', '    return best')),
+
   'Valid Anagram': solution(
     lines('function isAnagram(s, t) {', '  if (s.length !== t.length) return false;', '  const counts = new Map();', '  for (const char of s) counts.set(char, (counts.get(char) || 0) + 1);', '  for (const char of t) {', '    const next = (counts.get(char) || 0) - 1;', '    if (next < 0) return false;', '    counts.set(char, next);', '  }', '  return true;', '}'),
     lines('def is_anagram(s, t):', '    if len(s) != len(t):', '        return False', '    counts = {}', '    for char in s:', '        counts[char] = counts.get(char, 0) + 1', '    for char in t:', '        counts[char] = counts.get(char, 0) - 1', '        if counts[char] < 0:', '            return False', '    return True')),
