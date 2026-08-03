@@ -27,6 +27,36 @@ function lesson(title, details) {
 }
 
 export const walkthroughUpgrades = {
+  'Evaluate Reverse Polish Notation': lesson('Evaluate Reverse Polish Notation', {
+    brief: 'Evaluate an arithmetic expression given in postfix (Reverse Polish) notation.',
+    concepts: ['Operand stack', 'Postfix evaluation'],
+    intuition: 'In postfix notation an operator always applies to the two most recent results — a stack fits perfectly: push numbers, and when an operator arrives, pop two, combine, and push the result back.',
+    inputOutput: ['tokens: an array of number strings and the operators +, -, *, /.', 'Return the integer value of the expression.', 'Input: ["2","1","+","3","*"]\nOutput: 9, i.e. (2 + 1) * 3'],
+    conceptChoices: ['Operand stack', 'Two pointers', 'Recursion tree'],
+    algorithm: ['Keep a stack of operands.', 'For each number token, push it onto the stack.', 'For each operator, pop the two most recent operands.', 'Apply the operator (left operand first) and push the result.', 'Return the value left on the stack.'],
+    fixes: ['Pop the right operand before the left — order matters for minus and divide.', 'Convert token strings to numbers before pushing.'],
+    complexity: 'Time O(n); space O(n).',
+    exercises: [
+      { prompt: 'Which line combines the two popped operands and returns the result to the stack?', correct: 'stack.push(ops[token](a, b));', choices: ['stack.push(ops[token](a, b));', 'stack.push(ops[token](b, a));', 'stack.push(a, b);'], why: 'Apply the operator to the left operand a and right operand b in that order, then push the single result.' },
+      { prompt: 'For a non-operator token, which line puts the operand on the stack?', correct: 'stack.push(Number(token));', choices: ['stack.push(Number(token));', 'stack.push(token);', 'stack.pop(Number(token));'], why: 'Convert the token string to a number and push it for later operators to use.' },
+    ],
+    complexityGuide: { work: 'How many times is each token processed?', workChoices: [['once', 'At most once'], ['nested', 'Once per other token']], workCorrect: 'once', workWhy: 'One pass reads each token, and each push or pop is constant time.', memory: 'What extra storage can grow with the input?', memoryChoices: [['stack', 'The operand stack'], ['constant', 'Only a and b']], memoryCorrect: 'stack', memoryWhy: 'A long run of numbers before an operator all sit on the stack.', final: [['linear-linear', 'Time O(n), space O(n)'], ['quadratic-linear', 'Time O(n²), space O(n)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-linear' },
+  }),
+  'Longest Repeating Character Replacement': lesson('Longest Repeating Character Replacement', {
+    brief: 'Find the longest substring you can turn into one repeated letter using at most k replacements.',
+    concepts: ['Sliding window', 'Most-frequent-char count'],
+    intuition: 'A window works if the characters that are not the most common one number at most k (those are the ones you replace) — so grow the window while window size minus the top character count stays within k, and shrink when it does not.',
+    inputOutput: ['s: an uppercase string; k: the number of characters you may replace.', 'Return the longest achievable run of one repeated letter.', 'Input: s = "AABABBA", k = 1\nOutput: 4'],
+    conceptChoices: ['Sliding window + character counts', 'Sort the string', 'Two pointers from both ends'],
+    algorithm: ['Count each character in the current window.', 'Expand the right edge, updating counts.', 'Track the highest single-character count in the window.', 'While the window needs more than k replacements, shrink from the left.', 'Record the largest valid window length.'],
+    fixes: ['Compare window size minus the top character count against k.', 'A shrinking window can never beat an earlier best, so maxCount need not decrease.'],
+    complexity: 'Time O(n); space O(1) (at most 26 counts).',
+    exercises: [
+      { prompt: 'Which line shrinks the window while it needs more than k replacements?', correct: 'while (right - left + 1 - maxCount > k) {', choices: ['while (right - left + 1 - maxCount > k) {', 'while (right - left + 1 - maxCount < k) {', 'while (right - left + 1 > k) {'], why: 'Window length minus the most frequent character count is how many need replacing; shrink while that exceeds k.' },
+      { prompt: 'Which line tracks the highest single-character count in the window?', correct: 'maxCount = Math.max(maxCount, counts.get(s[right]));', choices: ['maxCount = Math.max(maxCount, counts.get(s[right]));', 'maxCount = counts.get(s[right]);', 'maxCount = Math.max(maxCount, right - left);'], why: 'maxCount is the largest frequency of any one character, which sets how many replacements the window needs.' },
+    ],
+    complexityGuide: { work: 'How many times can each character enter and leave the window?', workChoices: [['once', 'At most once each'], ['nested', 'Once per other character']], workCorrect: 'once', workWhy: 'Both edges move only forward, so each character is added and removed at most once — linear.', memory: 'What bounds the extra storage?', memoryChoices: [['alphabet', 'One count per letter (at most 26)'], ['string', 'A copy of the string']], memoryCorrect: 'alphabet', memoryWhy: 'Only the frequency of each of the 26 uppercase letters is stored.', final: [['linear-constant', 'Time O(n), space O(1)'], ['linear-linear', 'Time O(n), space O(n)'], ['quadratic-constant', 'Time O(n²), space O(1)']], finalCorrect: 'linear-constant' },
+  }),
   'Product of Array Except Self': lesson('Product of Array Except Self', {
     brief: 'Return an array where each position holds the product of all the other values, without dividing.',
     concepts: ['Prefix product', 'Suffix product'],

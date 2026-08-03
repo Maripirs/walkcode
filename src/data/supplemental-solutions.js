@@ -4,6 +4,14 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Evaluate Reverse Polish Notation': solution(
+    lines('function evalRPN(tokens) {', '  const stack = [];', '  const ops = {', "    '+': (a, b) => a + b,", "    '-': (a, b) => a - b,", "    '*': (a, b) => a * b,", "    '/': (a, b) => Math.trunc(a / b),", '  };', '  for (const token of tokens) {', '    if (token in ops) {', '      const b = stack.pop();', '      const a = stack.pop();', '      stack.push(ops[token](a, b));', '    } else {', '      stack.push(Number(token));', '    }', '  }', '  return stack.pop();', '}'),
+    lines('def eval_rpn(tokens):', '    stack = []', '    ops = {', "        '+': lambda a, b: a + b,", "        '-': lambda a, b: a - b,", "        '*': lambda a, b: a * b,", "        '/': lambda a, b: int(a / b),", '    }', '    for token in tokens:', '        if token in ops:', '            b = stack.pop()', '            a = stack.pop()', '            stack.append(ops[token](a, b))', '        else:', '            stack.append(int(token))', '    return stack.pop()')),
+
+  'Longest Repeating Character Replacement': solution(
+    lines('function characterReplacement(s, k) {', '  const counts = new Map();', '  let left = 0;', '  let maxCount = 0;', '  let best = 0;', '  for (let right = 0; right < s.length; right++) {', '    counts.set(s[right], (counts.get(s[right]) || 0) + 1);', '    maxCount = Math.max(maxCount, counts.get(s[right]));', '    while (right - left + 1 - maxCount > k) {', '      counts.set(s[left], counts.get(s[left]) - 1);', '      left++;', '    }', '    best = Math.max(best, right - left + 1);', '  }', '  return best;', '}'),
+    lines('def character_replacement(s, k):', '    counts = {}', '    left = 0', '    max_count = 0', '    best = 0', '    for right in range(len(s)):', '        counts[s[right]] = counts.get(s[right], 0) + 1', '        max_count = max(max_count, counts[s[right]])', '        while right - left + 1 - max_count > k:', '            counts[s[left]] -= 1', '            left += 1', '        best = max(best, right - left + 1)', '    return best')),
+
   'Longest Consecutive Sequence': solution(
     lines('function longestConsecutive(nums) {', '  const set = new Set(nums);', '  let best = 0;', '  for (const n of set) {', '    if (set.has(n - 1)) continue;', '    let length = 1;', '    while (set.has(n + length)) length++;', '    best = Math.max(best, length);', '  }', '  return best;', '}'),
     lines('def longest_consecutive(nums):', '    num_set = set(nums)', '    best = 0', '    for n in num_set:', '        if n - 1 in num_set:', '            continue', '        length = 1', '        while n + length in num_set:', '            length += 1', '        best = max(best, length)', '    return best')),
