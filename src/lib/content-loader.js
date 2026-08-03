@@ -64,6 +64,34 @@ export async function loadFeatures() {
   return {};
 }
 
+// Owner review API (token-gated). Lists content-complete-but-uncertified problems + decisions.
+export async function fetchReview(token) {
+  try {
+    const response = await fetch('/api/review', { headers: { accept: 'application/json', 'X-Review-Token': token || '' } });
+    let data = {};
+    try { data = await response.json(); } catch { /* non-JSON */ }
+    return { ok: response.ok, status: response.status, data };
+  } catch {
+    return { ok: false, status: 0, data: { error: 'You appear to be offline.' } };
+  }
+}
+
+// Record an approve/reject/pending decision (+ feedback) for a problem.
+export async function postReview(token, title, status, feedback) {
+  try {
+    const response = await fetch('/api/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', accept: 'application/json', 'X-Review-Token': token || '' },
+      body: JSON.stringify({ title, status, feedback }),
+    });
+    let data = {};
+    try { data = await response.json(); } catch { /* non-JSON */ }
+    return { ok: response.ok, status: response.status, data };
+  } catch {
+    return { ok: false, status: 0, data: { error: 'You appear to be offline.' } };
+  }
+}
+
 // Ask the server proxy to judge a free-text algorithm plan (M9). Never sends or holds a key —
 // the key lives only on the server. Returns a normalized { ok, status, data } either way.
 export async function fetchAlgorithmFeedback(payload) {

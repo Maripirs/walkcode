@@ -36,6 +36,16 @@ export const appState = {
   // Owner review mode (set from ?review or localStorage): reveals content-complete but not-yet-
   // certified problems in the library so they can be run and reviewed before being published.
   reviewMode: localStorage.getItem('walkcode-review') === '1',
+  // The /review approve-reject screen (token-gated).
+  review: {
+    token: localStorage.getItem('walkcode-review-token') || '',
+    problems: [],
+    loading: false,
+    error: '',
+    loaded: false,
+    saving: '',
+    drafts: {}, // title -> in-progress feedback text
+  },
 };
 
 export function getProgress(cardId) {

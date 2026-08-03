@@ -2,7 +2,7 @@
 // auto-seed (from the content bundled with the app), and the read that rebuilds the
 // /api/content bundle. `pg` is imported lazily so the static server still boots when the DB
 // or DATABASE_URL is absent.
-import { assembleBundle, clientBundleFrom, LANGUAGES } from '../src/data/assemble.js';
+import { assembleBundle, certifiedTitles, clientBundleFrom, LANGUAGES } from '../src/data/assemble.js';
 
 let poolPromise;
 
@@ -58,6 +58,12 @@ CREATE TABLE IF NOT EXISTS drills (
   difficulty text,
   position integer NOT NULL,
   body jsonb NOT NULL
+);
+CREATE TABLE IF NOT EXISTS certifications (
+  title text PRIMARY KEY,
+  status text NOT NULL,
+  feedback text,
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 `;
 
@@ -133,15 +139,41 @@ export async function ensureSeeded() {
   }
 }
 
+// Review decisions live in the DB (not source), so they survive re-seeds and take effect without
+// a redeploy. Returns approved/rejected title sets plus per-title status+feedback.
+export async function getCertifications() {
+  const pool = await getPool();
+  const { rows } = await pool.query('SELECT title, status, feedback, updated_at FROM certifications');
+  const approved = new Set();
+  const rejected = new Set();
+  const byTitle = {};
+  for (const row of rows) {
+    if (row.status === 'approved') approved.add(row.title);
+    else if (row.status === 'rejected') rejected.add(row.title);
+    byTitle[row.title] = { status: row.status, feedback: row.feedback || '', updatedAt: row.updated_at };
+  }
+  return { approved, rejected, byTitle };
+}
+
+export async function upsertCertification(title, status, feedback) {
+  const pool = await getPool();
+  await pool.query(
+    `INSERT INTO certifications (title, status, feedback, updated_at) VALUES ($1, $2, $3, now())
+     ON CONFLICT (title) DO UPDATE SET status = EXCLUDED.status, feedback = EXCLUDED.feedback, updated_at = now()`,
+    [title, status, feedback || null],
+  );
+}
+
 // Rebuilds the client-facing content bundle from the DB. Same shape as assembleClientBundle()
 // so the frontend cannot tell whether it was served from the DB or the offline fallback.
 export async function getContentBundle() {
   const pool = await getPool();
-  const [problemRows, lessonRows, drillRows, metaRows] = await Promise.all([
+  const [problemRows, lessonRows, drillRows, metaRows, certs] = await Promise.all([
     pool.query('SELECT id, topic, title, difficulty, is_built, position FROM problems WHERE is_card = true ORDER BY position'),
     pool.query('SELECT problem_id, language, body FROM lessons'),
     pool.query('SELECT body FROM drills ORDER BY position'),
     pool.query('SELECT version FROM content_meta WHERE id = 1'),
+    getCertifications(),
   ]);
 
   const lessons = {};
@@ -149,17 +181,22 @@ export async function getContentBundle() {
     (lessons[row.problem_id] ||= {})[row.language] = row.body;
   }
 
-  // isComplete is derived from the lesson body (JSONB already carries it), so no schema column or
-  // migration is needed — it works against any existing seed.
-  const cards = problemRows.rows.map((row) => ({
-    id: row.id,
-    topic: row.topic,
-    title: row.title,
-    difficulty: row.difficulty,
-    isBuilt: row.is_built,
-    isComplete: Boolean(lessons[row.id]?.JavaScript?.isComplete),
-    position: row.position,
-  }));
+  // isComplete is derived from the lesson body (JSONB already carries it) — no schema column.
+  // isBuilt (shown to learners) = complete AND certified, where certified = the source allowlist
+  // OR a live DB approval, minus any live DB rejection (so /review publishes/unpublishes instantly).
+  const cards = problemRows.rows.map((row) => {
+    const isComplete = Boolean(lessons[row.id]?.JavaScript?.isComplete);
+    const certified = (row.is_built || certs.approved.has(row.title)) && !certs.rejected.has(row.title);
+    return {
+      id: row.id,
+      topic: row.topic,
+      title: row.title,
+      difficulty: row.difficulty,
+      isBuilt: isComplete && certified,
+      isComplete,
+      position: row.position,
+    };
+  });
 
   const drills = drillRows.rows.map((row) => row.body);
 

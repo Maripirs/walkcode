@@ -1,8 +1,9 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
 import { appState, freshCoach, getProgress, progressLabel, resetLesson, setLanguage, setProgress } from './lib/state.js';
 import { shuffle } from './lib/ui.js';
-import { fetchAlgorithmFeedback, loadContent, loadFeatures } from './lib/content-loader.js';
+import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
+import { renderReview, bindReview } from './views/review.js';
 import { renderDrill, bindDrillAnswer } from './views/drill.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
@@ -63,8 +64,64 @@ function render() {
   });
   if (appState.screen === 'drill') renderDrillScreen();
   if (appState.screen === 'lesson') renderLessonScreen();
+  if (appState.screen === 'review') renderReviewScreen();
   bindSharedControls();
   syncHistory();
+}
+
+// ---- /review (owner approve-reject screen) ----
+function renderReviewScreen() {
+  root.innerHTML = renderReview({ state: appState });
+  bindReview(root, {
+    state: appState,
+    loadReview,
+    previewProblem: (id) => { const card = cardsById.get(id); if (card) beginWalkthrough(card); },
+    saveDecision: saveReviewDecision,
+  });
+  // Fetch on first entry (once a token is present).
+  const review = appState.review;
+  if (review.token && !review.loaded && !review.loading) loadReview();
+}
+
+async function loadReview() {
+  const review = appState.review;
+  review.loading = true;
+  review.error = '';
+  render();
+  const { ok, status, data } = await fetchReview(review.token);
+  review.loading = false;
+  if (ok) {
+    review.problems = data.problems || [];
+    review.loaded = true;
+    localStorage.setItem('walkcode-review-token', review.token);
+  } else if (status === 401) {
+    review.error = 'That token was not accepted. Check your review link and try again.';
+    review.loaded = false;
+    review.token = '';
+    localStorage.removeItem('walkcode-review-token');
+  } else if (status === 503 || data.disabled) {
+    review.error = 'Review is not configured on the server yet.';
+    review.loaded = false;
+  } else {
+    review.error = data.error || 'Could not load review data.';
+  }
+  render();
+}
+
+async function saveReviewDecision(title, status, feedback) {
+  const review = appState.review;
+  if (review.saving) return;
+  review.saving = title;
+  render();
+  const result = await postReview(review.token, title, status, feedback);
+  review.saving = '';
+  if (result.ok) {
+    delete review.drafts[title];
+    await loadReview();
+  } else {
+    review.error = result.data?.error || 'Could not save your decision.';
+    render();
+  }
 }
 
 // ---- Browser history / back-button integration ----
@@ -282,6 +339,18 @@ if (reviewParam !== null) {
   appState.reviewMode = on;
 }
 
+// /review — the owner approve-reject screen. The token rides in the URL fragment (#<token>),
+// which the browser never sends to the server; read it, persist it, then scrub it from the URL.
+if (window.location.pathname === '/review') {
+  appState.screen = 'review';
+  const tokenFromHash = window.location.hash.slice(1);
+  if (tokenFromHash) {
+    appState.review.token = tokenFromHash;
+    localStorage.setItem('walkcode-review-token', tokenFromHash);
+    try { window.history.replaceState(null, '', '/review'); } catch { /* history unavailable */ }
+  }
+}
+
 root.innerHTML = '<section class="home"><h1>Loading…</h1></section>';
 loadContent().then((bundle) => {
   initContent(bundle);
@@ -290,7 +359,7 @@ loadContent().then((bundle) => {
   // same screen/problem (and step) instead of resetting to home. A missing card falls back to the
   // library via renderLessonScreen.
   const saved = window.history.state;
-  if (saved && ['home', 'library', 'drill', 'lesson'].includes(saved.screen)) {
+  if (window.location.pathname !== '/review' && saved && ['home', 'library', 'drill', 'lesson', 'review'].includes(saved.screen)) {
     applyRouteSnapshot(saved);
     currentRouteKey = routeKey(appState);
   }

@@ -6,8 +6,19 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ensureSeeded, getContentBundle } from './db.js';
+import { timingSafeEqual } from 'node:crypto';
+import { ensureSeeded, getCertifications, getContentBundle, upsertCertification } from './db.js';
 import { algorithmCoachTurn, llmEnabled } from './llm.js';
+import { certifiedTitles } from '../src/data/assemble.js';
+
+// Secret that gates the /review approve/reject actions (a private link the owner holds).
+const REVIEW_TOKEN = process.env.REVIEW_TOKEN || '';
+function validReviewToken(provided) {
+  if (!REVIEW_TOKEN || !provided) return false;
+  const a = Buffer.from(String(provided));
+  const b = Buffer.from(REVIEW_TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 const PORT = process.env.PORT || 8080;
 // Local dev serves source files with no caching so a plain refresh always loads the latest code
@@ -198,6 +209,53 @@ async function handleAlgorithmFeedback(req, res) {
   }
 }
 
+// Token-gated review: GET lists content-complete-but-uncertified problems with their decision +
+// feedback; POST records an approve/reject/pending decision (approve publishes within ~a minute).
+async function handleReview(req, res) {
+  if (!REVIEW_TOKEN) return sendJson(res, 503, { disabled: true, error: 'Review is not configured.' });
+  if (!validReviewToken(req.headers['x-review-token'])) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+  if (req.method === 'GET') {
+    try {
+      const [bundle, certs] = await Promise.all([getContentBundle(), getCertifications()]);
+      const problems = bundle.cards
+        .filter((card) => card.isComplete && !certifiedTitles.has(card.title))
+        .map((card) => ({
+          id: card.id,
+          title: card.title,
+          topic: card.topic,
+          difficulty: card.difficulty,
+          isLive: card.isBuilt,
+          status: certs.byTitle[card.title]?.status || 'pending',
+          feedback: certs.byTitle[card.title]?.feedback || '',
+        }));
+      return sendJson(res, 200, { problems });
+    } catch (err) {
+      console.error('/api/review GET failed', err);
+      return sendJson(res, 503, { error: 'Review data unavailable.' });
+    }
+  }
+
+  if (req.method === 'POST') {
+    let payload;
+    try { payload = await readJsonBody(req); } catch { return sendJson(res, 400, { error: 'Invalid request.' }); }
+    const title = String(payload.title || '').slice(0, 200);
+    const status = String(payload.status || '');
+    const feedback = String(payload.feedback || '').slice(0, 4000);
+    if (!title) return sendJson(res, 400, { error: 'Missing title.' });
+    if (!['approved', 'rejected', 'pending'].includes(status)) return sendJson(res, 400, { error: 'Invalid status.' });
+    try {
+      await upsertCertification(title, status, feedback);
+      return sendJson(res, 200, { ok: true });
+    } catch (err) {
+      console.error('/api/review POST failed', err);
+      return sendJson(res, 503, { error: 'Could not save your decision.' });
+    }
+  }
+
+  return sendJson(res, 405, { error: 'Method Not Allowed' });
+}
+
 // API routes live under /api/**.
 async function handleApi(req, res, pathname) {
   if (pathname === '/api/health') {
@@ -208,6 +266,9 @@ async function handleApi(req, res, pathname) {
   if (pathname === '/api/algorithm-feedback') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method Not Allowed' });
     return handleAlgorithmFeedback(req, res);
+  }
+  if (pathname === '/api/review') {
+    return handleReview(req, res);
   }
   // The DB-backed content bundle the frontend renders from. Short cache so a DB content
   // change is visible on the next load without hammering the VM on every request. On any DB

@@ -33,6 +33,26 @@
 .review-banner{margin:14px 0;padding:13px 14px;border:2px dashed var(--teal);border-radius:11px;background:var(--soft);color:#0f5f5c}.review-banner b{display:block;font-size:15px;text-transform:uppercase;letter-spacing:.5px}.review-banner p{margin:4px 0 0;color:#0f5f5c;line-height:1.45}
 .review-section{margin-top:16px}.band-head.review{background:var(--soft);color:#0f5f5c;border-top:1px solid var(--line)}.band-head.review small{color:var(--teal)}
 
+/* /review approve-reject screen */
+.review-auth{max-width:420px;margin:18px 0;display:grid;gap:10px}
+.review-auth input{padding:11px;border:1px solid var(--line);border-radius:9px;font:inherit}
+.review-auth button{padding:11px;min-height:44px}
+.review-list{display:grid;gap:12px;margin-top:12px}
+.review-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px}
+.review-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.review-head b{font-size:17px}
+.rev-badge{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.4px}
+.rev-badge.live{background:#dff0e9;color:#21594e}
+.rev-badge.rejected{background:#fff0e9;color:#9a4738}
+.rev-badge.pending{background:#f0efe8;color:#5e6b75}
+.review-preview{display:inline-block;padding:9px 12px;min-height:40px;border:1px solid var(--teal);border-radius:9px;background:var(--soft);color:#0f5f5c;font-weight:800}
+.review-feedback{display:block;width:100%;margin-top:10px;border:1px solid #d9ded9;border-radius:9px;padding:10px;font:inherit;color:var(--ink);resize:vertical;min-height:56px}
+.review-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.review-actions button{flex:1;min-width:110px;padding:11px;min-height:44px;border-radius:9px;font-weight:800;border:1px solid var(--line);cursor:pointer}
+.review-approve{background:var(--teal);border-color:var(--teal);color:#fff}
+.review-reject{background:#fff0e9;border-color:#e2b3a6;color:#9a4738}
+.review-reset{background:#fff;color:var(--muted)}
+
 /* Progress rail: the single "move through the steps" control. Tappable, shows where you are,
    marks finished steps, and scrolls horizontally on narrow screens. */
 .steprail{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;margin:14px -2px 0;scrollbar-width:none}.steprail::-webkit-scrollbar{display:none}

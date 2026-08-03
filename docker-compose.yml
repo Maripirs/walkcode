@@ -24,6 +24,8 @@ services:
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
+      # Gates the /review approve-reject page. Local default is a simple dev token.
+      REVIEW_TOKEN: ${REVIEW_TOKEN:-localdev}
     depends_on:
       db:
         condition: service_healthy
