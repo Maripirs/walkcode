@@ -117,7 +117,7 @@ earns a database first.) Accounts + progress sync is deferred to the Backlog.
    fallback so the app still boots with no network. Adding content afterward is a DB write
    the frontend picks up on next load.
 
-The **in-browser code editor + execution** (M6) is a separate, frontend-only feature that
+The **in-browser code editor + execution** (M7) is a separate, frontend-only feature that
 does not depend on this migration — it's sequenced after because content-in-DB is the
 higher-value backend milestone.
 
@@ -134,9 +134,11 @@ commands I prepare or run.
 - [x] **M2** — Custom domain + HTTPS — **done & verified**: `https://walkcode.maripi.net` live from Cloud Run with a valid Google-issued cert
 - [x] **M3** — Backend skeleton + local dev — **done & verified**: `/api/health` live in prod; `docker compose up` runs app + Postgres locally (host port 8088)
 - [x] **M4** — Postgres on the e2-micro VM — **done & verified**: private Cloud Run→Postgres path works (`/api/db-ping` OK), nothing on the public internet
-- [ ] **M5** — Content to the database: problems, code examples, and exercises served from Postgres via `/api`
-- [ ] **M6** — In-browser code editor + execution (client-side; JS now, Python via Pyodide later)
-- [ ] **M7** — Hardening (backups, budget alert)
+- [x] **M5** — Content to the database — **done & verified**: problems, code examples, and exercises served from Postgres via `/api` on the live domain; you confirmed the deployed revision on `walkcode.maripi.net` (2026-08-03)
+- [x] **M6** — UI/UX restructure — **done & verified (2026-08)**: learning-first stepper (Understand→Algorithm→Code→Complexity→Review), guided coach *or* drag-drop, human copy, browser back/forward + refresh persistence. Deployed.
+- [x] **M9** — LLM-assisted algorithm coach — **done & deployed (2026-08)**: Socratic step-by-step build via Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder. Live on `walkcode.maripi.net`.
+- [ ] **M8** — Hardening: nightly Postgres backups + budget alert — **⬅ next milestone**
+- [ ] **M7** — In-browser code editor + execution (client-side; JS now, Python via Pyodide) — planned after M8
 
 ### M0 — Foundations (accounts & tooling)
 - [x] **Status: Done** — authed to `walkcode-504322`; APIs `run`, `artifactregistry`, `cloudbuild`, `compute` enabled; Docker installed.
@@ -152,7 +154,7 @@ commands I prepare or run.
 - [x] **Done when:** `gcloud` is authed to the project and the APIs are enabled.
 
 ### M1 — Static site live on Cloud Run
-- [x] **Status: Deployed & serving** — live at `https://walkcode-n2nusmut7q-uc.a.run.app` with `--min-instances=0 --max-instances=2`; static + ES-module MIME + SPA fallback verified. ⏳ awaiting your desktop/phone smoke-test sign-off.
+- [x] **Status: Deployed & serving** — live at `https://walkcode-n2nusmut7q-uc.a.run.app` with `--min-instances=0 --max-instances=2`; static + ES-module MIME + SPA fallback verified; smoke-tested and signed off.
 - [x] **Goal:** today's site served from Cloud Run at its `*.run.app` URL.
 - [x] **Me:** tiny `Dockerfile` + minimal static server; build → Artifact Registry → deploy with
   `--min-instances=0 --max-instances=2`.
@@ -182,7 +184,7 @@ commands I prepare or run.
   GitHub Pages retired (no longer serves the domain — CNAME now points to Cloud Run).
 
 ### M3 — Backend skeleton + local dev
-- [x] **Status: Live in prod** — `/api/health` added to the dependency-free server (`/api/**` no longer falls through to the SPA); `docker-compose.yml` (app + Postgres) added for local parity; redeployed (revision `walkcode-00002`); `/api/health` returns `{"status":"ok"}` on both the `*.run.app` URL and `https://walkcode.maripi.net`. ⏳ your `docker compose up` local test.
+- [x] **Status: Live in prod** — `/api/health` added to the dependency-free server (`/api/**` no longer falls through to the SPA); `docker-compose.yml` (app + Postgres) added for local parity; redeployed (revision `walkcode-00002`); `/api/health` returns `{"status":"ok"}` on both the `*.run.app` URL and `https://walkcode.maripi.net`; `docker compose up` local dev confirmed.
 - [x] **Goal:** the container also runs a Node server; one-command local dev.
 - [x] **Me:** Node server (serve static + `/api/health`); `docker-compose.yml` (app + postgres)
   for local parity; redeploy.
@@ -222,43 +224,98 @@ commands I prepare or run.
   public site is still healthy.
 - [x] **Done when:** Cloud Run reaches Postgres over internal IP; nothing on the public internet.
 
-> **M4 ops notes (for M5+ / M7):** the `walkcode_app` password lives only in Secret Manager
+> **M4 ops notes (for M6+ / M8):** the `walkcode_app` password lives only in Secret Manager
 > (`DATABASE_URL`), not in the repo. The VM has **no external IP**, so `apt`/patching needs a
 > temporary IP re-added (`gcloud compute instances add-access-config walkcode-pg
 > --zone=us-central1-a`) then removed again. Rebuilding the VM: re-run the same startup-script
-> flow, restore from a `pg_dump` (M7). `/api/db-ping` is throwaway — delete when M5's
+> flow, restore from a `pg_dump` (M8). `/api/db-ping` is throwaway — delete when M5's
 > `/api/content` routes land.
 
 ### M5 — Content to the database
-- [ ] **Goal:** problems, code examples, and exercises are served from Postgres via `/api`,
+- [x] **Status: code-complete & locally verified** (2026-08). Content authored in `src/data/**`
+  is assembled by `src/data/assemble.js` into one bundle that is used three ways — seeded to
+  Postgres, rebuilt from the DB for `/api/content`, and shipped as the browser's offline
+  fallback — so the three can't drift (verified byte-for-byte equal). `server/db.js` holds the
+  schema (`content_meta`/`topics`/`problems`/`lessons`/`drills`, JSONB bodies) and
+  **auto-seeds on boot** only when the DB is empty or the content hash changed (a manual DB
+  edit survives restarts — verified). `server/server.js` serves `/api/content` (60 s cache,
+  503→fallback) and dropped the throwaway `/api/db-ping`. Frontend cut over: `app.js` awaits
+  `loadContent()` (`src/lib/content-loader.js`: fetch → localStorage cache → bundled fallback),
+  `model.js` is now a thin selector over the loaded bundle. **Verified locally:** `docker
+  compose up` seeds + serves; a headless-Chrome render boots the home screen from `/api`;
+  library/lesson/drill render in both languages; a row inserted straight into Postgres appears
+  with no redeploy; offline `loadContent()` returns a usable 150-card bundle. Docs updated
+  (`CLAUDE.md`, `CONTRIBUTING.md`). Smoke-tested on the deployed revision and signed off.
+- [x] **Goal:** problems, code examples, and exercises are served from Postgres via `/api`,
   so new content is added by writing to the DB — no frontend edit or redeploy. The site
   looks and behaves exactly as it does today after the cutover.
-- [ ] **You:** nothing to set up. One optional product call later: *how* you want to author
-  new content (raw SQL/seed script now vs. a simple authed admin endpoint later) — punt-able.
-- [ ] **Me:**
-  1. **Schema** — `problems` (title, topic, difficulty, `is_built`, position), `lessons`
-     (per problem: brief, explanation, code by language, concept choices, complexity,
-     input/output), `exercises`/`drills` (prompt, answer, correct feedback, per-wrong-answer
-     feedback, language variants, standalone vs. lesson-attached). Mirrors the fragments in
-     `src/data/**` + the assembly `model.js` does today.
-  2. **Content API** — read-only `/api/content` routes (e.g. cards list, a problem's full
-     lesson, the drill queue) returning the same shapes `cards` / `lessonFor` / `drillItems`
-     produce now, so views change as little as possible.
-  3. **Seed importer** — a one-time script that reads today's assembled content via
-     `model.js` and inserts it, making the DB an exact mirror of what ships now.
-  4. **Frontend cutover** — replace `src/data` imports with `fetch` to `/api/content`,
-     keeping a cached/bundled copy as an **offline fallback** so the app still boots with no
-     network. Update `CLAUDE.md`/`CONTRIBUTING.md` since the content workflow changes.
-- [ ] **Test plan (you):** open the site and confirm it looks/works **identical** to today —
-  library browse, a random walkthrough through all five lesson steps, a drill with correct +
-  wrong answers, and the **JS ↔ Python** switch (content still language-correct). Then the
-  real proof: **I add a new problem/drill directly in the DB, you refresh, and it appears —
-  with no redeploy.** Kill the network (offline) and confirm the app still boots from the
-  fallback. Console shows **no errors**.
-- [ ] **Done when:** the frontend renders all content from `/api` (DB-backed), a DB-only
-  content addition shows up after refresh with no code change, and offline still boots.
+- [x] **You:** nothing to set up. Product call **settled: auto-seed on deploy + direct DB
+  writes** (no admin endpoint); the server re-mirrors the DB from the bundled content whenever
+  its hash changes, and direct DB edits persist otherwise.
+- [x] **Me:**
+  1. **Schema** — `problems` (title, topic, difficulty, `is_built`, `is_card`, position),
+     `lessons` (per problem × language, assembled body as JSONB), `drills` (per drill item,
+     body as JSONB), plus `topics` and a `content_meta` version row. Relational classification +
+     JSONB bodies; mirrors the `src/data/**` fragments the assembler produces.
+  2. **Content API** — read-only `GET /api/content` returning the bundle (`cards` / per-language
+     `lessons` / `drills`) so the client keeps the same `cards` / `lessonFor` / `drillItems`
+     interface and views barely changed.
+  3. **Seed importer** — `assembleBundle()` is the single source; `ensureSeeded()` writes it to
+     the DB on boot, making the DB an exact mirror of the shipped content.
+  4. **Frontend cutover** — `src/data` imports replaced by `fetch('/api/content')` with a
+     `localStorage` cache and the bundled assembly as offline fallback. `CLAUDE.md`/
+     `CONTRIBUTING.md` updated for the new content workflow.
+- [x] **Test plan (you):** ✅ confirmed the updates on `walkcode.maripi.net` (deployed revision
+  serving DB-backed content). Remaining optional spot-checks whenever you like: the offline-boot
+  test and a direct DB add showing up on refresh (both verified locally on my side).
+- [x] **Done when:** the frontend renders all content from `/api` (DB-backed), a DB-only
+  content addition shows up after refresh with no code change, and offline still boots —
+  **all satisfied; deployed and confirmed live.**
 
-### M6 — In-browser code editor + execution
+### M6 — UI/UX restructure (learning-first, smooth & intuitive)
+- [x] **Status: DONE & DEPLOYED (2026-08)** — learning-first restructure live on `walkcode.maripi.net`.
+  Guided **stepper** (Understand→Algorithm→Code→Complexity→Review, friendly headers, tappable progress
+  rail, consistent Back/Next, "another problem" in a footer); the **Understand** step leads with the full
+  statement → I/O/example → problem-specific `intuition` → concept check (topic hidden there so it can't
+  spoil the pattern); library **de-categorized** into one easier→harder Easy/Medium/Hard list (WIP hidden);
+  human copy + progress labels (Not started / In progress / Done); algorithm distractors moved to authored
+  data; all user-facing + LLM content **escaped** + a11y focus ring + committed `validate-content.mjs`.
+  **Post-review polish:** browser back/forward + **refresh persistence** (`navigation.js`), a touch-friendly
+  **pointer-drag** reorder with sliding steps, and the code-fix blank shown as a **placeholder comment**.
+  Verified (`node --check` clean, validator 120 exercises/60 drills, headless render suites). Signed off.
+- [x] **Goal:** make the whole experience **teach well and get out of the way**. Prioritize
+  comprehension and ease of use so a learner can land, understand a problem, and make progress
+  without friction. The content is now strong (M5) and the drills are solid — this milestone is
+  about the *experience* around them. Builds on the findings in **"UI/UX & quality review"** below.
+- [x] **You:** product calls on tone/wording and on the navigation model (a couple of small
+  A/B-style choices I'll bring you with mockups); otherwise nothing to set up. *(Settled — see Status.)*
+- [x] **Me — phased, each independently shippable (ordered by learning impact):**
+  1. **Comprehension first — the Recognize step.** Always lead with a full, plain-language
+     problem statement, *then* Input/Output/Example, *then* "what to notice"; replace the single
+     generic hint with problem-specific intuition. (Fixes the flagged step-1 gap: Built lessons
+     currently omit the full statement.)
+  2. **One intuitive navigation model.** Collapse the three competing axes (stage tabs + bottom
+     step buttons + top problem nav) into a single clear model — obvious "move through the steps"
+     vs "go to another problem," consistent across all five steps (fix the step-3 inconsistency),
+     with a visible progress indicator. Clarify "Seen" vs "Solved."
+  3. **Human copy & headers.** Plain-language stage names; replace the "{n} of 150" title with the
+     problem name; drop the internal "✓ BUILT" badge from the learner UI; humanize hints/labels.
+  4. **Make step 2 (Algorithm) actually teach.** Move the hardcoded, identical distractors out of
+     the view into per-problem authored content; a clearer, lower-friction interaction.
+  5. **Ease-of-use polish.** Smooth first-run, sensible defaults, mobile tap-targets and code
+     readability, and a consistency pass so drills and lessons feel like one system.
+  6. **Robustness under the new model.** Escape DB-sourced content (the M5 authoring path made
+     this a real gap), basic a11y/focus states, and commit the content validator as a real check.
+- [ ] **Test plan (you):** open a Built problem cold and confirm you understand it from the
+  Recognize step alone (full statement + example), move through all five steps without confusion
+  about "where am I / how do I go next," and confirm the copy reads naturally on desktop and phone.
+  Console shows **no errors**.
+- [ ] **Done when:** a first-time learner can go home → understand a problem → work its five steps
+  → do a drill **without instruction**, the Recognize step carries a complete problem explanation,
+  navigation is unambiguous, and the learner-facing copy is clean. Phases 1–2 are the must-haves;
+  3–6 are the polish that makes it feel finished.
+
+### M7 — In-browser code editor + execution
 - [ ] **Goal:** learners can **write and run code in the browser** against a problem and see
   output/results, not just read and pick answers. **Client-side execution** (chosen): no
   server compute, scales to zero, no sandbox-escape risk on our infra.
@@ -285,7 +342,8 @@ commands I prepare or run.
   problem, get correct pass/fail + output, runaway code is bounded by a timeout, and users
   who never run code pay no runtime-download cost.
 
-### M7 — Hardening (pulled from Backlog)
+### M8 — Hardening (pulled from Backlog) — ⬅ NEXT MILESTONE
+- [ ] **Status: next up (2026-08).** More relevant now that prod holds DB content **and** calls a paid-tier-capable LLM: a **budget alert** is the priority, plus nightly Postgres backups.
 - [ ] **Goal:** safe to leave running unattended.
 - [ ] **You:** decide whether you want the absolute billing kill-switch.
 - [ ] **Me:** nightly `pg_dump` → Cloud Storage cron; recovery runbook; budget alert.
@@ -296,30 +354,164 @@ commands I prepare or run.
   config + notification address). If you opted for the kill-switch, confirm it's wired.
 - [ ] **Done when:** a test restore succeeds and a budget alert is live.
 
+### M9 — LLM-assisted algorithm coach
+- [x] **Status: DONE & DEPLOYED (2026-08)** — live on `walkcode.maripi.net` (rev `walkcode-00006`), Groq key in Secret Manager. **key created and tested
+  locally** against the real model. **Interaction (settled & then upgraded):** a **Socratic, step-by-step
+  build** — the coach asks a question ("what should we set up first?"), judges the learner's proposed
+  step, appends an accepted step to a growing solution or nudges without revealing the answer, and asks
+  the next question until the algorithm is complete. When on, it **replaces** the drag-and-drop builder;
+  the deterministic drag-and-drop builder is the **offline/no-key fallback** (kept — no DB cleanup) and
+  the whole feature **degrades gracefully** (no key / offline → coach hidden via `/api/health` →
+  `features.algorithmFeedback`, builder returns). **Landed:** `server/llm.js` `algorithmCoachTurn()`
+  (provider-agnostic OpenAI-compatible proxy, key server-only, env-configurable model/base-URL; returns
+  `{decision, acceptedStep, feedback, nextPrompt, done, summary}`) + rate-limited `POST
+  /api/algorithm-feedback` with input caps + a step-count backstop; frontend guided-build UI (question →
+  answer → accepted step) with state that survives re-renders; the model's response is **escaped** as
+  untrusted output; `.env`/`docker-compose.yml` pass the key through for local dev. **Verified:**
+  `node --check` clean; a 30-check server+coach suite passes (turn parse of accept/revise, prompt built
+  with reference marked *do-not-reveal*, no-key→503 + feature-off + static intact + POST-to-static→405,
+  with-key→validation 400s + dead-upstream 502 + rate-limit 429, coach UI hides the drag-drop when on
+  and escapes step text); and a **live multi-turn conversation** through the container returned correct
+  accept (step added, next question) and revise (no step, non-spoiling nudge) turns. **Coaching-quality
+  iteration (from live use):** the prompt now judges GENEROUSLY (a correct compound if/else is accepted,
+  not rejected), asks clear one-thing-at-a-time questions and decomposes decisions (condition → each
+  branch), is grounded with a structural checklist (state/setup → loop → per-iteration update → stopping
+  condition → return) plus the reference solution code (private) so it teaches loop mechanics and knows
+  when it's complete, and runs a completeness check; server guards add near-duplicate step dedup, a reference-length
+  completion backstop (so it can't loop forever on micro-edge-cases), and strip question sentences out of
+  `feedback` (so it never echoes the next question); and a learner **"I've got the full
+  algorithm" finish control** ends the session reliably instead of relying on the small model to detect
+  completion. **Model note:** provider auto-selects from the key. Local default is now **Groq
+  `llama-3.3-70b-versatile`** (`GROQ_API_KEY`) — fast (~0.7s/turn) and a big judgment/coverage upgrade
+  over NVIDIA's 8B (the only fast+free NVIDIA option; its 70B was 404/unavailable, 49B ~34s/turn). Groq
+  free tier = 12k tokens/min (fine for one user; rapid testing 429s). The 8B-era server guards + prompt
+  rules stay as a safety net and for the NVIDIA fallback. **Prod:** `GROQ_API_KEY` in Secret Manager,
+  wired via `--set-secrets`; `.gcloudignore` keeps the key out of the build and the Dockerfile now copies
+  `server/llm.js`. Public LLM proxy is bounded by the per-IP rate limit + Groq's free TPM cap (worst case
+  → graceful fallback, no cost).
+- [x] **Goal:** the **Algorithm** lesson step (step 2) gains an *optional* "get feedback on my
+  approach" that judges a learner's ordered steps (or a free-text plan) against the problem and
+  returns specific, non-spoiling feedback — more flexible than today's exact-match step check.
+  The deterministic drag-and-drop checker **stays** as the baseline; the LLM is additive.
+  *(Built for the free-text-plan interaction.)*
+- [x] **You:** create a free LLM API key and accept the external-vendor posture.
+  *(Settled: **Groq** chosen over NVIDIA for coaching quality; free `GROQ_API_KEY` created, stored in
+  Secret Manager, and deployed. Surface = the Algorithm step. NVIDIA NIM remains a config-only fallback.)*
+- [x] **Me:**
+  - **Server proxy** — one route `POST /api/algorithm-feedback` on the existing Node server;
+    reads `NVIDIA_API_KEY` from a Cloud Run **secret** (never in the browser). Calls the
+    **OpenAI-compatible** endpoint `https://integrate.api.nvidia.com/v1` with a free model
+    (default **`meta/llama-3.1-8b-instruct`** — the reliably fast+free option on the tested account;
+    bigger free models were unavailable/too slow). Server guards compensate for the small model
+    (step dedup, feedback-question stripping, learner "finish" control). Tight system prompt, JSON
+    output, **token cap + basic rate-limit** so the
+    route can't be turned into a free LLM faucet.
+  - **Frontend** — an opt-in button/box in the algorithm panel; shows the model's feedback,
+    **degrades gracefully** to the deterministic checker when offline / no key / rate-limited.
+  - **Portability** — base-URL is config, so the vendor is swappable (Groq, local Ollama, any
+    OpenAI-compatible host) with no code change.
+- [ ] **Test plan (you):** open a built lesson's algorithm step, submit a valid approach and a
+  flawed one, and confirm the feedback is specific and correct without revealing the full answer;
+  go offline and confirm the step still works via the deterministic checker (no crash).
+- [ ] **Done when:** algorithm-step feedback works end-to-end behind the server proxy, costs stay
+  within the free tier, and the step is fully functional with the LLM path disabled.
+
+## UI/UX & quality review (backlog — captured 2026-08)
+
+A walkthrough of the current implementation to tackle later. The **drill** experience is in
+good shape after the whole-line rework; the weakest link is the **5-step walkthrough** (framing
++ copy + navigation) and a few latent tech-debt items. Grouped by area, roughly priority-ordered.
+
+### 1. Recognize step (step 1) — missing a comprehensive problem explanation ⬅ flagged
+- **Root cause:** `recognitionPanel()` in `src/views/lesson.js` shows **either** Input/Output/
+  Example (when `lesson.inputOutput` exists) **or** the plain-language `lesson.explanation` —
+  never both. Every **Built** lesson has `inputOutput`, so it shows the terse I/O spec (e.g.
+  "nums: an integer array; target: an integer") and **omits the full problem statement**. So the
+  built lessons — the ones learners actually use — never show the comprehensive "what is this
+  problem" narrative. This matches the reported feeling.
+- **Fix direction:** always lead with the problem statement (`explanation`/`brief`), *then* show
+  Input/Output/Example, *then* "What to notice". Consider a short worked intuition too.
+- The **hint** is generic and identical on every problem ("Name the input's shape first:
+  ordered, contiguous, hierarchical, connected, or repetitive."). Make it problem-specific or drop.
+
+### 2. Headers & copy — clunky spots
+- **Lesson top bar title is "{position} of 150"** (e.g. "42 of 150") — reads as a bare number,
+  not a name. Show the **problem title** (or topic) there; demote the position to a small subtitle.
+- **Eyebrow shows "· ✓ BUILT" to learners.** "Built" is an internal curation flag; surfacing it
+  is confusing. Drop it from the user-facing eyebrow (keep the WIP banner for unbuilt lessons).
+- **"Recognize the usable structure"** (and audit the other four stage headings) reads as jargon —
+  prefer plain language ("Understand the problem" / "Recognize the pattern").
+- Stage tabs ("1 Recognize" … "5 Review") are terse but fine; keep casing/spacing consistent.
+
+### 3. Navigation flow — redundant/inconsistent
+- A lesson exposes **three navigation axes at once**: stage tabs (top of the article),
+  Previous/Next **step** (bottom bar), and Previous/Next **problem** (top bar). The stage tabs and
+  the bottom step buttons both move between steps — redundant and easy to conflate with
+  "next problem." Consolidate: make the tabs the primary step control and simplify/relabel the
+  bottom bar, and visually separate "move within this problem" from "go to another problem."
+- On **step 3 (Code fixes)** the bottom step bar is hidden when exercises exist (only the
+  per-exercise Continue shows) — an inconsistent affordance vs. the other steps.
+- **"Seen" vs "Solved"** progress states may be unclear to users; consider clearer labels or a
+  single completion state.
+
+### 4. Content quality gaps (beyond drills, which are now solid)
+- **Algorithm step (step 2) distractors are hardcoded in the view** (`ensureAlgorithmState` in
+  `lesson.js`) — the *same two generic distractors for every problem*, and content living in a
+  view (against this repo's own "no content in views" rule). Move to per-problem authored
+  distractors in the data layer and make them problem-specific.
+- Other **generic repeated copy**: the complexity "How to verify it" hint, the recognition hint —
+  make problem-specific or remove.
+- **127 of 150 problems are WIP** (only 23 Built). Their Recognize/Review steps are thin
+  fallbacks; decide whether to keep browsing WIP or hide it more firmly. **Resolved (2026-08):
+  WIP problems are now hidden from the library and random walkthroughs — only built & reviewed
+  problems are reachable (`app.js` filters `orderedCards()` to `isBuilt`).**
+
+### 5. Implementation / tech-debt
+- **No automated tests.** The whole-line drill validator built during the drill rework (checks:
+  exactly one blank, `correct` ∈ `choices`, unique choices, feedback for every wrong line, and
+  no other copy of the correct line) should be committed as a real script (e.g.
+  `server/scripts/validate-content.mjs`) and added to the handoff checklist.
+- **Raw HTML interpolation** of user-facing content (`lesson.explanation`, `inputOutput`,
+  `concepts`, prompts) without escaping. Safe *today* because content is authored — but **M5 made
+  content DB-sourced and "write to the DB" a supported authoring path**, so a DB author could
+  inject markup/script. Escape/sanitize user-facing content now that the trust boundary moved.
+- **Code blocks use `white-space:pre-wrap`** so long lines wrap rather than scroll — OK on mobile
+  but wrapping can distort Python indentation; consider horizontal scroll for code, and keep lines
+  short (the ≤36-line rule bounds length, not width — some Hard drills have very long lines).
+- Minor: audit for dead CSS (e.g. `.fix`) now that the drill masking is gone.
+
+### 6. Content depth (backlog — captured 2026-08)
+- **Harder problems need a more thorough explanation.** Hard-tier problems especially need a fuller
+  problem statement / worked intuition on the **Understand** step — the current brief + single example
+  is thin for them. Scale explanation depth with difficulty.
+- **More examples for every problem.** All problems would benefit from additional worked examples
+  (multiple input/output cases, an edge case or two). These can be **collapsible** so they don't crowd
+  the Understand step. Likely a lesson-schema addition (e.g. an `examples` array) rendered under a
+  collapsible section, plus authoring across the built set.
+
+### Strengths to preserve
+Clean render-on-state loop with no framework/build step; cohesive warm visual system; mobile-first
+layout; now DB-backed **and** offline-capable; and the drills are pedagogically strong (whole-line
+selection, no answer leak, correct per-language variants). Don't regress these while polishing.
+
+**Overall read:** a solid MVP with a strong content/drill core. The highest-leverage improvements
+are (a) step-1 problem framing, (b) problem-specific algorithm-step distractors, and (c) escaping
+DB-sourced content — then the header/navigation polish.
+
 ## Your setup checklist (what only you can do)
 
-**Already done ✅:** GCP project **`walkcode-504322`** created; authenticated as
-`mariapazmaluenda@gmail.com`; gcloud config pointed at the project with region
-**`us-central1`**; **Docker** installed. (Note: gcloud is an older 421 build — fine to
-proceed; we can update it later if any command needs it.)
+**All prior setup is done ✅:** GCP project `walkcode-504322` (auth `mariapazmaluenda@gmail.com`,
+region `us-central1`), billing linked, `maripi.net` DNS cut over to Cloud Run (M2), gcloud updated
+(578), Docker installed, e2-micro VM created (M4), and the `GROQ_API_KEY` secret created (M9). Product
+calls for M6 (UI/UX) and M9 (Groq provider) are settled.
 
-**Still needed to unblock M0–M2:**
+**Still on you, ahead:**
 
-1. **Confirm billing** is linked to `walkcode-504322` (Console → Billing). Even the
-   always-free tier needs billing enabled with a card on file; it won't charge within free
-   limits, and we add a budget alert in M7 (Hardening). This gets definitively validated at
-   the first M1 deploy.
-2. Access to your **`maripi.net` DNS** provider (for the M2 domain-verify TXT record and the
-   `walkcode` cutover) — needed at M2, not before.
+1. **M8:** decide whether you want the absolute billing **kill-switch** (vs. just a budget alert).
+2. **M7:** the **runner-scope** product call — which surfaces get the in-browser editor (see *Open questions*).
 
-**Later, for M4–M6:** approve VM creation (M4); optionally decide *how* you want to author
-new content once it's in the DB (M5 — punt-able); a scope call on the in-browser runner
-(M6). Auth is no longer a near-term call — accounts + progress sync moved to the Backlog.
-
-Everything else on the checklist-adjacent work (Dockerfile, server, deploy commands, VM
-setup scripts, content schema, seed importer, API + frontend cutover, the code runner) is
-on me — I'll prepare each and walk you through
-anything interactive.
+Everything else (Dockerfile, server, deploy commands, schema, seed, API + frontend, the code runner) is
+on me — I'll prepare each and walk you through anything interactive.
 
 ## Database choice detail
 
@@ -423,10 +615,9 @@ Not doing these now; revisit as traffic or risk tolerance changes:
 
 ## Open questions
 
-- Confirm **Node** for the backend server (keeps one language with the existing JS).
-- **Content authoring (M5):** start with raw SQL / a seed script for adding problems, or
-  build a small authed admin endpoint? (Punt-able — read-only serving works either way.)
-- **Runner scope (M6):** which surfaces get the in-browser editor — drills only, full
+- **Runner scope (M7, still open):** which surfaces get the in-browser editor — drills only, full
   lessons, or a scratch "try it" pane — and do runs check against expected output?
-- ~~Auth / cross-device progress sync data model~~ — **settled:** accounts + progress sync
-  moved to the Backlog; not shaping the near-term schema.
+
+**Settled:** ~~Node for the backend~~ (yes, used throughout) · ~~Content authoring (M5)~~ (auto-seed on
+deploy + direct DB writes; no admin endpoint) · ~~LLM provider/posture (M9)~~ (Groq, config-swappable) ·
+~~Auth / cross-device progress sync~~ (moved to Backlog; not shaping the near-term schema).

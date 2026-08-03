@@ -12,7 +12,11 @@ COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev
 
 # Copy only what the server needs to serve (context is trimmed by .dockerignore).
+# src/** is copied both to be served to the browser and because the server assembles the
+# seed content from src/data/** on startup (see server/db.js).
 COPY server/server.js ./server/server.js
+COPY server/db.js ./server/db.js
+COPY server/llm.js ./server/llm.js
 COPY index.html ./index.html
 COPY src ./src
 

@@ -4,6 +4,10 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Valid Anagram': solution(
+    lines('function isAnagram(s, t) {', '  if (s.length !== t.length) return false;', '  const counts = new Map();', '  for (const char of s) counts.set(char, (counts.get(char) || 0) + 1);', '  for (const char of t) {', '    const next = (counts.get(char) || 0) - 1;', '    if (next < 0) return false;', '    counts.set(char, next);', '  }', '  return true;', '}'),
+    lines('def is_anagram(s, t):', '    if len(s) != len(t):', '        return False', '    counts = {}', '    for char in s:', '        counts[char] = counts.get(char, 0) + 1', '    for char in t:', '        counts[char] = counts.get(char, 0) - 1', '        if counts[char] < 0:', '            return False', '    return True')),
+
   'Valid Palindrome': solution(
     lines('function isPalindrome(s) {', '  let left = 0;', '  let right = s.length - 1;', '  while (left < right) {', '    while (left < right && !/[a-z0-9]/i.test(s[left])) left++;', '    while (left < right && !/[a-z0-9]/i.test(s[right])) right--;', '    if (s[left].toLowerCase() !== s[right].toLowerCase()) return false;', '    left++;', '    right--;', '  }', '  return true;', '}'),
     lines('def is_palindrome(s):', '    left, right = 0, len(s) - 1', '    while left < right:', '        while left < right and not s[left].isalnum():', '            left += 1', '        while left < right and not s[right].isalnum():', '            right -= 1', '        if s[left].lower() != s[right].lower():', '            return False', '        left += 1', '        right -= 1', '    return True')),

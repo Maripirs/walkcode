@@ -13,8 +13,17 @@ services:
       - "${WALKCODE_PORT:-8088}:8080"
     environment:
       PORT: 8080
+      # Local dev: serve source files with no caching so a plain refresh always loads latest code.
+      WALKCODE_DEV: "1"
       # Wired now for parity; the server begins using it in M4/M5 (accounts + progress).
       DATABASE_URL: postgres://walkcode:walkcode@db:5432/walkcode
+      # M9 (optional AI algorithm coach). Absent → the feature stays off and the Algorithm step
+      # keeps working via the deterministic builder. Provider auto-selects from whichever key is
+      # set (GROQ_API_KEY → Groq/Llama-70B; else NVIDIA_API_KEY → NVIDIA NIM).
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
     depends_on:
       db:
         condition: service_healthy

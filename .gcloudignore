@@ -1,0 +1,17 @@
+# Files NOT uploaded to Cloud Build by `gcloud run deploy --source`. Keep the context tiny and,
+# critically, never upload local secrets. (The Dockerfile also only COPYs what the image needs.)
+.git
+.gitignore
+node_modules
+
+# Local secrets — never send these to the build
+.env
+.env.local
+.env.*.local
+
+# Dev/workspace-only artifacts
+outputs
+work
+.DS_Store
+*.pem
+docker-compose.yml

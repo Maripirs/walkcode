@@ -1,90 +1,14 @@
-import { difficultyTag, feedback, shuffle, topBar } from '../lib/ui.js';
+import { difficultyTag, escapeCode, escapeText, feedback, highlightBlank, richText, shuffle, topBar } from '../lib/ui.js';
 import { sourceLink } from '../lib/problem-source.js';
 
+// Full solutions shown in drills stay short so the whole thing fits on screen with one line
+// blanked out. This is a content guideline (enforced by review), not a runtime gate.
 export const MAX_DRILL_CONTEXT_LINES = 36;
-
-// Keep the complete short solution visible without revealing the answer: the
-// line the learner is working on stays blank while its surrounding code shows
-// exactly where it fits.
-function escapeCode(value) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-export function highlightBlank(code) {
-  return escapeCode(code).replaceAll('___', '<mark class="code-blank">___</mark>');
-}
-
-function normalizeCode(code) {
-  return code.replace(/\s+/g, '');
-}
-
-function escapeForPattern(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function flexibleCodePattern(code) {
-  return code.split(/(\s+)/).map((part) => (
-    /^\s+$/.test(part) ? '\\s*' : escapeForPattern(part)
-  )).join('');
-}
-
-function maskAnswerElsewhere(line, answer) {
-  const answerPattern = new RegExp(
-    `(^|[^A-Za-z0-9_$])${flexibleCodePattern(answer)}(?=$|[^A-Za-z0-9_$])`,
-    'g',
-  );
-  const marker = '__WALKCODE_MASKED_ANSWER__';
-  const masked = line.replace(answerPattern, (_, prefix) => `${prefix}${marker}`);
-  return escapeCode(masked).replaceAll(marker, '<mark class="code-masked-answer">answer hidden</mark>');
-}
-
-export function redactedCodeContext(fullCode, exercise) {
-  if (!fullCode || !exercise.correct) return null;
-
-  const blankLine = exercise.code.split('\n').find((line) => line.includes('___'));
-  if (!blankLine) return null;
-
-  const [beforeBlank, afterBlank] = blankLine.split('___');
-  const lines = fullCode.split('\n');
-  if (lines.length > MAX_DRILL_CONTEXT_LINES) return null;
-  const targetLineIndex = lines.findIndex((line) => normalizeCode(line).includes(
-    normalizeCode(`${beforeBlank}${exercise.correct}${afterBlank}`),
-  ));
-
-  // Only use a real, meaningfully larger solution rather than merely a
-  // related line.
-  if (
-    targetLineIndex < 0
-    || normalizeCode(fullCode).length - normalizeCode(blankLine).length < 32
-  ) return null;
-
-  const focusPattern = new RegExp(
-    `(${flexibleCodePattern(beforeBlank)})${flexibleCodePattern(exercise.correct)}(${flexibleCodePattern(afterBlank)})`,
-  );
-  const focusedLine = lines[targetLineIndex].replace(focusPattern, '$1___$2');
-  if (focusedLine === lines[targetLineIndex]) return null;
-
-  return lines.map((line, index) => (
-    index === targetLineIndex
-      ? highlightBlank(focusedLine)
-      // The same value can occur elsewhere in a real solution. Keep its
-      // context without quietly revealing the answer before a choice is made.
-      : maskAnswerElsewhere(line, exercise.correct)
-  )).join('\n');
-}
 
 function difficultyPicker(selected) {
   return `<label class="difficulty-picker">Difficulty <select data-drill-difficulty>
     ${['All', 'Easy', 'Medium', 'Hard'].map((level) => `<option value="${level}" ${selected === level ? 'selected' : ''}>${level}</option>`).join('')}
   </select></label>`;
-}
-
-function richText(value) {
-  return escapeCode(value).replaceAll('\n', '<br>');
 }
 
 function problemDetails(lesson, drill) {
@@ -120,13 +44,14 @@ function solutionDetails(lesson) {
   </details>`;
 }
 
+// One choice button. The full line of code is the label (escaped so it renders literally) and
+// the data attribute carries it verbatim for the answer check.
+function choiceButton(choice) {
+  return `<button class="drill-choice" data-drill-choice="${encodeURIComponent(choice)}">${escapeCode(choice)}</button>`;
+}
+
 export function renderDrill({ state, drill, lesson, exercise }) {
   const choices = shuffle(exercise.choices);
-  const codeContext = [
-    drill.fullCode?.[state.language],
-    lesson.code,
-    lesson.complexityGuide?.code,
-  ].map((source) => redactedCodeContext(source, exercise)).find(Boolean);
   return `${topBar({
     title: `Random code drill · ${state.drillIndex + 1}/${state.drillQueue.length}`,
     language: state.language,
@@ -134,17 +59,18 @@ export function renderDrill({ state, drill, lesson, exercise }) {
     extras: difficultyPicker(state.drillDifficulty),
   })}
   <article class="drill-card">
-    <div class="eyebrow">${(drill.topic || lesson.topic).toUpperCase()}</div>
-    <h1>${drill.title}${difficultyTag(drill.difficulty)}</h1>
+    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())}</div>
+    <h1>${escapeText(drill.title)}${difficultyTag(drill.difficulty)}</h1>
     <section class="drill-context"><b>The problem</b>
-      <p>${lesson.explanation || drill.problemDescription || drill.context}</p>
+      <p>${richText(lesson.explanation || drill.problemDescription || drill.context)}</p>
     </section>
     ${problemDetails(lesson, drill)}
-    <p class="drill-prompt">${exercise.prompt}</p>
+    <p class="drill-prompt">${escapeText(exercise.prompt)}</p>
     <section class="drill-code-context">
-      <pre class="code drill-context-code" tabindex="0">${codeContext || highlightBlank(exercise.code)}</pre>
+      <pre class="code drill-context-code" tabindex="0">${highlightBlank(exercise.code, state.language)}</pre>
     </section>
-    <div class="choice-list">${choices.map((choice) => `<button class="drill-choice" data-drill-choice="${encodeURIComponent(choice)}">${choice}</button>`).join('')}</div>
+    <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>
+    <div class="choice-list">${choices.map(choiceButton).join('')}</div>
     <div data-drill-feedback aria-live="polite"></div>
     ${solutionDetails(lesson)}
     <div data-drill-next></div>
@@ -162,8 +88,8 @@ export function bindDrillAnswer(root, exercise, onNext) {
       const correct = choice === exercise.correct;
       feedbackSlot.innerHTML = feedback(
         correct
-          ? `✓ Correct. ${exercise.why}`
-          : `Not quite. ${exercise.wrong?.[choice] || 'That option is useful elsewhere, but it does not make this line work.'}`,
+          ? `✓ Correct. ${escapeText(exercise.why)}`
+          : `Not quite. ${escapeText(exercise.wrong?.[choice] || 'That line does not preserve what this step needs.')}`,
         correct,
       );
       nextSlot.innerHTML = '';

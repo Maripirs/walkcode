@@ -1,4 +1,9 @@
 // Code-drill and code-fix content.
+//
+// Drill shape (whole-line selection): `code` is the full short solution with exactly one line
+// replaced by `___`; `choices` are complete candidate lines (one equals `correct`); `wrong`
+// gives per-line feedback that explains the flaw without naming the correct line. Nothing is
+// masked, so there is nothing to reverse-engineer.
 export const drillContext = {
   "Contains Duplicate": "nums is the input array. n is the current number as we scan left to right, and seen is a Set containing only numbers from earlier positions.",
   "Two Sum II": "numbers is sorted in ascending order. left and right are zero-indexed pointers to the first and last still-possible positions; sum is the pair they currently point to. The result must use 1-indexed positions, so each returned pointer needs + 1.",
@@ -23,82 +28,74 @@ export const drillDifficultyByTitle = {
 
 export const extraCodeDrills = [
   {
-    "title": "Trapping Rain Water",
-    "topic": "Two Pointers",
-    "difficulty": "Hard",
-    "context": "height is the elevation array. left and right are pointers at the unprocessed ends; leftMax and rightMax are the tallest walls seen from each side. At a side, its maximum wall determines how much water that bar can hold.",
-    "fullCode": {
-      "JavaScript": "let left = 0, right = height.length - 1;\nlet leftMax = 0, rightMax = 0, water = 0;\nwhile (left < right) {\n  if (height[left] <= height[right]) {\n    leftMax = Math.max(leftMax, height[left]);\n    water += leftMax - height[left];\n    left++;\n  } else {\n    rightMax = Math.max(rightMax, height[right]);\n    water += rightMax - height[right];\n    right--;\n  }\n}\nreturn water;",
-      "Python": "left, right = 0, len(height) - 1\nleft_max = right_max = water = 0\nwhile left < right:\n    if height[left] <= height[right]:\n        left_max = max(left_max, height[left])\n        water += left_max - height[left]\n        left += 1\n    else:\n        right_max = max(right_max, height[right])\n        water += right_max - height[right]\n        right -= 1\nreturn water;"
-    },
-    "exercise": {
-      "prompt": "The left maximum is the limiting wall for this bar. Add only the water above height[left].",
-      "code": "leftMax = Math.max(leftMax, height[left]);\nwater += ___;\nleft++;",
-      "choices": [
-        "leftMax - height[left]",
-        "height[left] - leftMax",
-        "leftMax + height[left]"
+    title: "Trapping Rain Water",
+    topic: "Two Pointers",
+    difficulty: "Hard",
+    context: "height is the elevation array. left and right are pointers at the unprocessed ends; leftMax and rightMax are the tallest walls seen from each side. At a side, its maximum wall determines how much water that bar can hold.",
+    exercise: {
+      prompt: "The left side is being processed. Which line adds only the water that sits above the current bar?",
+      code: "while (left < right) {\n  if (height[left] <= height[right]) {\n    leftMax = Math.max(leftMax, height[left]);\n    ___\n    left++;\n  } else {\n    rightMax = Math.max(rightMax, height[right]);\n    water += rightMax - height[right];\n    right--;\n  }\n}",
+      choices: [
+        "water += leftMax - height[left];",
+        "water += height[left] - leftMax;",
+        "water += leftMax + height[left];"
       ],
-      "correct": "leftMax - height[left]",
-      "why": "The water level is leftMax, so subtracting the bar height gives the trapped water above this position.",
-      "wrong": {
-        "height[left] - leftMax": "The bar is never taller than leftMax after the update, so this reverses the needed difference.",
-        "leftMax + height[left]": "Both values are heights; adding them does not represent water above the bar."
+      correct: "water += leftMax - height[left];",
+      why: "The water level over this bar is leftMax, so leftMax − height[left] is the trapped depth above it.",
+      wrong: {
+        "water += height[left] - leftMax;": "height[left] is never taller than leftMax after the update, so this is zero or negative.",
+        "water += leftMax + height[left];": "Both terms are heights; adding them is not a depth of water."
       }
     },
-    "pythonExercise": {
-      "prompt": "The left maximum is the limiting wall for this bar. Add only the water above height[left].",
-      "code": "left_max = max(left_max, height[left])\nwater += ___\nleft += 1",
-      "choices": [
-        "left_max - height[left]",
-        "height[left] - left_max",
-        "left_max + height[left]"
+    pythonExercise: {
+      prompt: "The left side is being processed. Which line adds only the water that sits above the current bar?",
+      code: "while left < right:\n    if height[left] <= height[right]:\n        left_max = max(left_max, height[left])\n        ___\n        left += 1\n    else:\n        right_max = max(right_max, height[right])\n        water += right_max - height[right]\n        right -= 1",
+      choices: [
+        "water += left_max - height[left]",
+        "water += height[left] - left_max",
+        "water += left_max + height[left]"
       ],
-      "correct": "left_max - height[left]",
-      "why": "The water level is left_max, so subtracting the bar height gives the trapped water above this position.",
-      "wrong": {
-        "height[left] - left_max": "This reverses the needed difference.",
-        "left_max + height[left]": "Adding heights does not represent water above the bar."
+      correct: "water += left_max - height[left]",
+      why: "The water level over this bar is left_max, so left_max − height[left] is the trapped depth above it.",
+      wrong: {
+        "water += height[left] - left_max": "height[left] is never taller than left_max after the update, so this is zero or negative.",
+        "water += left_max + height[left]": "Both terms are heights; adding them is not a depth of water."
       }
     }
   },
   {
-    "title": "Largest Rectangle in Histogram",
-    "topic": "Stack",
-    "difficulty": "Hard",
-    "context": "heights contains bar heights. stack holds indexes of bars with increasing heights. i is the first index where a popped bar can no longer extend right, while left is the nearest shorter bar to its left.",
-    "fullCode": {
-      "JavaScript": "const stack = [];\nlet best = 0;\nfor (let i = 0; i <= heights.length; i++) {\n  const current = i === heights.length ? 0 : heights[i];\n  while (stack.length && heights[stack.at(-1)] > current) {\n    const h = heights[stack.pop()];\n    const left = stack.length ? stack.at(-1) : -1;\n    best = Math.max(best, h * (i - left - 1));\n  }\n  stack.push(i);\n}\nreturn best;",
-      "Python": "stack = []\nbest = 0\nfor i in range(len(heights) + 1):\n    current = 0 if i == len(heights) else heights[i]\n    while stack and heights[stack[-1]] > current:\n        h = heights[stack.pop()]\n        left = stack[-1] if stack else -1\n        best = max(best, h * (i - left - 1))\n    stack.append(i)\nreturn best;"
-    },
-    "exercise": {
-      "prompt": "After popping a bar, i is the first index that is too short and left is the nearest shorter bar on the other side. Compute the inclusive width between them.",
-      "code": "const h = heights[stack.pop()];\nconst left = stack.length ? stack.at(-1) : -1;\nbest = Math.max(best, h * (___));",
-      "choices": [
-        "i - left - 1",
-        "i - left",
-        "left - i - 1"
+    title: "Largest Rectangle in Histogram",
+    topic: "Stack",
+    difficulty: "Hard",
+    context: "heights contains bar heights. stack holds indexes of bars with increasing heights. i is the first index where a popped bar can no longer extend right, while left is the nearest shorter bar to its left.",
+    exercise: {
+      prompt: "The popped bar h can extend from just after left to just before i. Which line uses the correct inclusive width?",
+      code: "while (stack.length && heights[stack.at(-1)] > current) {\n  const h = heights[stack.pop()];\n  const left = stack.length ? stack.at(-1) : -1;\n  ___\n}",
+      choices: [
+        "best = Math.max(best, h * (i - left - 1));",
+        "best = Math.max(best, h * (i - left));",
+        "best = Math.max(best, h * (left - i - 1));"
       ],
-      "correct": "i - left - 1",
-      "why": "The rectangle starts immediately after left and ends immediately before i, so both boundary bars are excluded.",
-      "wrong": {
-        "i - left": "That includes one of the shorter boundary bars.",
-        "left - i - 1": "The order is reversed, producing a negative width."
+      correct: "best = Math.max(best, h * (i - left - 1));",
+      why: "The rectangle starts immediately after left and ends immediately before i, so both boundary bars are excluded: i − left − 1.",
+      wrong: {
+        "best = Math.max(best, h * (i - left));": "That counts one of the shorter boundary bars in the width.",
+        "best = Math.max(best, h * (left - i - 1));": "The endpoints are reversed, producing a negative width."
       }
     },
-    "pythonExercise": {
-      "prompt": "After popping a bar, i is the first index that is too short and left is the nearest shorter bar on the other side. Compute the inclusive width between them.",
-      "code": "h = heights[stack.pop()]\nleft = stack[-1] if stack else -1\nbest = max(best, h * (___))",
-      "choices": [
-        "i - left - 1",
-        "i - left",
-        "left - i - 1"
+    pythonExercise: {
+      prompt: "The popped bar h can extend from just after left to just before i. Which line uses the correct inclusive width?",
+      code: "while stack and heights[stack[-1]] > current:\n    h = heights[stack.pop()]\n    left = stack[-1] if stack else -1\n    ___\nstack.append(i)",
+      choices: [
+        "best = max(best, h * (i - left - 1))",
+        "best = max(best, h * (i - left))",
+        "best = max(best, h * (left - i - 1))"
       ],
-      "correct": "i - left - 1",
-      "why": "The rectangle starts immediately after left and ends immediately before i, so both boundary bars are excluded.",
-      "wrong": {
-        "i - left": "That includes one of the shorter boundary bars.",
-        "left - i - 1": "The order is reversed, producing a negative width."
+      correct: "best = max(best, h * (i - left - 1))",
+      why: "The rectangle starts immediately after left and ends immediately before i, so both boundary bars are excluded: i − left − 1.",
+      wrong: {
+        "best = max(best, h * (i - left))": "That counts one of the shorter boundary bars in the width.",
+        "best = max(best, h * (left - i - 1))": "The endpoints are reversed, producing a negative width."
       }
     }
   }
@@ -107,249 +104,257 @@ export const extraCodeDrills = [
 export const codeExercises = {
   "Contains Duplicate": [
     {
-      "prompt": "Complete the duplicate check before adding the current number.",
-      "code": "for (const n of nums) {\n  if (seen.___(n)) return true;\n  seen.add(n);\n}",
-      "choices": [
-        "has",
-        "add",
-        "delete"
+      prompt: "Which line returns as soon as the current number was already seen?",
+      code: "const seen = new Set();\nfor (const n of nums) {\n  ___\n  seen.add(n);\n}\nreturn false;",
+      choices: [
+        "if (seen.has(n)) return true;",
+        "if (seen.add(n)) return true;",
+        "if (!seen.has(n)) return true;"
       ],
-      "correct": "has",
-      "why": "has checks membership without changing the set. add would mutate the set and always return the set itself."
+      correct: "if (seen.has(n)) return true;",
+      why: "seen.has(n) tests membership without changing the set, so a value from an earlier position ends the scan.",
+      wrong: {
+        "if (seen.add(n)) return true;": "add returns the Set itself, which is always truthy, so this returns true on the first number.",
+        "if (!seen.has(n)) return true;": "This fires for brand-new values — the opposite of a duplicate."
+      }
     },
     {
-      "prompt": "Complete the state update after you know this number is new.",
-      "code": "if (seen.has(n)) return true;\nseen.___(n);",
-      "choices": [
-        "add",
-        "has",
-        "clear"
+      prompt: "Which line records the current number so a later repeat can be caught?",
+      code: "const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  ___\n}\nreturn false;",
+      choices: [
+        "seen.add(n);",
+        "seen.has(n);",
+        "seen.delete(n);"
       ],
-      "correct": "add",
-      "why": "add records this new number so a later repeat can be detected."
+      correct: "seen.add(n);",
+      why: "Storing n now lets a later occurrence be found by the membership check.",
+      wrong: {
+        "seen.has(n);": "This only checks membership; it saves nothing, so no duplicate is ever detected.",
+        "seen.delete(n);": "This removes n instead of remembering it."
+      }
     }
   ],
   "Reverse Linked List": [
     {
-      "prompt": "Before reversing current.next, preserve the link to the unvisited part of the list.",
-      "code": "while (current) {\n  const next = current.___;\n  current.next = prev;\n}",
-      "choices": [
-        "next",
-        "value",
-        "prev"
+      prompt: "Which line saves the rest of the list before the next link is overwritten?",
+      code: "let prev = null;\nlet current = head;\nwhile (current) {\n  ___\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;",
+      choices: [
+        "const next = current.next;",
+        "const next = current.prev;",
+        "const next = prev;"
       ],
-      "correct": "next",
-      "why": "next saves the only pointer to the rest of the original list before current.next is overwritten.",
-      "wrong": {
-        "value": "value is the node’s data, not the link to the remaining nodes.",
-        "prev": "prev points to the already reversed portion; using it here would lose the unreversed nodes."
+      correct: "const next = current.next;",
+      why: "current.next still points at the unvisited remainder; saving it keeps that list reachable after the link flips.",
+      wrong: {
+        "const next = current.prev;": "A singly linked node has no prev pointer.",
+        "const next = prev;": "prev is the already-reversed side, not the remaining nodes."
       }
     },
     {
-      "prompt": "After pointing current backward, move prev forward to the node you just processed.",
-      "code": "const next = current.next;\ncurrent.next = prev;\nprev = ___;\ncurrent = next;",
-      "choices": [
-        "current",
-        "next",
-        "head"
+      prompt: "Which line moves prev forward to the node just reversed?",
+      code: "let prev = null;\nlet current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  ___\n  current = next;\n}\nreturn prev;",
+      choices: [
+        "prev = current;",
+        "prev = next;",
+        "prev = head;"
       ],
-      "correct": "current",
-      "why": "current is now the front of the reversed portion, so it becomes prev for the next iteration.",
-      "wrong": {
-        "next": "next is still the first unprocessed node; assigning it to prev would skip the node you just reversed.",
-        "head": "head never advances through the list, so it cannot represent the growing reversed portion."
+      correct: "prev = current;",
+      why: "current is now the front of the reversed portion, so it becomes prev for the next iteration.",
+      wrong: {
+        "prev = next;": "next is still unprocessed; using it skips the node just reversed.",
+        "prev = head;": "head never advances, so it cannot track the growing reversed list."
       }
     }
   ],
   "Two Sum II": [
     {
-      "prompt": "The array is sorted. When the pair sum is too small, choose the move that can make it larger.",
-      "code": "const sum = numbers[left] + numbers[right];\nif (sum < target) {\n  ___;\n} else {\n  right--;\n}",
-      "choices": [
-        "left++",
-        "right--",
-        "left--"
+      prompt: "The array is sorted ascending. Which line moves the right pointer inward from a match?",
+      code: "let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  ___\n}",
+      choices: [
+        "if (sum < target) left++; else right--;",
+        "if (sum < target) right--; else left++;",
+        "if (sum < target) left--; else right++;"
       ],
-      "correct": "left++",
-      "why": "Moving left rightward chooses a larger value, so it is the only pointer move that can increase the sum.",
-      "wrong": {
-        "right--": "Moving right leftward chooses a smaller value and makes an already too-small sum even smaller.",
-        "left--": "left is already at the smallest remaining candidate; moving it left leaves the active search range."
+      correct: "if (sum < target) left++; else right--;",
+      why: "A too-small sum needs a larger value (left++); a too-large sum needs a smaller value (right--).",
+      wrong: {
+        "if (sum < target) right--; else left++;": "Lowering right on a too-small sum makes it even smaller.",
+        "if (sum < target) left--; else right++;": "Both moves leave the active window and can run out of bounds."
       }
     },
     {
-      "prompt": "The prompt asks for 1-indexed positions, not JavaScript array indexes.",
-      "code": "if (sum === target) {\n  return [left + 1, ___];\n}",
-      "choices": [
-        "right + 1",
-        "right",
-        "left"
+      prompt: "Positions must be 1-indexed. Which line returns the correct answer on a match?",
+      code: "let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  ___\n  if (sum < target) left++; else right--;\n}",
+      choices: [
+        "if (sum === target) return [left + 1, right + 1];",
+        "if (sum === target) return [left, right];",
+        "if (sum === target) return [left + 1, right];"
       ],
-      "correct": "right + 1",
-      "why": "Both stored pointers are zero-indexed array positions, so both need one added before returning.",
-      "wrong": {
-        "right": "right is zero-indexed; returning it directly is off by one.",
-        "left": "left is the first position again, not the right-side match."
+      correct: "if (sum === target) return [left + 1, right + 1];",
+      why: "left and right are zero-indexed, and the problem wants 1-indexed positions, so both need + 1.",
+      wrong: {
+        "if (sum === target) return [left, right];": "These are zero-indexed positions, off by one on both.",
+        "if (sum === target) return [left + 1, right];": "This corrects only the left index."
       }
     }
   ],
   "Longest Substring Without Repeating Characters": [
     {
-      "prompt": "When the incoming character is already in the window, remove the character at the left edge and advance left.",
-      "code": "while (seen.has(s[right])) {\n  seen.delete(s[___]);\n}",
-      "choices": [
-        "left++",
-        "right++",
-        "right"
+      prompt: "The incoming character is already inside the window. Which line repairs the window from the left?",
+      code: "const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  ___\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}",
+      choices: [
+        "while (seen.has(s[right])) seen.delete(s[left++]);",
+        "while (seen.has(s[right])) seen.delete(s[right++]);",
+        "while (seen.has(s[right])) seen.add(s[left++]);"
       ],
-      "correct": "left++",
-      "why": "left++ uses the outgoing character, then moves the left edge forward so the window can become valid again.",
-      "wrong": {
-        "right++": "right identifies the incoming duplicate. Removing it would leave the earlier duplicate inside the window.",
-        "right": "right is the incoming character, not the character that must leave from the left edge."
+      correct: "while (seen.has(s[right])) seen.delete(s[left++]);",
+      why: "The duplicate must leave from the left edge, so remove s[left] and advance left until the window is valid.",
+      wrong: {
+        "while (seen.has(s[right])) seen.delete(s[right++]);": "This removes the incoming character and skips input, leaving the earlier duplicate inside.",
+        "while (seen.has(s[right])) seen.add(s[left++]);": "Adding instead of deleting never makes the window valid, so the loop never ends."
       }
     },
     {
-      "prompt": "After repairing the window, measure its inclusive length.",
-      "code": "seen.add(s[right]);\nbest = Math.max(best, ___);",
-      "choices": [
-        "right - left + 1",
-        "right - left",
-        "best + 1"
+      prompt: "The window is valid again. Which line records its length?",
+      code: "const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  ___\n}",
+      choices: [
+        "best = Math.max(best, right - left + 1);",
+        "best = Math.max(best, right - left);",
+        "best = Math.max(best, best + 1);"
       ],
-      "correct": "right - left + 1",
-      "why": "Both left and right are included in the current substring, so the length needs the +1.",
-      "wrong": {
-        "right - left": "That excludes one endpoint, so every non-empty window is counted too short.",
-        "best + 1": "The window can change by more than one character between measurements; calculate its actual boundaries."
+      correct: "best = Math.max(best, right - left + 1);",
+      why: "Both ends are inside the window, so its length is right − left + 1.",
+      wrong: {
+        "best = Math.max(best, right - left);": "This drops one endpoint, undercounting every window.",
+        "best = Math.max(best, best + 1);": "The window can change by more than one; measure it from its bounds."
       }
     }
   ],
   "Valid Parentheses": [
     {
-      "prompt": "A closing bracket must resolve the most recently opened bracket.",
-      "code": "if (char in pairs) {\n  if (stack.___() !== pairs[char]) return false;\n}",
-      "choices": [
-        "pop",
-        "push",
-        "shift"
+      prompt: "A closing bracket must resolve the most recent opener. Which line checks that?",
+      code: "const pairs = { \")\": \"(\", \"]\": \"[\", \"}\": \"{\" };\nconst stack = [];\nfor (const ch of s) {\n  if (ch in pairs) {\n    ___\n  } else {\n    stack.push(ch);\n  }\n}\nreturn stack.length === 0;",
+      choices: [
+        "if (stack.pop() !== pairs[ch]) return false;",
+        "if (stack.shift() !== pairs[ch]) return false;",
+        "if (stack.push(ch) !== pairs[ch]) return false;"
       ],
-      "correct": "pop",
-      "why": "pop removes and returns the most recently pushed opening bracket, which is the only one this closing bracket may match.",
-      "wrong": {
-        "push": "push adds another item; it does not inspect or resolve the pending opening bracket.",
-        "shift": "shift removes the oldest opening bracket, but nested brackets must close in last-in, first-out order."
+      correct: "if (stack.pop() !== pairs[ch]) return false;",
+      why: "pop() removes the most recently pushed opener, the only one this closing bracket may match.",
+      wrong: {
+        "if (stack.shift() !== pairs[ch]) return false;": "shift() removes the oldest opener, breaking nested last-in, first-out order.",
+        "if (stack.push(ch) !== pairs[ch]) return false;": "push adds another item and returns the new length; it resolves nothing."
       }
     },
     {
-      "prompt": "After reading every character, no opening bracket may remain unresolved.",
-      "code": "for (const char of s) {\n  // match or push each bracket\n}\nreturn stack.length === ___;",
-      "choices": [
-        "0",
-        "1",
-        "s.length"
+      prompt: "Which line reports whether every opener was matched?",
+      code: "const pairs = { \")\": \"(\", \"]\": \"[\", \"}\": \"{\" };\nconst stack = [];\nfor (const ch of s) {\n  if (ch in pairs) {\n    if (stack.pop() !== pairs[ch]) return false;\n  } else {\n    stack.push(ch);\n  }\n}\n___",
+      choices: [
+        "return stack.length === 0;",
+        "return stack.length === 1;",
+        "return stack.length === s.length;"
       ],
-      "correct": "0",
-      "why": "An empty stack means every opening bracket found a matching closing bracket.",
-      "wrong": {
-        "1": "One remaining opening bracket is still unmatched, so the string is invalid.",
-        "s.length": "The stack stores only unresolved openings, not every character in the input."
+      correct: "return stack.length === 0;",
+      why: "An empty stack means every opening bracket found its match.",
+      wrong: {
+        "return stack.length === 1;": "One leftover opener is still unmatched, so the string is invalid.",
+        "return stack.length === s.length;": "The stack holds only unresolved openers, not every character."
       }
     }
   ],
   "Binary Search": [
     {
-      "prompt": "mid is known to be too small, so remove it and every value to its left from the active interval.",
-      "code": "if (nums[mid] < target) {\n  left = ___;\n}",
-      "choices": [
-        "mid + 1",
-        "mid - 1",
-        "mid"
+      prompt: "mid is too small and already tested. Which line keeps only the values that could still match?",
+      code: "let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  ___\n  else right = mid - 1;\n}\nreturn -1;",
+      choices: [
+        "if (nums[mid] < target) left = mid + 1;",
+        "if (nums[mid] < target) left = mid - 1;",
+        "if (nums[mid] < target) left = mid;"
       ],
-      "correct": "mid + 1",
-      "why": "mid was already checked and is too small. The next possible answer begins immediately after it.",
-      "wrong": {
-        "mid - 1": "That moves left in the direction of even smaller values, which cannot help after a too-small midpoint.",
-        "mid": "Leaving mid in the interval can repeat the same midpoint forever."
+      correct: "if (nums[mid] < target) left = mid + 1;",
+      why: "mid was checked and is too small, so the next possible answer starts right after it.",
+      wrong: {
+        "if (nums[mid] < target) left = mid - 1;": "That moves toward even smaller values, which cannot help.",
+        "if (nums[mid] < target) left = mid;": "Leaving mid in the range can repeat the same midpoint forever."
       }
     },
     {
-      "prompt": "When mid is too large, keep only values strictly before it.",
-      "code": "if (nums[mid] > target) {\n  right = ___;\n}",
-      "choices": [
-        "mid - 1",
-        "mid + 1",
-        "mid"
+      prompt: "mid is too large and already tested. Which line ends the interval just before it?",
+      code: "let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  ___\n}\nreturn -1;",
+      choices: [
+        "else right = mid - 1;",
+        "else right = mid + 1;",
+        "else right = mid;"
       ],
-      "correct": "mid - 1",
-      "why": "mid was checked and is too large, so the remaining search interval ends just before it.",
-      "wrong": {
-        "mid + 1": "That keeps only values greater than an already too-large midpoint.",
-        "mid": "Leaving mid in the interval can stop the bounds from shrinking."
+      correct: "else right = mid - 1;",
+      why: "mid was checked and is too large, so the remaining interval ends one before it.",
+      wrong: {
+        "else right = mid + 1;": "That keeps values above an already too-large midpoint.",
+        "else right = mid;": "Leaving mid in the range can stop the bounds from shrinking."
       }
     }
   ],
   "Number of Islands": [
     {
-      "prompt": "As soon as flood fill reaches land, mark it visited so another search cannot count it again.",
-      "code": "if (grid[r][c] !== \"1\") return;\ngrid[r][c] = ___;",
-      "choices": [
-        "\"0\"",
-        "\"1\"",
-        "r + 1"
+      prompt: "Flood fill has just reached land. Which line marks it so it is not counted again?",
+      code: "function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  ___\n  visit(r + 1, c);\n  visit(r - 1, c);\n  visit(r, c + 1);\n  visit(r, c - 1);\n}",
+      choices: [
+        "grid[r][c] = \"0\";",
+        "grid[r][c] = \"1\";",
+        "grid[r][c] = r + 1;"
       ],
-      "correct": "\"0\"",
-      "why": "Changing visited land to water records that this cell already belongs to the island being explored.",
-      "wrong": {
-        "\"1\"": "Leaving the cell as land lets a later scan or recursive path visit it again.",
-        "r + 1": "The grid stores cell values; r + 1 is a coordinate, not a visited marker."
+      correct: "grid[r][c] = \"0\";",
+      why: "Turning visited land into water records that this cell already belongs to the current island.",
+      wrong: {
+        "grid[r][c] = \"1\";": "Leaving it as land lets a later scan or call visit it again.",
+        "grid[r][c] = r + 1;": "A grid cell holds a value, not a coordinate."
       }
     },
     {
-      "prompt": "Flood fill must explore horizontally adjacent land as well as vertically adjacent land.",
-      "code": "visit(r + 1, c);\nvisit(r - 1, c);\nvisit(r, c + 1);\nvisit(___, c - 1);",
-      "choices": [
-        "r",
-        "c",
-        "r + 1"
+      prompt: "Three neighbors are already visited. Which line explores the left neighbor?",
+      code: "function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  grid[r][c] = \"0\";\n  visit(r + 1, c);\n  visit(r - 1, c);\n  visit(r, c + 1);\n  ___\n}",
+      choices: [
+        "visit(r, c - 1);",
+        "visit(c, c - 1);",
+        "visit(r + 1, c - 1);"
       ],
-      "correct": "r",
-      "why": "Keeping r unchanged and decreasing c visits the left neighbor.",
-      "wrong": {
-        "c": "c is a column index, but the first argument to visit is the row.",
-        "r + 1": "That repeats the downward neighbor instead of exploring left."
+      correct: "visit(r, c - 1);",
+      why: "Keeping r and decreasing c reaches the cell immediately to the left.",
+      wrong: {
+        "visit(c, c - 1);": "This passes a column where the row is expected.",
+        "visit(r + 1, c - 1);": "This moves diagonally, skipping the direct left cell."
       }
     }
   ],
   "Invert Binary Tree": [
     {
-      "prompt": "An empty subtree is already inverted, so it provides the recursive base case.",
-      "code": "function invertTree(root) {\n  if (!root) return ___;\n}",
-      "choices": [
-        "null",
-        "root",
-        "[]"
+      prompt: "Which line handles the empty subtree that ends the recursion?",
+      code: "function invertTree(root) {\n  ___\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}",
+      choices: [
+        "if (!root) return null;",
+        "if (!root) return root;",
+        "if (!root) return [];"
       ],
-      "correct": "null",
-      "why": "A missing child stays missing; returning null stops recursion at the edge of the tree.",
-      "wrong": {
-        "root": "There is no root node when this branch is empty.",
-        "[]": "The function returns tree nodes or null, not an array."
+      correct: "if (!root) return null;",
+      why: "A missing child stays missing; returning null stops recursion at the edge of the tree.",
+      wrong: {
+        "if (!root) return root;": "There is no node to return when this branch is empty.",
+        "if (!root) return [];": "The function returns tree nodes or null, not an array."
       }
     },
     {
-      "prompt": "Preserve the original left child before replacing root.left with the inverted right subtree.",
-      "code": "const oldLeft = root.___;\nroot.left = invertTree(root.right);\nroot.right = invertTree(oldLeft);",
-      "choices": [
-        "left",
-        "right",
-        "value"
+      prompt: "Which line preserves the original left child before it is overwritten?",
+      code: "function invertTree(root) {\n  if (!root) return null;\n  ___\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}",
+      choices: [
+        "const oldLeft = root.left;",
+        "const oldLeft = root.right;",
+        "const oldLeft = root.val;"
       ],
-      "correct": "left",
-      "why": "oldLeft holds the original left subtree so it can become the new right subtree after both sides are inverted.",
-      "wrong": {
-        "right": "Saving right loses the original left subtree, which still needs to move to the right.",
-        "value": "value is the node’s payload; the operation needs a child subtree reference."
+      correct: "const oldLeft = root.left;",
+      why: "The original left subtree must be saved so it can become the new right after both sides invert.",
+      wrong: {
+        "const oldLeft = root.right;": "Saving right loses the original left subtree, which still needs to move.",
+        "const oldLeft = root.val;": "val is the node’s payload, not a child subtree."
       }
     }
   ]

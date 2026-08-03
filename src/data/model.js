@@ -1,99 +1,66 @@
-import { curriculum } from './curriculum.js';
-import { easyWalkthroughTitles, hardWalkthroughTitles } from './difficulty.js';
-import { codeExercises, drillContext, drillDifficultyByTitle, extraCodeDrills } from './drills.js';
-import { supplementalCodeDrills } from './supplemental-drills.js';
-import { walkthroughUpgrades } from './walkthrough-upgrades.js';
-import { pythonExercises, pythonSolutions } from './languages.js';
-import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
+// Thin selector over a loaded content bundle. Historically this file assembled content
+// directly from the src/data/** modules; in M5 that assembly moved to assemble.js and the
+// content is loaded at runtime (from /api/content, with an offline fallback) via
+// initContent(). The public interface below is unchanged, so the views/app.js keep consuming
+// `cards`, `lessonFor`, `drillItems`, etc. exactly as before.
 
-const featuredTopics = {
-  'Two Sum': 'Arrays & Hashing',
-  'Two Sum II': 'Two Pointers',
-  'Longest Substring Without Repeating Characters': 'Sliding Window',
-  'Binary Search': 'Binary Search',
-  'Valid Parentheses': 'Stack',
-  'Number of Islands': 'Graphs',
-};
+let bundle = { version: '', cards: [], lessons: {}, drills: [] };
 
-const builtTitles = new Set([
-  'Contains Duplicate',
-  'Valid Anagram',
-  'Valid Palindrome',
-  'Best Time to Buy and Sell Stock',
-  'Min Stack',
-  'Maximum Depth of Binary Tree',
-  'Group Anagrams',
-  '3Sum',
-  'Daily Temperatures',
-  'Merge Two Sorted Lists',
-  'Climbing Stairs',
-  'Course Schedule',
-  'Diameter of Binary Tree',
-  'Kth Largest Element in an Array',
-  'Coin Change',
-  'Distinct Subsequences',
-  'Two Sum II',
-  'Longest Substring Without Repeating Characters',
-  'Valid Parentheses',
-  'Binary Search',
-  'Reverse Linked List',
-  'Invert Binary Tree',
-  'Number of Islands',
-]);
+// Live bindings: reassigned by initContent() and observed by importers (app.js).
+export let cards = [];
+export let cardsById = new Map();
+let cardsByTitle = new Map();
 
-export const cards = [
-  ...Object.entries(curriculum).flatMap(([topic, titles]) => titles.map((title) => ({
-    id: `${topic}:${title}`,
-    topic,
-    title,
-  }))),
-  ...Object.keys(featured)
-    .filter((title) => !Object.values(curriculum).flat().includes(title))
-    .map((title) => ({ id: `featured:${title}`, topic: featuredTopics[title] || 'Arrays & Hashing', title })),
-].map((card, index) => ({ ...card, position: index + 1 }));
+export function initContent(next) {
+  bundle = next || bundle;
+  cards = bundle.cards || [];
+  cardsById = new Map(cards.map((card) => [card.id, card]));
+  cardsByTitle = new Map(cards.map((card) => [card.title, card]));
+}
 
-export const cardsById = new Map(cards.map((card) => [card.id, card]));
+export function contentVersion() {
+  return bundle.version;
+}
 
 export function difficultyFor(title) {
-  if (drillDifficultyByTitle[title]) return drillDifficultyByTitle[title];
-  if (hardWalkthroughTitles.includes(title)) return 'Hard';
-  return easyWalkthroughTitles.includes(title) ? 'Easy' : 'Medium';
+  return cardsByTitle.get(title)?.difficulty || 'Medium';
 }
 
 export function isBuilt(title) {
-  return builtTitles.has(title);
+  return cardsByTitle.get(title)?.isBuilt || false;
+}
+
+// Content-complete (all authored fields present) but not necessarily certified/shown — used by
+// the owner's review mode to surface problems that are ready for review.
+export function isComplete(title) {
+  return cardsByTitle.get(title)?.isComplete || false;
 }
 
 export function lessonFor(card, language) {
-  const authored = featured[card.title] || walkthroughUpgrades[card.title];
-  const profile = profiles[card.topic] || fallback;
-  const base = authored || {
-    brief: problemExplanations[card.title] || `Solve ${card.title}.`,
-    ...profile,
-    code: language === 'Python'
-      ? `# ${card.title}\ndef solve(input):\n    # preserve the key invariant\n    return result`
-      : `// ${card.title}\nfunction solve(input) {\n  // preserve the key invariant\n  return result;\n}`,
-  };
+  const byLanguage = bundle.lessons[card.id];
+  const lesson = byLanguage?.[language] || byLanguage?.JavaScript;
+  if (lesson) return lesson;
+  // Defensive fallback: the bundle precomputes a lesson for every card and every drill's
+  // synthetic card, so this should not be reached in practice.
   return {
-    ...base,
     title: card.title,
     topic: card.topic,
-    explanation: problemExplanations[card.title] || base.brief,
-    code: language === 'Python' && (authored?.pythonCode || pythonSolutions[card.title])
-      ? authored?.pythonCode || pythonSolutions[card.title]
-      : base.code,
-    inputOutput: authored?.inputOutput || briefs[card.title] || null,
-    conceptChoices: authored?.conceptChoices || conceptChoices[card.title] || null,
-    exercises: (authored?.exercises || codeExercises[card.title] || []).map((exercise, index) => localizedExercise(card.title, index, exercise, language)),
-    complexityGuide: authored?.complexityGuide || complexityLessons[card.title] || null,
-    drillContext: drillContext[card.title],
-    isBuilt: isBuilt(card.title),
+    isBuilt: false,
+    brief: `Solve ${card.title}.`,
+    explanation: `Solve ${card.title}.`,
+    concepts: [],
+    algorithm: [],
+    fixes: [],
+    complexity: '',
+    code: '',
+    inputOutput: null,
+    conceptChoices: null,
+    intuition: null,
+    exercises: [],
+    complexityGuide: null,
+    drillContext: null,
+    isComplete: false,
   };
-}
-
-export function localizedExercise(title, index, exercise, language) {
-  if (language !== 'Python') return exercise;
-  return { ...exercise, ...(pythonExercises[`${title}:${index}`] || {}) };
 }
 
 export function groupedCards() {
@@ -103,12 +70,17 @@ export function groupedCards() {
   }, {});
 }
 
+// Library browse order: a single flat list from easier to harder. We deliberately do NOT group
+// by topic — the category names the very pattern the Recognize step asks the learner to spot.
+// Ties (same difficulty) keep the curriculum/roadmap order via `position`.
+const DIFFICULTY_RANK = { Easy: 0, Medium: 1, Hard: 2 };
+
+export function orderedCards() {
+  return [...cards].sort((a, b) =>
+    (DIFFICULTY_RANK[a.difficulty] ?? 1) - (DIFFICULTY_RANK[b.difficulty] ?? 1)
+    || (a.position ?? 0) - (b.position ?? 0));
+}
+
 export function drillItems() {
-  const lessonDrills = Object.entries(codeExercises).flatMap(([title, exercises]) => exercises.map((exercise, index) => ({
-    title,
-    exercise,
-    index,
-    difficulty: difficultyFor(title),
-  })));
-  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills];
+  return bundle.drills;
 }

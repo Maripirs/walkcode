@@ -1,18 +1,28 @@
 import { supplementalFullCode } from './supplemental-solutions.js';
+import { blankLine, genericWrong } from './blank-line.js';
 
-const additionalFullCode = {
-  'Valid Anagram': {
-    JavaScript: 'function isAnagram(s, t) {\n  if (s.length !== t.length) return false;\n  const counts = new Map();\n  for (const char of s) counts.set(char, (counts.get(char) || 0) + 1);\n  for (const char of t) {\n    const next = (counts.get(char) || 0) - 1;\n    if (next < 0) return false;\n    counts.set(char, next);\n  }\n  return true;\n}',
-    Python: 'def is_anagram(s, t):\n    if len(s) != len(t):\n        return False\n    counts = {}\n    for char in s:\n        counts[char] = counts.get(char, 0) + 1\n    for char in t:\n        counts[char] = counts.get(char, 0) - 1\n        if counts[char] < 0:\n            return False\n    return True',
-  },
-};
+// Build a whole-line code-fix exercise from a spec { prompt, correct, choices, why }: the JS
+// solution is shown with `correct` blanked, and Python variants live in languages.js keyed by
+// `title:index`. Keeping the JS solution here as the single source means the shown code is
+// always the real solution with one line removed.
+function ex(fullJs, spec) {
+  return {
+    prompt: spec.prompt,
+    code: blankLine(fullJs, spec.correct),
+    choices: spec.choices,
+    correct: spec.correct,
+    why: spec.why,
+    wrong: spec.wrong || genericWrong(spec.choices, spec.correct),
+  };
+}
 
 function lesson(title, details) {
-  const fullCode = supplementalFullCode[title] || additionalFullCode[title];
+  const fullCode = supplementalFullCode[title];
   return {
     ...details,
     code: fullCode.JavaScript,
     pythonCode: fullCode.Python,
+    exercises: details.exercises.map((spec) => ex(fullCode.JavaScript, spec)),
   };
 }
 
@@ -25,9 +35,10 @@ export const walkthroughUpgrades = {
     algorithm: ['Return false if the lengths differ.', 'Count every character in s.', 'Consume one count for each character in t.', 'A missing count returns false.', 'Return true after every count balances.'],
     fixes: ['Check lengths before doing map work.', 'Subtract for t; adding would hide a mismatch.'],
     complexity: 'Time O(n); space O(n) in the general alphabet case.',
+    intuition: 'Two anagrams are just the same bag of letters poured out in a different order — so forget the order entirely and only ask whether every letter shows up the same number of times.',
     exercises: [
-      { prompt: 'Different lengths cannot have equal frequencies.', code: 'if (s.length !== t.length) return ___;', choices: ['false', 'true', 'null'], correct: 'false', why: 'Equal counts require equal totals.', wrong: { true: 'true accepts an impossible pair.', null: 'The result must be boolean.' } },
-      { prompt: 'A character in t uses one available count.', code: 'const next = (counts.get(char) || 0) ___ 1;', choices: ['-', '+', '*'], correct: '-', why: 'Subtracting consumes one matching character.', wrong: { '+': 'Adding makes a mismatch look available.', '*': 'Multiplication does not track remaining copies.' } },
+      { prompt: 'Which line rejects strings that can’t be anagrams before counting?', correct: 'if (s.length !== t.length) return false;', choices: ['if (s.length !== t.length) return false;', 'if (s.length !== t.length) return true;', 'if (s.length === t.length) return false;'], why: 'Unequal lengths cannot have equal character counts.' },
+      { prompt: 'Each character of t consumes one available count. Which line?', correct: 'const next = (counts.get(char) || 0) - 1;', choices: ['const next = (counts.get(char) || 0) - 1;', 'const next = (counts.get(char) || 0) + 1;', 'const next = (counts.get(char) || 0) * 1;'], why: 'Subtracting consumes one matching character; a later negative count signals a mismatch.' },
     ],
     complexityGuide: { work: 'Across both loops, how many characters are processed?', workChoices: [['once', 'At most once per character'], ['nested', 'Once for every other character']], workCorrect: 'once', workWhy: 'The two scans are consecutive, so total work is linear.', memory: 'Which storage can grow with distinct characters?', memoryChoices: [['map', 'The frequency map'], ['constant', 'Only char and next']], memoryCorrect: 'map', memoryWhy: 'The map can store every distinct character in s.', final: [['linear-linear', 'Time O(n), space O(n)'], ['quadratic-linear', 'Time O(n²), space O(n)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-linear' },
   }),
@@ -39,9 +50,10 @@ export const walkthroughUpgrades = {
     algorithm: ['Start left at the first character and right at the last.', 'Skip non-alphanumeric characters on either side.', 'Compare the normalized characters.', 'A mismatch returns false; otherwise move both pointers inward.', 'When pointers cross, return true.'],
     fixes: ['Skip punctuation before comparing.', 'Move both pointers only after a match.'],
     complexity: 'Time O(n); space O(1).',
+    intuition: 'A palindrome mirrors around its center, so you never need the whole string at once — just walk inward from both ends, skipping anything that is not a letter or digit, and check that each facing pair matches.',
     exercises: [
-      { prompt: 'A mismatched mirrored pair disproves a palindrome.', code: 'if (s[left].toLowerCase() !== s[right].toLowerCase()) return ___;', choices: ['false', 'true', 'null'], correct: 'false', why: 'The first mismatch is decisive.', wrong: { true: 'true would accept a mismatch.', null: 'The required result is boolean.' } },
-      { prompt: 'After a match, move left inward.', code: 'left___;', choices: ['++', '--', '+= 2'], correct: '++', why: 'left moves toward right.', wrong: { '--': 'That moves away from the center.', '+= 2': 'That skips a character.' } },
+      { prompt: 'Which line rejects a mismatched mirrored pair?', correct: 'if (s[left].toLowerCase() !== s[right].toLowerCase()) return false;', choices: ['if (s[left].toLowerCase() !== s[right].toLowerCase()) return false;', 'if (s[left].toLowerCase() === s[right].toLowerCase()) return false;', 'if (s[left] !== s[right]) return false;'], why: 'One mismatched alphanumeric pair, compared case-insensitively, disproves the palindrome.' },
+      { prompt: 'Which line skips non-alphanumeric characters on the left edge?', correct: 'while (left < right && !/[a-z0-9]/i.test(s[left])) left++;', choices: ['while (left < right && !/[a-z0-9]/i.test(s[left])) left++;', 'while (left < right && /[a-z0-9]/i.test(s[left])) left++;', 'while (left < right && !/[a-z0-9]/i.test(s[right])) left++;'], why: 'Advance left past non-alphanumeric characters, staying in bounds, before comparing.' },
     ],
     complexityGuide: { work: 'How many times can either pointer pass one character?', workChoices: [['once', 'At most once'], ['nested', 'Once for every other character']], workCorrect: 'once', workWhy: 'Pointers only move inward; no character is revisited.', memory: 'What extra storage grows with the input?', memoryChoices: [['constant', 'Only left and right'], ['copy', 'A normalized string copy']], memoryCorrect: 'constant', memoryWhy: 'The original string is compared in place.', final: [['linear-constant', 'Time O(n), space O(1)'], ['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n)']], finalCorrect: 'linear-constant' },
   }),
@@ -53,9 +65,10 @@ export const walkthroughUpgrades = {
     algorithm: ['Start minPrice above every price and best at zero.', 'Read each price as today’s possible sell.', 'Compare today’s profit to best.', 'Update the cheapest price for future days.', 'Return best.'],
     fixes: ['Compute profit before updating the running minimum.', 'Keep best at zero for a falling market.'],
     complexity: 'Time O(n); space O(1).',
+    intuition: 'On any day you could sell, the best you could have done is sell now after buying at the cheapest day so far — so just track the lowest price behind you and the biggest gap it ever opens up.',
     exercises: [
-      { prompt: 'Selling today uses the cheapest earlier buy.', code: 'best = Math.max(best, price - ___);', choices: ['minPrice', 'best', 'price'], correct: 'minPrice', why: 'The lowest earlier price gives today’s legal profit.', wrong: { best: 'best is a profit, not a price.', price: 'Subtracting today from itself gives zero.' } },
-      { prompt: 'Preserve the cheapest purchase for future days.', code: 'minPrice = Math.___(minPrice, price);', choices: ['min', 'max', 'floor'], correct: 'min', why: 'A future sale needs the smallest earlier purchase.', wrong: { max: 'The highest price makes profit worse.', floor: 'Rounding does not choose a day.' } },
+      { prompt: 'Which line records the best profit from selling at today’s price?', correct: 'best = Math.max(best, price - minPrice);', choices: ['best = Math.max(best, price - minPrice);', 'best = Math.max(best, minPrice - price);', 'best = Math.max(best, price - best);'], why: 'Selling today after buying at the cheapest earlier price gives profit price − minPrice.' },
+      { prompt: 'Which line keeps the cheapest purchase price for future days?', correct: 'minPrice = Math.min(minPrice, price);', choices: ['minPrice = Math.min(minPrice, price);', 'minPrice = Math.max(minPrice, price);', 'minPrice = price;'], why: 'A future sale needs the smallest earlier price, so keep the running minimum.' },
     ],
     complexityGuide: { work: 'How many price entries are examined?', workChoices: [['once', 'At most once'], ['nested', 'Once for every other price']], workCorrect: 'once', workWhy: 'One loop does constant work per price.', memory: 'What storage grows with prices.length?', memoryChoices: [['constant', 'Only minPrice and best'], ['array', 'A profit for every day']], memoryCorrect: 'constant', memoryWhy: 'Only two running values are kept.', final: [['linear-constant', 'Time O(n), space O(1)'], ['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n)']], finalCorrect: 'linear-constant' },
   }),
@@ -67,9 +80,10 @@ export const walkthroughUpgrades = {
     algorithm: ['Keep a normal value stack.', 'Keep a matching stack of minimums.', 'On push, store the smaller of val and the old minimum.', 'On pop, remove one item from both stacks.', 'Read getMin from the minimum-stack top.'],
     fixes: ['Store one minimum for every stack depth.', 'Pop both stacks together.'],
     complexity: 'Every operation is O(1); storage is O(n).',
+    intuition: 'You cannot afford to hunt for the minimum on demand, so remember it as you go: at every push record the smallest value seen up to that depth, and popping simply uncovers the minimum that came before.',
     exercises: [
-      { prompt: 'Carry the previous minimum to the new depth.', code: 'minStack.push(Math.min(val, ___));', choices: ['minStack.at(-1)', 'stack.at(-1)', 'val + 1'], correct: 'minStack.at(-1)', why: 'The prior minimum is the value that must survive.', wrong: { 'stack.at(-1)': 'The prior value need not be the minimum.', 'val + 1': 'That is unrelated to stack state.' } },
-      { prompt: 'Removing one value removes its matching minimum.', code: 'minStack.___();', choices: ['pop', 'push', 'shift'], correct: 'pop', why: 'The records must stay at matching depths.', wrong: { push: 'Pushing creates a mismatched record.', shift: 'Removing the bottom breaks stack order.' } },
+      { prompt: 'On push, which line keeps the running minimum correct at the new depth?', correct: 'minStack.push(Math.min(val, minStack.at(-1)));', choices: ['minStack.push(Math.min(val, minStack.at(-1)));', 'minStack.push(Math.min(val, stack.at(-1)));', 'minStack.push(val);'], why: 'Compare the new value with the previous minimum, which sits on top of minStack.' },
+      { prompt: 'Which line returns the current minimum in O(1)?', correct: 'getMin() { return this.minStack.at(-1); }', choices: ['getMin() { return this.minStack.at(-1); }', 'getMin() { return this.stack.at(-1); }', 'getMin() { return Math.min(...this.stack); }'], why: 'The current minimum is kept on top of minStack, so getMin just reads that top.' },
     ],
     complexityGuide: { work: 'How much scanning does getMin perform?', workChoices: [['constant', 'It reads one top value'], ['linear', 'It scans all values']], workCorrect: 'constant', workWhy: 'The minimum is maintained at the top of minStack.', memory: 'What extra storage can grow with pushes?', memoryChoices: [['stack', 'One minimum record per depth'], ['constant', 'Only one global minimum']], memoryCorrect: 'stack', memoryWhy: 'minStack mirrors every item in the main stack.', final: [['constant-linear', 'Time O(1) per operation, space O(n)'], ['linear-constant', 'Time O(n) per operation, space O(1)'], ['constant-constant', 'Time O(1) per operation, space O(1)']], finalCorrect: 'constant-linear' },
   }),
@@ -81,9 +95,10 @@ export const walkthroughUpgrades = {
     algorithm: ['An empty subtree has depth zero.', 'Find the left subtree depth recursively.', 'Find the right subtree depth recursively.', 'Choose the larger child depth.', 'Add one for the current node.'],
     fixes: ['Use zero for an empty subtree.', 'Recurse into both children before choosing the larger depth.'],
     complexity: 'Time O(n); space O(h) for recursion height h.',
+    intuition: 'A tree’s depth is nothing more than one step plus the depth of its taller side — so let each node ask its two children how deep they are and add itself on top.',
     exercises: [
-      { prompt: 'Use both subtree depths before choosing the deeper one.', code: 'return 1 + Math.max(maxDepth(root.left), ___);', choices: ['maxDepth(root.right)', 'maxDepth(root)', 'root.right'], correct: 'maxDepth(root.right)', why: 'The right subtree must be measured recursively too.', wrong: { 'maxDepth(root)': 'That would recurse forever on the same node.', 'root.right': 'A node reference is not its depth.' } },
-      { prompt: 'An absent subtree contains no nodes.', code: 'if (!root) return ___;', choices: ['0', '1', 'null'], correct: '0', why: 'Zero lets a leaf become depth one.', wrong: { '1': 'That makes every depth too large.', null: 'Depth calculations need a number.' } },
+      { prompt: 'Which line returns this node’s depth from its children’s depths?', correct: 'return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));', choices: ['return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));', 'return 1 + Math.min(maxDepth(root.left), maxDepth(root.right));', 'return Math.max(maxDepth(root.left), maxDepth(root.right));'], why: 'A node’s depth is one more than the depth of its deeper child.' },
+      { prompt: 'Which line gives an empty subtree its depth?', correct: 'if (!root) return 0;', choices: ['if (!root) return 0;', 'if (!root) return 1;', 'if (!root) return null;'], why: 'An empty subtree has depth zero, which lets a leaf become depth one.' },
     ],
     complexityGuide: { work: 'How many times is each real node visited?', workChoices: [['once', 'At most once'], ['nested', 'Once for every other node']], workCorrect: 'once', workWhy: 'Each call handles its node once, then moves only to children.', memory: 'What grows with a very tall tree?', memoryChoices: [['stack', 'The recursion call stack'], ['constant', 'Only two child depths']], memoryCorrect: 'stack', memoryWhy: 'Calls remain active along a root-to-leaf path of height h.', final: [['linear-height', 'Time O(n), space O(h)'], ['quadratic-height', 'Time O(n²), space O(h)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-height' },
   }),
@@ -95,7 +110,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Create a map from a signature to a group.', 'Sort one word’s characters to make its signature.', 'Use that signature as the map key.', 'Append the original word to its matching group.', 'Return all map values.'],
     fixes: ['Use the sorted letters as the key, not the original word.', 'Store the original word in its group.'],
     complexity: 'Time O(n · k log k); space O(n · k), where k is a word length.',
-    exercises: [{ prompt: 'Turn a sorted character list into one stable key.', code: "const key = [...word].sort().___('');", choices: ['join', 'push', 'split'], correct: 'join', why: 'join creates one comparable string signature.', wrong: { push: 'push mutates an array and does not make a key.', split: 'split works on strings, not this array.' } }, { prompt: 'Place words with this signature in the same bucket.', code: 'groups.get(key).___(word);', choices: ['push', 'pop', 'clear'], correct: 'push', why: 'push adds this original word to its anagram group.', wrong: { pop: 'pop removes an existing word.', clear: 'clear would erase the group.' } }],
+    intuition: 'Every anagram of a word collapses to the same fingerprint when you sort its letters — so use that sorted-letter fingerprint as a bucket label and drop each word into its matching bucket.',
+    exercises: [
+      { prompt: 'Which line builds one stable key shared by all anagrams of word?', correct: "const key = [...word].sort().join('');", choices: ["const key = [...word].sort().join('');", 'const key = [...word].sort();', "const key = word.join('');"], why: 'Sorting the letters and joining them yields the same string for every anagram.' },
+      { prompt: 'Which line adds the word to the group for its signature?', correct: 'groups.get(key).push(word);', choices: ['groups.get(key).push(word);', 'groups.set(key, word);', 'groups.get(word).push(key);'], why: 'Append the original word to the bucket keyed by its sorted-letter signature.' },
+    ],
     complexityGuide: { work: 'What dominates work for each word of length k?', workChoices: [['sort', 'Sorting its k characters'], ['constant', 'One constant-time comparison']], workCorrect: 'sort', workWhy: 'Creating the canonical key requires sorting each word.', memory: 'What grows with all input characters?', memoryChoices: [['groups', 'The grouped output map'], ['constant', 'Only key']], memoryCorrect: 'groups', memoryWhy: 'The map keeps every word in an output group.', final: [['n-klogk', 'Time O(n · k log k), space O(n · k)'], ['linear-constant', 'Time O(n), space O(1)'], ['quadratic-linear', 'Time O(n²), space O(n)']], finalCorrect: 'n-klogk' },
   }),
   '3Sum': lesson('3Sum', {
@@ -106,7 +125,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Sort nums so equal values are adjacent.', 'Fix one value at index i.', 'Skip a repeated fixed value.', 'Move left and right to find the remaining pair.', 'After a match, skip duplicate pointer values.'],
     fixes: ['Skip repeated fixed values with continue.', 'Move both pointers after storing a valid triple.'],
     complexity: 'Time O(n²); space O(1) beyond the result, excluding sort implementation.',
-    exercises: [{ prompt: 'Ignore a repeated fixed value while keeping later candidates.', code: 'if (i > 0 && nums[i] === nums[i - 1]) ___;', choices: ['continue', 'break', 'return []'], correct: 'continue', why: 'Only this duplicate i is skipped.', wrong: { break: 'break loses later distinct fixed values.', 'return []': 'That discards already found triples.' } }, { prompt: 'A sum below zero needs a larger second value.', code: 'if (sum < 0) ___;', choices: ['left++', 'right--', 'left--'], correct: 'left++', why: 'Moving left rightward increases the sorted value.', wrong: { 'right--': 'That makes the sum smaller.', 'left--': 'That leaves the search range.' } }],
+    intuition: 'Lock one number in place and the puzzle shrinks to finding two others that cancel it out — and once the array is sorted, those two can be squeezed in from both ends while duplicates are quietly skipped.',
+    exercises: [
+      { prompt: 'Which line skips a repeated fixed value while keeping later distinct ones?', correct: 'if (i > 0 && nums[i] === nums[i - 1]) continue;', choices: ['if (i > 0 && nums[i] === nums[i - 1]) continue;', 'if (i > 0 && nums[i] === nums[i - 1]) break;', 'if (i > 0 && nums[i] === nums[i - 1]) return [];'], why: 'continue skips just this duplicate fixed value while later distinct ones still run.' },
+      { prompt: 'The array is sorted. Which line reacts to a sum below zero?', correct: 'if (sum < 0) left++;', choices: ['if (sum < 0) left++;', 'if (sum < 0) right--;', 'if (sum < 0) left--;'], why: 'A too-small sum needs a larger value, so move left rightward.' },
+    ],
     complexityGuide: { work: 'For each fixed i, how do left and right move?', workChoices: [['once', 'Across the remaining suffix once'], ['nested', 'Across the suffix for every pointer position']], workCorrect: 'once', workWhy: 'Both pointers move inward without resetting for that i.', memory: 'What auxiliary structure grows with n after sorting?', memoryChoices: [['constant', 'Only indexes and sum'], ['map', 'A map of every value']], memoryCorrect: 'constant', memoryWhy: 'The pair search uses the sorted array directly.', final: [['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n)'], ['cubic-constant', 'Time O(n³), space O(1)']], finalCorrect: 'quadratic-constant' },
   }),
   'Daily Temperatures': lesson('Daily Temperatures', {
@@ -117,7 +140,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Store indexes whose warmer day is unknown.', 'Read today’s temperature.', 'While today is warmer than the stack top, resolve that earlier day.', 'Store i minus the earlier index as its wait.', 'Push today as unresolved.'],
     fixes: ['Store indexes so a waiting distance can be computed.', 'Pop while today is warmer, not just once.'],
     complexity: 'Time O(n); space O(n).',
-    exercises: [{ prompt: 'Waiting time is today’s index minus the earlier day.', code: 'result[prev] = ___;', choices: ['i - prev', 'prev - i', 'i + prev'], correct: 'i - prev', why: 'Today is the first warmer day after prev.', wrong: { 'prev - i': 'That is negative.', 'i + prev': 'Indexes add to no meaningful distance.' } }, { prompt: 'Keep today unresolved for a later warmer day.', code: 'stack.___(i);', choices: ['push', 'pop', 'shift'], correct: 'push', why: 'The stack records today’s index.', wrong: { pop: 'pop removes an unresolved day.', shift: 'shift removes the oldest unresolved day.' } }],
+    intuition: 'Each cooler day is just waiting for the next warmer one, so stack up the unresolved days and let a warm day reach back and settle every colder day still waiting on top of the stack.',
+    exercises: [
+      { prompt: 'Which line records how long the earlier day waited?', correct: 'result[prev] = i - prev;', choices: ['result[prev] = i - prev;', 'result[prev] = prev - i;', 'result[prev] = i + prev;'], why: 'Today (i) is the first warmer day after prev, so the wait is i − prev.' },
+      { prompt: 'Which line keeps today’s index unresolved for a later warmer day?', correct: 'stack.push(i);', choices: ['stack.push(i);', 'stack.pop();', 'stack.push(prev);'], why: 'Push today’s index so a future warmer day can resolve it.' },
+    ],
     complexityGuide: { work: 'How many times can one index be pushed and popped?', workChoices: [['once', 'At most once each'], ['nested', 'Once for every later day']], workCorrect: 'once', workWhy: 'An index enters once and leaves once when resolved.', memory: 'What can grow during a long cooling streak?', memoryChoices: [['stack', 'The unresolved-index stack'], ['constant', 'Only i and prev']], memoryCorrect: 'stack', memoryWhy: 'Every unresolved day remains on the stack.', final: [['linear-linear', 'Time O(n), space O(n)'], ['quadratic-linear', 'Time O(n²), space O(n)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-linear' },
   }),
   'Merge Two Sorted Lists': lesson('Merge Two Sorted Lists', {
@@ -128,7 +155,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Create a dummy node and let tail start there.', 'Compare the two current node values.', 'Attach the smaller node to tail.', 'Advance the list that supplied that node.', 'Attach the nonempty remainder and return dummy.next.'],
     fixes: ['Advance only the list whose node was attached.', 'Return dummy.next so the sentinel is excluded.'],
     complexity: 'Time O(m + n); space O(1).',
-    exercises: [{ prompt: 'Attach the smaller current node before advancing list1.', code: 'tail.next = ___;', choices: ['list1', 'list2', 'tail'], correct: 'list1', why: 'list1 has the smaller current value in this branch.', wrong: { list2: 'list2 is larger in this branch.', tail: 'tail would create a cycle.' } }, { prompt: 'Move tail to the node that was just attached.', code: 'tail = tail.___;', choices: ['next', 'val', 'head'], correct: 'next', why: 'tail must become the end of the merged portion.', wrong: { val: 'val is data, not a node link.', head: 'There is no head field on a node.' } }],
+    intuition: 'Because both lists are already sorted, the next node of the merged list is always the smaller of the two current heads — so keep a tail pointer and repeatedly snap on whichever front node is smaller.',
+    exercises: [
+      { prompt: 'After attaching a node, which line advances the tail?', correct: 'tail = tail.next;', choices: ['tail = tail.next;', 'tail = tail.val;', 'tail = dummy;'], why: 'tail must move to the node just attached so the next one links onto the end.' },
+      { prompt: 'One list runs out first. Which line appends the leftover nodes?', correct: 'tail.next = list1 || list2;', choices: ['tail.next = list1 || list2;', 'tail.next = list1 && list2;', 'tail.next = null;'], why: 'Whichever list still has nodes is already sorted, so attach it whole.' },
+    ],
     complexityGuide: { work: 'How often can a node move from an input list to the merged list?', workChoices: [['once', 'At most once'], ['nested', 'Once for every node in the other list']], workCorrect: 'once', workWhy: 'Each comparison attaches exactly one new node and advances it permanently.', memory: 'What extra storage grows with the lists?', memoryChoices: [['constant', 'Only dummy and tail references'], ['array', 'A copy of all node values']], memoryCorrect: 'constant', memoryWhy: 'Existing nodes are relinked in place.', final: [['linear-constant', 'Time O(m + n), space O(1)'], ['quadratic-constant', 'Time O(mn), space O(1)'], ['linear-linear', 'Time O(m + n), space O(m + n)']], finalCorrect: 'linear-constant' },
   }),
   'Climbing Stairs': lesson('Climbing Stairs', {
@@ -139,7 +170,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Treat the two smallest totals as base cases.', 'Keep the number of ways for the two previous heights.', 'The next height is their sum.', 'Slide the two saved states forward.', 'Return the state for n.'],
     fixes: ['Add the two legal previous states.', 'Update both saved states after computing current.'],
     complexity: 'Time O(n); space O(1).',
-    exercises: [{ prompt: 'A final one-step move or two-step move partitions all ways.', code: 'const current = ___;', choices: ['one + two', 'one * two', 'Math.max(one, two)'], correct: 'one + two', why: 'The two disjoint preceding states add.', wrong: { 'one * two': 'Ways are alternatives, not combinations.', 'Math.max(one, two)': 'The smaller prior state still contributes valid paths.' } }, { prompt: 'Shift the older saved state forward.', code: 'two = ___;', choices: ['one', 'current', 'two + one'], correct: 'one', why: 'The old one-step-back state becomes two steps back next round.', wrong: { current: 'current should become one, the newest state.', 'two + one': 'That creates an unneeded third value.' } }],
+    intuition: 'You reach any step from either one or two steps below, so the number of ways to a step is simply the sum of the ways to the two steps beneath it — the Fibonacci pattern in disguise.',
+    exercises: [
+      { prompt: 'Which line combines the two previous step counts?', correct: 'const current = one + two;', choices: ['const current = one + two;', 'const current = one * two;', 'const current = Math.max(one, two);'], why: 'The two disjoint ways to arrive — a one-step or a two-step move — are added.' },
+      { prompt: 'Which line shifts the older saved state forward?', correct: 'two = one;', choices: ['two = one;', 'two = current;', 'two = one + two;'], why: 'The previous one-step-back state becomes two steps back for the next iteration.' },
+    ],
     complexityGuide: { work: 'How many loop iterations occur as n grows?', workChoices: [['once', 'One per stair after the base cases'], ['nested', 'One for every earlier stair']], workCorrect: 'once', workWhy: 'The loop advances one stair per iteration.', memory: 'What state grows with n?', memoryChoices: [['constant', 'Only one, two, and current'], ['array', 'A table for every stair']], memoryCorrect: 'constant', memoryWhy: 'The recurrence is compressed to two prior values.', final: [['linear-constant', 'Time O(n), space O(1)'], ['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n)']], finalCorrect: 'linear-constant' },
   }),
   'Course Schedule': lesson('Course Schedule', {
@@ -150,7 +185,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Build edges from each prerequisite to its dependent course.', 'Count every course’s remaining prerequisites.', 'Start a queue with zero-indegree courses.', 'Remove each queued course and decrease its neighbors’ indegrees.', 'All courses are finishable exactly when the queue processes every course.'],
     fixes: ['Decrease a dependent’s indegree after completing one prerequisite.', 'Enqueue a course only when its indegree reaches zero.'],
     complexity: 'Time O(V + E); space O(V + E).',
-    exercises: [{ prompt: 'Completing one prerequisite removes one incoming edge.', code: 'indegree[nextCourse] ___;', choices: ['-= 1', '+= 1', '= 0'], correct: '-= 1', why: 'One prerequisite has been satisfied.', wrong: { '+= 1': 'That adds a nonexistent prerequisite.', '= 0': 'Other prerequisites may remain.' } }, { prompt: 'A course becomes available after every prerequisite is gone.', code: 'if (indegree[nextCourse] === 0) queue.___(nextCourse);', choices: ['push', 'pop', 'shift'], correct: 'push', why: 'The newly unlocked course joins the work queue.', wrong: { pop: 'pop removes existing work.', shift: 'shift removes the oldest work.' } }],
+    intuition: 'A schedule is impossible only when prerequisites form a cycle, so keep peeling off courses that currently have no prerequisites left; if everything eventually peels away, no cycle was hiding in there.',
+    exercises: [
+      { prompt: 'While building the graph, which line counts a prerequisite for a course?', correct: 'indegree[course] += 1;', choices: ['indegree[course] += 1;', 'indegree[prereq] += 1;', 'indegree[course] -= 1;'], why: 'Each prerequisite pair adds one incoming edge to the dependent course.' },
+      { prompt: 'Which line enqueues a course once its prerequisites are gone?', correct: 'if (indegree[nextCourse] === 0) queue.push(nextCourse);', choices: ['if (indegree[nextCourse] === 0) queue.push(nextCourse);', 'if (indegree[nextCourse] > 0) queue.push(nextCourse);', 'if (indegree[course] === 0) queue.push(nextCourse);'], why: 'A course is ready exactly when its remaining prerequisite count reaches zero.' },
+    ],
     complexityGuide: { work: 'How often can an edge be removed during the traversal?', workChoices: [['once', 'At most once'], ['nested', 'Once for every other edge']], workCorrect: 'once', workWhy: 'Each prerequisite edge is processed only when its source course leaves the queue.', memory: 'Which representation grows with courses and prerequisites?', memoryChoices: [['graph', 'Adjacency list and indegree array'], ['constant', 'Only the queue head']], memoryCorrect: 'graph', memoryWhy: 'The graph stores every prerequisite relationship.', final: [['graph-graph', 'Time O(V + E), space O(V + E)'], ['quadratic-constant', 'Time O(V²), space O(1)'], ['linear-constant', 'Time O(V), space O(1)']], finalCorrect: 'graph-graph' },
   }),
   'Diameter of Binary Tree': lesson('Diameter of Binary Tree', {
@@ -161,7 +200,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Return zero height for an empty child.', 'Recursively get left and right heights.', 'Update the best diameter with left plus right.', 'Return one plus the larger child height.', 'Finish the traversal and return best.'],
     fixes: ['Update best with both child paths, not only the larger one.', 'Return height upward while keeping diameter global.'],
     complexity: 'Time O(n); space O(h) for recursion height h.',
-    exercises: [{ prompt: 'A path turning at this node includes both child paths.', code: 'best = Math.max(best, ___);', choices: ['left + right', 'Math.max(left, right)', 'left * right'], correct: 'left + right', why: 'The diameter through a node joins its left and right downward paths.', wrong: { 'Math.max(left, right)': 'That is only one downward branch.', 'left * right': 'Path lengths add; they do not multiply.' } }, { prompt: 'Height returns one node plus the taller child height.', code: 'return 1 + Math.___(left, right);', choices: ['max', 'min', 'abs'], correct: 'max', why: 'A node’s height follows its deepest child.', wrong: { min: 'The shallower child cannot define maximum depth.', abs: 'Difference is not a depth.' } }],
+    intuition: 'The longest path might bend through any node, joining its deepest left reach to its deepest right reach — so as you compute each node’s height, quietly track the best left-plus-right total you ever see.',
+    exercises: [
+      { prompt: 'Which line updates the best path turning through this node?', correct: 'best = Math.max(best, left + right);', choices: ['best = Math.max(best, left + right);', 'best = Math.max(best, Math.max(left, right));', 'best = Math.max(best, left * right);'], why: 'A path turning through a node joins both child paths, so their edge counts add.' },
+      { prompt: 'Which line returns this node’s height to its parent?', correct: 'return 1 + Math.max(left, right);', choices: ['return 1 + Math.max(left, right);', 'return 1 + Math.min(left, right);', 'return 1 + left + right;'], why: 'A node’s height is one plus the height of its deeper child.' },
+    ],
     complexityGuide: { work: 'How many times is each node’s height computed?', workChoices: [['once', 'At most once'], ['nested', 'Once for every ancestor']], workCorrect: 'once', workWhy: 'Postorder computes each subtree result once and returns it upward.', memory: 'What can grow with a skewed tree?', memoryChoices: [['stack', 'The recursion call stack'], ['constant', 'Only left and right']], memoryCorrect: 'stack', memoryWhy: 'One call remains active per node along the deepest path.', final: [['linear-height', 'Time O(n), space O(h)'], ['quadratic-height', 'Time O(n²), space O(h)'], ['linear-constant', 'Time O(n), space O(1)']], finalCorrect: 'linear-height' },
   }),
   'Kth Largest Element in an Array': lesson('Kth Largest Element in an Array', {
@@ -172,7 +215,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Convert k to its zero-based ascending target index.', 'Partition the active range around a pivot.', 'The pivot lands at its final sorted index.', 'Return it when that index equals target.', 'Otherwise keep only the side containing target.'],
     fixes: ['Use nums.length - k for the ascending target index.', 'Narrow only one partition after each pivot.'],
     complexity: 'Average time O(n); worst-case O(n²); space O(1) iterative.',
-    exercises: [{ prompt: 'Quickselect is done when the pivot reaches the requested index.', code: 'if (pivotIndex === ___) return nums[pivotIndex];', choices: ['target', 'k', 'left'], correct: 'target', why: 'target is the actual ascending index of the kth-largest value.', wrong: { k: 'k is a rank from the other end.', left: 'left is only the current search boundary.' } }, { prompt: 'A pivot left of target means discard that completed left partition.', code: 'left = pivotIndex + ___;', choices: ['1', '0', 'k'], correct: '1', why: 'The pivot is already known not to be target.', wrong: { '0': 'Keeping the pivot repeats the same work.', k: 'Rank size does not locate the next boundary.' } }],
+    intuition: 'You do not need the whole array sorted — only the value that would land in one particular slot. Partitioning drops a pivot into its final sorted position, so you just keep chasing whichever side still hides that slot.',
+    exercises: [
+      { prompt: 'Which line converts rank k to the ascending target index?', correct: 'const target = nums.length - k;', choices: ['const target = nums.length - k;', 'const target = k;', 'const target = nums.length - k - 1;'], why: 'The kth-largest value sits at ascending index n − k after partitioning.' },
+      { prompt: 'The pivot is left of target. Which line narrows the search rightward?', correct: 'if (pivotIndex < target) left = pivotIndex + 1;', choices: ['if (pivotIndex < target) left = pivotIndex + 1;', 'if (pivotIndex < target) left = pivotIndex - 1;', 'if (pivotIndex < target) right = pivotIndex + 1;'], why: 'The target is past this pivot, so start the next search just after it.' },
+    ],
     complexityGuide: { work: 'After partitioning, how much of the array is kept?', workChoices: [['one-side', 'Only the side containing target'], ['both-sides', 'Both partitions']], workCorrect: 'one-side', workWhy: 'Quickselect discards the partition proven not to contain the target.', memory: 'What storage is created by this iterative partition loop?', memoryChoices: [['constant', 'A fixed set of indexes and pivot values'], ['array', 'A sorted copy']], memoryCorrect: 'constant', memoryWhy: 'It swaps inside nums rather than creating another array.', final: [['average-linear', 'Average time O(n), space O(1)'], ['linear-linear', 'Time O(n), space O(n)'], ['quadratic-constant', 'Always time O(n²), space O(1)']], finalCorrect: 'average-linear' },
   }),
   'Coin Change': lesson('Coin Change', {
@@ -183,7 +230,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Set dp[0] to zero and every other amount to impossible.', 'Consider every amount from one through target.', 'Try each coin that does not exceed that amount.', 'Use the best solution for amount minus coin plus one coin.', 'Return -1 if target remains impossible.'],
     fixes: ['Initialize unreachable amounts above any possible answer.', 'Add one for the coin chosen last.'],
     complexity: 'Time O(amount · number of coins); space O(amount).',
-    exercises: [{ prompt: 'Using one final coin adds exactly one to a smaller solved amount.', code: 'dp[amount] = Math.min(dp[amount], dp[amount - coin] + ___);', choices: ['1', 'coin', 'dp[coin]'], correct: '1', why: 'The recurrence counts one new selected coin.', wrong: { coin: 'Coin value is not its count.', 'dp[coin]': 'That is unrelated to the remaining amount.' } }, { prompt: 'Amounts that cannot be made should start above any valid minimum.', code: 'Array(amount + 1).fill(___);', choices: ['Infinity', '0', '-1'], correct: 'Infinity', why: 'A minimum can safely replace Infinity when a valid transition appears.', wrong: { '0': 'Every amount would falsely look free.', '-1': 'Math.min would keep the invalid value.' } }],
+    intuition: 'The fewest coins for an amount is just one more coin than the best you could do for some smaller amount — so build answers up from zero, and any amount you can never reach stays flagged impossible.',
+    exercises: [
+      { prompt: 'Which line sets the base case that every amount builds on?', correct: 'dp[0] = 0;', choices: ['dp[0] = 0;', 'dp[0] = 1;', 'dp[0] = Infinity;'], why: 'Making amount 0 takes zero coins; every larger amount is derived from it.' },
+      { prompt: 'Which line reports an amount that no combination of coins can make?', correct: 'return dp.at(-1) === Infinity ? -1 : dp.at(-1);', choices: ['return dp.at(-1) === Infinity ? -1 : dp.at(-1);', 'return dp.at(-1);', 'return dp.at(-1) === 0 ? -1 : dp.at(-1);'], why: 'A leftover Infinity means the amount was never reached, so return -1.' },
+    ],
     complexityGuide: { work: 'For each amount, what set is tried?', workChoices: [['coins', 'Every coin denomination'], ['constant', 'Only one coin']], workCorrect: 'coins', workWhy: 'Each state checks every denomination that could be used last.', memory: 'What grows with the target amount?', memoryChoices: [['dp', 'The dp array of amounts'], ['constant', 'Only coin and amount']], memoryCorrect: 'dp', memoryWhy: 'dp stores one best answer per amount through target.', final: [['amount-coins', 'Time O(amount · coins), space O(amount)'], ['linear-constant', 'Time O(amount), space O(1)'], ['quadratic-linear', 'Time O(amount²), space O(amount)']], finalCorrect: 'amount-coins' },
   }),
   'Distinct Subsequences': lesson('Distinct Subsequences', {
@@ -194,7 +245,11 @@ export const walkthroughUpgrades = {
     algorithm: ['Let dp[j] count ways to form the first j target characters.', 'Set dp[0] to one for the empty target.', 'Read each source character.', 'Walk target indexes backward.', 'When characters match, add dp[j - 1] into dp[j].'],
     fixes: ['Iterate j backward so one source character is used once.', 'Keep dp[0] equal to one as the empty-prefix base case.'],
     complexity: 'Time O(|s| · |t|); space O(|t|).',
-    exercises: [{ prompt: 'A matching source character extends every way to form the shorter target.', code: 'dp[j] += ___;', choices: ['dp[j - 1]', 'dp[j + 1]', '1'], correct: 'dp[j - 1]', why: 'Each shorter-prefix way can append this matching character.', wrong: { 'dp[j + 1]': 'That is a longer, not shorter, target prefix.', '1': 'There can be many prior ways to extend.' } }, { prompt: 'Prevent reusing the same source character during one update.', code: 'for (let j = t.length; j ___ 1; j--)', choices: ['>=', '<=', '==='], correct: '>=', why: 'The loop must walk backward through all positive target indexes.', wrong: { '<=': 'That walks forward and can reuse a character.', '===': 'That checks only one index.' } }],
+    intuition: 'Carry, for each target prefix, how many ways it can be spelled so far — every time a source character matches, it lets every shorter match grow by one, so the counts flow forward through the source string.',
+    exercises: [
+      { prompt: 'Which line seeds the one way to form the empty target?', correct: 'dp[0] = 1;', choices: ['dp[0] = 1;', 'dp[0] = 0;', 'dp[t.length] = 1;'], why: 'There is exactly one way to form the empty target — the base every count builds on.' },
+      { prompt: 'Which line walks the target backward so a source char is used once per step?', correct: 'for (let j = t.length; j >= 1; j--) {', choices: ['for (let j = t.length; j >= 1; j--) {', 'for (let j = 1; j <= t.length; j++) {', 'for (let j = t.length; j >= 0; j--) {'], why: 'Iterating j downward keeps one source character from extending the same prefix twice.' },
+    ],
     complexityGuide: { work: 'For each source character, which target positions can be visited?', workChoices: [['target', 'Every target position'], ['constant', 'Only one target position']], workCorrect: 'target', workWhy: 'The inner loop considers every possible target-prefix extension.', memory: 'What grows with the target length?', memoryChoices: [['dp', 'The dp count array'], ['constant', 'Only j']], memoryCorrect: 'dp', memoryWhy: 'There is one count for each target prefix.', final: [['source-target', 'Time O(|s| · |t|), space O(|t|)'], ['linear-constant', 'Time O(|s|), space O(1)'], ['quadratic-linear', 'Time O(|s|²), space O(|t|)']], finalCorrect: 'source-target' },
   }),
 };

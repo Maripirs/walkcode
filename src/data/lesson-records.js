@@ -18,7 +18,8 @@ export const featured = {
       "Check membership before adding the current value.",
       "A Set stores prior values directly, so it is enough for a duplicate check."
     ],
-    "complexity": "Time O(n); space O(n) in the worst case."
+    "complexity": "Time O(n); space O(n) in the worst case.",
+    "intuition": "You never need to compare every pair — the instant you meet a value you have already met, you have your answer. So carry a memory of everything you have passed and let each new number check itself against that memory."
   },
   "Reverse Linked List": {
     "brief": "Given the head of a singly linked list, reverse its links in place and return the new head.",
@@ -38,7 +39,8 @@ export const featured = {
       "Save next before overwriting current.next, or the unreversed list is lost.",
       "Return prev, not head: the original head becomes the final node."
     ],
-    "complexity": "Time O(n); space O(1) for the iterative version."
+    "complexity": "Time O(n); space O(1) for the iterative version.",
+    "intuition": "Reversing the list is just flipping one arrow at a time, but each flip destroys your way forward — so grab the next node before you rewire, and drag a 'previous' marker along behind you as you go."
   },
   "Invert Binary Tree": {
     "brief": "Given a binary tree, swap the left and right child of every node and return the same root.",
@@ -58,7 +60,8 @@ export const featured = {
       "Save one child before its reference is overwritten.",
       "Handle the null base case before reading a child."
     ],
-    "complexity": "Time O(n); space O(h) for the recursion stack, where h is the tree height."
+    "complexity": "Time O(n); space O(h) for the recursion stack, where h is the tree height.",
+    "intuition": "Inverting the whole tree is the same tiny action repeated everywhere: swap a node's two children, then ask each child to do the same to itself. The full mirror image falls out of that one local swap."
   },
   "Two Sum": {
     "brief": "Given an array of integers and a target, return the indices of two different numbers whose values add up to that target.",
@@ -77,7 +80,8 @@ export const featured = {
       "Save after checking, so you cannot use the same element twice.",
       "Map values to indices—not booleans—because the result needs positions."
     ],
-    "complexity": "Time O(n); space O(n) for the map."
+    "complexity": "Time O(n); space O(n) for the map.",
+    "intuition": "As you scan, the only thing that unlocks an answer is having already seen the number that completes the pair — so remember each value you pass and check for its complement, not future values."
   },
   "Two Sum II": {
     "brief": "Given a sorted array and a target, return the two positions whose values add up to the target.",
@@ -96,7 +100,8 @@ export const featured = {
       "Move only one pointer per comparison.",
       "The input is already sorted; do not sort it again."
     ],
-    "complexity": "Time O(n); space O(1)."
+    "complexity": "Time O(n); space O(1).",
+    "intuition": "Because the values are sorted, the outer pair's sum tells you everything: too small can never be fixed by shrinking, too large can never be fixed by growing — so each comparison lets you retire one end for good."
   },
   "Longest Substring Without Repeating Characters": {
     "brief": "Given a string, find the length of its longest contiguous substring with no repeated characters.",
@@ -115,7 +120,8 @@ export const featured = {
       "Delete s[left], not the incoming duplicate.",
       "Measure after the window is repaired."
     ],
-    "complexity": "Time O(n); space O(min(n, alphabet size))."
+    "complexity": "Time O(n); space O(min(n, alphabet size)).",
+    "intuition": "A repeat can only ever appear at the newest character you add, so instead of restarting you just pull the left edge forward until the clash is gone — and the window keeps sliding without ever rechecking old ground."
   },
   "Binary Search": {
     "brief": "Given a sorted list and a target, return its index or -1 without checking every value.",
@@ -134,7 +140,8 @@ export const featured = {
       "Use left <= right so a single remaining value is checked.",
       "Move past mid; mid was already tested."
     ],
-    "complexity": "Time O(log n); space O(1)."
+    "complexity": "Time O(log n); space O(1).",
+    "intuition": "Because the array is sorted, one comparison against the middle tells you which half the target cannot be in — so you can throw away half the remaining range every step."
   },
   "Valid Parentheses": {
     "brief": "Given brackets, decide whether every opening bracket is closed in the correct order.",
@@ -153,7 +160,8 @@ export const featured = {
       "Check the result of pop; an empty stack is invalid.",
       "Do not only compare counts—order matters."
     ],
-    "complexity": "Time O(n); space O(n)."
+    "complexity": "Time O(n); space O(n).",
+    "intuition": "Only the most recently opened bracket can be the next one legally closed — that 'last opened, first closed' rule is exactly what a stack enforces, so push every opener and match each closer against the top."
   },
   "Number of Islands": {
     "brief": "Given a grid of land and water, count the distinct groups of connected land.",
@@ -173,7 +181,8 @@ export const featured = {
       "Mark a cell visited when it is discovered, not later.",
       "Check grid boundaries before indexing."
     ],
-    "complexity": "Time O(rows × cols); space O(rows × cols) in the worst case."
+    "complexity": "Time O(rows × cols); space O(rows × cols) in the worst case.",
+    "intuition": "Each new patch of land you stumble on is the start of a fresh island — so count it once, then flood outward to erase every cell connected to it, guaranteeing you never count the same island twice."
   }
 };
 

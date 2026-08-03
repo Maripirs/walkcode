@@ -10,3 +10,8 @@ work/
 # System files
 .DS_Store
 *.pem
+
+# Local secrets / environment — never commit real keys (.env.example is the safe template)
+.env
+.env.local
+.env.*.local
