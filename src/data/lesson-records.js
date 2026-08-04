@@ -552,51 +552,15 @@ export const briefs = {
 };
 
 export const conceptChoices = {
-  "Two Sum": [
-    "Hash map / complement lookup",
-    "Two pointers only",
-    "Binary search"
-  ],
-  "Two Sum II": [
-    "Two pointers",
-    "Dynamic programming",
-    "Trie"
-  ],
-  "Longest Substring Without Repeating Characters": [
-    "Sliding window + set",
-    "Heap",
-    "Union-find"
-  ],
-  "Binary Search": [
-    "Binary search interval",
-    "Depth-first search",
-    "Prefix sums"
-  ],
-  "Valid Parentheses": [
-    "Stack",
-    "Queue",
-    "Hash map"
-  ],
-  "Number of Islands": [
-    "Grid DFS/BFS + visited state",
-    "Binary search",
-    "Monotonic stack"
-  ],
-  "Contains Duplicate": [
-    "Hash set",
-    "Two pointers",
-    "Binary search"
-  ],
-  "Reverse Linked List": [
-    "Pointer rewiring with prev / current / next",
-    "Hash map",
-    "Two pointers"
-  ],
-  "Invert Binary Tree": [
-    "Tree DFS with child swapping",
-    "Hash map",
-    "Two pointers"
-  ]
+  "Two Sum": ["A hash map of complements", "Sort, then two pointers", "Check every pair"],
+  "Two Sum II": ["Two pointers from both ends", "A hash map of complements", "Binary search for each complement"],
+  "Longest Substring Without Repeating Characters": ["A sliding window with a seen-set", "Check every substring for repeats", "Sort the characters"],
+  "Binary Search": ["Halve the interval each step", "Scan left to right", "Jump in fixed-size blocks"],
+  "Valid Parentheses": ["A stack of open brackets", "Count each bracket type", "Delete matched pairs repeatedly"],
+  "Number of Islands": ["Flood-fill each new land cell", "Union-find over adjacent land", "Scan rows counting land"],
+  "Contains Duplicate": ["A hash set of seen values", "Sort, then check neighbors", "Compare every pair"],
+  "Reverse Linked List": ["Rewire next-pointers with a prev cursor", "Recurse to the tail, then relink", "Copy to an array and reverse"],
+  "Invert Binary Tree": ["Swap every node's children", "Swap only the leaf nodes", "Sort each level left to right"]
 };
 
 export const complexityLessons = {
