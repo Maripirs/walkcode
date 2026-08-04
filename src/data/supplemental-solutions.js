@@ -187,4 +187,48 @@ export const supplementalFullCode = {
   'Reconstruct Itinerary': solution(
     lines('function findItinerary(tickets) {', '  const graph = new Map();', '  for (const [from, to] of tickets) {', '    if (!graph.has(from)) graph.set(from, []);', '    graph.get(from).push(to);', '  }', '  for (const destinations of graph.values()) destinations.sort().reverse();', '  const route = [];', '  function visit(airport) {', '    while (graph.get(airport)?.length) visit(graph.get(airport).pop());', '    route.push(airport);', '  }', '  visit("JFK");', '  return route.reverse();', '}'),
     lines('def find_itinerary(tickets):', '    graph = {}', '    for start, end in tickets:', '        graph.setdefault(start, []).append(end)', '    for destinations in graph.values():', '        destinations.sort(reverse=True)', '    route = []', '    def visit(airport):', '        while graph.get(airport):', '            visit(graph[airport].pop())', '        route.append(airport)', '    visit("JFK")', '    return route[::-1]')),
+
+  'Single Number': solution(
+    lines('function singleNumber(nums) {', '  let result = 0;', '  for (const n of nums) {', '    result ^= n;', '  }', '  return result;', '}'),
+    lines('def single_number(nums):', '    result = 0', '    for n in nums:', '        result ^= n', '    return result')),
+
+  'Plus One': solution(
+    lines('function plusOne(digits) {', '  for (let i = digits.length - 1; i >= 0; i--) {', '    if (digits[i] < 9) {', '      digits[i]++;', '      return digits;', '    }', '    digits[i] = 0;', '  }', '  return [1, ...digits];', '}'),
+    lines('def plus_one(digits):', '    for i in range(len(digits) - 1, -1, -1):', '        if digits[i] < 9:', '            digits[i] += 1', '            return digits', '        digits[i] = 0', '    return [1] + digits')),
+
+  'Same Tree': solution(
+    lines('function isSameTree(p, q) {', '  if (!p && !q) return true;', '  if (!p || !q || p.val !== q.val) return false;', '  return isSameTree(p.left, q.left) && isSameTree(p.right, q.right);', '}'),
+    lines('def is_same_tree(p, q):', '    if not p and not q:', '        return True', '    if not p or not q or p.val != q.val:', '        return False', '    return is_same_tree(p.left, q.left) and is_same_tree(p.right, q.right)')),
+
+  'Linked List Cycle': solution(
+    lines('function hasCycle(head) {', '  let slow = head;', '  let fast = head;', '  while (fast && fast.next) {', '    slow = slow.next;', '    fast = fast.next.next;', '    if (slow === fast) return true;', '  }', '  return false;', '}'),
+    lines('def has_cycle(head):', '    slow = head', '    fast = head', '    while fast and fast.next:', '        slow = slow.next', '        fast = fast.next.next', '        if slow is fast:', '            return True', '    return False')),
+
+  'Last Stone Weight': solution(
+    lines('function lastStoneWeight(stones) {', '  while (stones.length > 1) {', '    stones.sort((a, b) => a - b);', '    const y = stones.pop();', '    const x = stones.pop();', '    if (y > x) {', '      stones.push(y - x);', '    }', '  }', '  return stones.length ? stones[0] : 0;', '}'),
+    lines('def last_stone_weight(stones):', '    while len(stones) > 1:', '        stones.sort()', '        y = stones.pop()', '        x = stones.pop()', '        if y > x:', '            stones.append(y - x)', '    return stones[0] if stones else 0')),
+
+  'Number of 1 Bits': solution(
+    lines('function hammingWeight(n) {', '  let count = 0;', '  while (n !== 0) {', '    count += n & 1;', '    n >>>= 1;', '  }', '  return count;', '}'),
+    lines('def hamming_weight(n):', '    count = 0', '    while n != 0:', '        count += n & 1', '        n >>= 1', '    return count')),
+
+  'Happy Number': solution(
+    lines('function isHappy(n) {', '  const seen = new Set();', '  while (n !== 1 && !seen.has(n)) {', '    seen.add(n);', '    let sum = 0;', '    while (n > 0) {', '      const digit = n % 10;', '      sum += digit * digit;', '      n = Math.floor(n / 10);', '    }', '    n = sum;', '  }', '  return n === 1;', '}'),
+    lines('def is_happy(n):', '    seen = set()', '    while n != 1 and n not in seen:', '        seen.add(n)', '        total = 0', '        while n > 0:', '            digit = n % 10', '            total += digit * digit', '            n = n // 10', '        n = total', '    return n == 1')),
+
+  'Subtree of Another Tree': solution(
+    lines('function isSubtree(root, subRoot) {', '  if (!subRoot) return true;', '  if (!root) return false;', '  if (isSameTree(root, subRoot)) return true;', '  return isSubtree(root.left, subRoot) || isSubtree(root.right, subRoot);', '}', '', 'function isSameTree(a, b) {', '  if (!a && !b) return true;', '  if (!a || !b || a.val !== b.val) return false;', '  return isSameTree(a.left, b.left) && isSameTree(a.right, b.right);', '}'),
+    lines('def is_subtree(root, sub_root):', '    if not sub_root:', '        return True', '    if not root:', '        return False', '    if is_same_tree(root, sub_root):', '        return True', '    return is_subtree(root.left, sub_root) or is_subtree(root.right, sub_root)', '', 'def is_same_tree(a, b):', '    if not a and not b:', '        return True', '    if not a or not b or a.val != b.val:', '        return False', '    return is_same_tree(a.left, b.left) and is_same_tree(a.right, b.right)')),
+
+  'Counting Bits': solution(
+    lines('function countBits(n) {', '  const result = new Array(n + 1).fill(0);', '  for (let i = 1; i <= n; i++) {', '    result[i] = result[i >> 1] + (i & 1);', '  }', '  return result;', '}'),
+    lines('def count_bits(n):', '    result = [0] * (n + 1)', '    for i in range(1, n + 1):', '        result[i] = result[i >> 1] + (i & 1)', '    return result')),
+
+  'Reverse Bits': solution(
+    lines('function reverseBits(n) {', '  let result = 0;', '  for (let i = 0; i < 32; i++) {', '    result = (result << 1) | (n & 1);', '    n >>= 1;', '  }', '  return result >>> 0;', '}'),
+    lines('def reverse_bits(n):', '    result = 0', '    for i in range(32):', '        result = (result << 1) | (n & 1)', '        n >>= 1', '    return result')),
+
+  'Remove Nth Node From End of List': solution(
+    lines('function removeNthFromEnd(head, n) {', '  const dummy = new ListNode(0, head);', '  let fast = dummy;', '  let slow = dummy;', '  for (let i = 0; i < n; i++) fast = fast.next;', '  while (fast.next) {', '    fast = fast.next;', '    slow = slow.next;', '  }', '  slow.next = slow.next.next;', '  return dummy.next;', '}'),
+    lines('def remove_nth_from_end(head, n):', '    dummy = ListNode(0, head)', '    fast = dummy', '    slow = dummy', '    for _ in range(n):', '        fast = fast.next', '    while fast.next:', '        fast = fast.next', '        slow = slow.next', '    slow.next = slow.next.next', '    return dummy.next')),
 };
