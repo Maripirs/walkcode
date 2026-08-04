@@ -1,5 +1,5 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress } from './lib/state.js';
+import { appState, DEFAULT_UI_SCALE, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress, setUiScale } from './lib/state.js';
 import { shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
@@ -99,7 +99,48 @@ function startPickedDrill(id) {
   startDrillQueue([picked, ...shuffle(set.filter((drill) => drill.id !== id))]);
 }
 
+// The global UI scale is applied with `zoom` on <main> via a CSS variable, so it scales the whole
+// interface (text, padding, code blocks) together. Kept off the re-rendered #app subtree so it
+// survives view changes without being reset.
+function applyScale() {
+  document.documentElement.style.setProperty('--ui-scale', String(appState.uiScale));
+}
+
+// The settings panel lives OUTSIDE <main> (appended to <body>), so it is not itself zoomed — the
+// control that changes the size shouldn't shrink with it. It's a plain overlay updated in place.
+let settingsEl = null;
+function renderSettings() {
+  if (!settingsEl) { settingsEl = document.createElement('div'); settingsEl.id = 'settings-overlay'; document.body.appendChild(settingsEl); }
+  if (!appState.settingsOpen) { settingsEl.innerHTML = ''; return; }
+  const pct = Math.round(appState.uiScale * 100);
+  settingsEl.innerHTML = `
+    <div class="settings-backdrop" data-settings-close></div>
+    <div class="settings-panel" role="dialog" aria-label="Settings">
+      <div class="settings-row"><b>Settings</b><button class="settings-x" data-settings-close aria-label="Close">×</button></div>
+      <span class="settings-label">Code language</span>
+      <div class="lang-segment">
+        <button data-set-language="JavaScript" class="${appState.language === 'JavaScript' ? 'active' : ''}">JavaScript</button>
+        <button data-set-language="Python" class="${appState.language === 'Python' ? 'active' : ''}">Python</button>
+      </div>
+      <span class="settings-label">Text size</span>
+      <div class="size-stepper">
+        <button data-scale="-1" aria-label="Smaller">−</button>
+        <span class="size-readout">${pct}%</span>
+        <button data-scale="1" aria-label="Larger">+</button>
+      </div>
+      <button class="size-reset" data-scale-reset>Reset to default</button>
+    </div>`;
+  const refresh = () => { applyScale(); renderSettings(); };
+  settingsEl.querySelectorAll('[data-settings-close]').forEach((b) => b.addEventListener('click', () => { appState.settingsOpen = false; renderSettings(); }));
+  // Language change re-renders the whole view (content is language-specific); render() rebuilds this panel too.
+  settingsEl.querySelectorAll('[data-set-language]').forEach((b) => b.addEventListener('click', () => { setLanguage(b.dataset.setLanguage); render(); }));
+  settingsEl.querySelectorAll('[data-scale]').forEach((b) => b.addEventListener('click', () => { setUiScale(appState.uiScale + Number(b.dataset.scale) * 0.05); refresh(); }));
+  settingsEl.querySelector('[data-scale-reset]').addEventListener('click', () => { setUiScale(DEFAULT_UI_SCALE); refresh(); });
+}
+
 function render() {
+  applyScale();
+  renderSettings();
   if (appState.screen === 'home') {
     root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary() });
     appState.animateCard = null; // one-shot: consumed by this render so re-renders don't replay it
@@ -426,9 +467,9 @@ function bindSharedControls() {
     appState.walkthroughPickerOpen = false;
     render();
   }));
-  root.querySelectorAll('[data-language]').forEach((select) => select.addEventListener('change', () => {
-    setLanguage(select.value);
-    render();
+  root.querySelectorAll('[data-settings-toggle]').forEach((button) => button.addEventListener('click', () => {
+    appState.settingsOpen = !appState.settingsOpen;
+    renderSettings();
   }));
   // Home mode cards expand in place; opening one collapses the other.
   root.querySelectorAll('[data-toggle-drills]').forEach((button) => button.addEventListener('click', () => {
@@ -493,6 +534,7 @@ if (window.location.pathname === '/review') {
   }
 }
 
+applyScale(); // scale even the loading screen so there's no first-paint size jump
 root.innerHTML = '<section class="home"><h1>Loading…</h1></section>';
 loadContent().then((bundle) => {
   initContent(bundle);

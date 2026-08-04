@@ -1,6 +1,20 @@
 const STATE_KEY = 'walkcode-states';
 const LANGUAGE_KEY = 'walkcode-language';
 const DRILL_KEY = 'walkcode-drills';
+const UI_SCALE_KEY = 'walkcode-ui-scale';
+
+// Global UI scale (applied via `zoom` on <main>). Mobile-first default is a touch compact; the
+// settings panel lets the learner tune it. Clamped to a sane range so the app never breaks.
+export const DEFAULT_UI_SCALE = 0.85;
+const MIN_UI_SCALE = 0.7;
+const MAX_UI_SCALE = 1.3;
+function clampScale(scale) {
+  return Math.min(MAX_UI_SCALE, Math.max(MIN_UI_SCALE, Math.round(scale * 100) / 100));
+}
+function loadUiScale() {
+  const stored = parseFloat(localStorage.getItem(UI_SCALE_KEY));
+  return Number.isFinite(stored) ? clampScale(stored) : DEFAULT_UI_SCALE;
+}
 
 // The Socratic AI coach's opening question, and a fresh coach session (M9). `steps` is the
 // growing solution the learner builds; `prompt` is the current question; `input` survives the
@@ -11,7 +25,10 @@ export function freshCoach() {
 }
 
 export const appState = {
-  language: localStorage.getItem(LANGUAGE_KEY) === 'Python' ? 'Python' : 'JavaScript',
+  language: localStorage.getItem(LANGUAGE_KEY) === 'JavaScript' ? 'JavaScript' : 'Python',
+  // Global UI scale + whether the settings panel is open.
+  uiScale: loadUiScale(),
+  settingsOpen: false,
   screen: 'home',
   currentCardId: null,
   lessonStep: 0,
@@ -104,6 +121,14 @@ export function drillSolvedCount(ids) {
 export function setLanguage(language) {
   appState.language = language;
   localStorage.setItem(LANGUAGE_KEY, language);
+}
+
+// Set the global UI scale (device-local), clamped to the safe range. Returns the applied value.
+export function setUiScale(scale) {
+  const clamped = clampScale(scale);
+  appState.uiScale = clamped;
+  localStorage.setItem(UI_SCALE_KEY, String(clamped));
+  return clamped;
 }
 
 export function resetLesson(cardId) {

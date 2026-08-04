@@ -1,4 +1,4 @@
-import { includeCompletedToggle, languagePicker } from '../lib/ui.js';
+import { includeCompletedToggle, settingsGear } from '../lib/ui.js';
 
 // Both mode cards expand in place (no separate screen) into their two ways to start: a random one
 // — with the shared "include already completed" toggle — or the browse/pick path. `progress`
@@ -44,9 +44,9 @@ export function renderHome(state, progress = {}) {
   </div>`;
 
   return `<section class="home">
+    <div class="home-top">${settingsGear()}</div>
     <h1>Small drills.<br><em>Stronger code.</em></h1>
     <p>Choose the kind of practice that fits the time you have.</p>
-    ${languagePicker(state.language)}
     <div class="mode-grid">
       ${drillCard}
       ${walkthroughCard}

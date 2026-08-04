@@ -40,13 +40,6 @@ export function shuffle(items) {
   return result;
 }
 
-export function languagePicker(language) {
-  return `<label class="language-picker">Code language <select data-language>
-    <option value="JavaScript" ${language === 'JavaScript' ? 'selected' : ''}>JavaScript</option>
-    <option value="Python" ${language === 'Python' ? 'selected' : ''}>Python</option>
-  </select></label>`;
-}
-
 export function difficultyTag(difficulty) {
   return `<span class="difficulty ${difficulty.toLowerCase()}">${difficulty}</span>`;
 }
@@ -61,11 +54,24 @@ export function feedback(message, good) {
   return `<p class="answer-feedback ${good ? 'good' : 'bad'}">${message}</p>`;
 }
 
-export function topBar({ title, language, previous = '', next = '', extras = '', variant = '' }) {
+// Minimal line-art gear (Feather "settings"). `stroke="currentColor"` so it takes the button's
+// themed color instead of the multi-color emoji glyph.
+const GEAR_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
+// Minimal line-art house (Feather "home"), same currentColor treatment as the gear.
+const HOME_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+
+// The settings gear, reused by the top bar and the home screen (which has no top bar). Language
+// now lives in the settings panel, so it is no longer in the bar.
+export function settingsGear() {
+  return `<button class="gear icon-btn" data-settings-toggle aria-label="Settings" title="Settings">${GEAR_SVG}</button>`;
+}
+
+export function topBar({ title, previous = '', next = '', extras = '', variant = '' }) {
   return `<nav class="topbar ${variant}">
-    <button data-home>Home</button>
+    <button data-home class="icon-btn" aria-label="Home" title="Home">${HOME_SVG}</button>
     <span><b>${title}</b></span>
-    ${languagePicker(language)}
+    ${settingsGear()}
     ${previous}
     ${next}
     ${extras}
