@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
 import { ensureSeeded, getContentBundle, getReviews, upsertReview, reviewOutcome, REVIEW_STEPS, REVIEW_STEP_LABELS } from './db.js';
 import { algorithmCoachTurn, llmEnabled } from './llm.js';
-import { certifiedTitles } from '../src/data/assemble.js';
 
 // Secret that gates the /review approve/reject actions (a private link the owner holds).
 const REVIEW_TOKEN = process.env.REVIEW_TOKEN || '';
@@ -219,8 +218,11 @@ async function handleReview(req, res) {
   if (req.method === 'GET') {
     try {
       const [bundle, reviews] = await Promise.all([getContentBundle(), getReviews()]);
+      // Every content-complete problem is reviewable — including the ones currently live via the
+      // `certifiedTitles` code allowlist, which were never actually walked through the review flow.
+      // `isLive` (below) marks those so the UI can show "live, but not yet reviewed".
       const problems = bundle.cards
-        .filter((card) => card.isComplete && !certifiedTitles.has(card.title))
+        .filter((card) => card.isComplete)
         .map((card) => {
           const byStep = reviews[card.title] || {};
           const steps = REVIEW_STEPS.map((step, i) => ({

@@ -6,12 +6,15 @@ export function draftKey(title, step) {
   return `${title}::${step}`;
 }
 
-// A problem publishes only once all five stages are approved; a rejected stage blocks it.
+// A problem publishes only once all five stages are approved; a rejected stage blocks it. Some
+// problems are already live via the `certifiedTitles` code allowlist without having been reviewed —
+// `isLive` marks those so they read as "live · not yet reviewed" rather than plain pending.
 export function reviewBadge(problem) {
   const total = problem.steps.length;
   const blocked = problem.steps.some((s) => s.status === 'rejected');
-  if (problem.approvedCount === total) return '<span class="rev-badge live">✓ all approved — live</span>';
   if (blocked) return `<span class="rev-badge rejected">blocked · ${problem.approvedCount}/${total}</span>`;
+  if (problem.approvedCount === total) return '<span class="rev-badge live">✓ all approved — live</span>';
+  if (problem.isLive) return `<span class="rev-badge live">live · not yet reviewed (${problem.approvedCount}/${total})</span>`;
   return `<span class="rev-badge pending">${problem.approvedCount}/${total} approved</span>`;
 }
 
@@ -41,7 +44,7 @@ export function renderReview({ state }) {
   } else if (!review.problems.length) {
     body = `${errorBanner}<p class="brief">Nothing pending — every complete problem is certified.</p>`;
   } else {
-    body = `${errorBanner}<p class="brief">${review.problems.length} build${review.problems.length > 1 ? 's' : ''} pending. Open one to walk through it — <b>each stage has its own feedback box and Approve/Reject</b> right where you experience it. A problem publishes live only once <b>all five stages</b> are approved.</p>
+    body = `${errorBanner}<p class="brief">${review.problems.length} complete problem${review.problems.length > 1 ? 's' : ''} to review. Ones marked <b>live · not yet reviewed</b> are already published via the code allowlist but haven’t been walked through — reviewing them is how you actually vet them (rejecting a stage takes a live problem back down). Open one to walk through it: <b>each stage has its own feedback box and Approve/Reject</b>, and a problem is approved-live once <b>all five stages</b> are approved.</p>
       <div class="review-list">${review.problems.map((problem) => problemCard(problem)).join('')}</div>`;
   }
   return `${topBar({ title: 'Review builds', language: state.language })}
