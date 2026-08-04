@@ -3,6 +3,33 @@ const LANGUAGE_KEY = 'walkcode-language';
 const DRILL_KEY = 'walkcode-drills';
 const UI_SCALE_KEY = 'walkcode-ui-scale';
 const THEME_KEY = 'walkcode-theme';
+const FILTERS_KEY = 'walkcode-filters';
+const REDUCED_MOTION_KEY = 'walkcode-reduced-motion';
+
+// Explicit reduced-motion override (M11), on top of the OS `prefers-reduced-motion`. Persisted
+// device-local; applied as `data-reduced-motion` on <html> (see app.js applyReducedMotion).
+function loadReducedMotion() {
+  return localStorage.getItem(REDUCED_MOTION_KEY) === '1';
+}
+
+// Content filters (M11) — the single source of truth for what random/pick/browse show, edited only
+// in the settings panel's Filters tab and persisted device-local. `types`/`difficulties` are the
+// SELECTED values (a drill passes when its type AND difficulty are both selected); an empty set
+// therefore matches nothing. Default: everything selected. `includeCompleted` governs whether random
+// drills AND random walkthroughs reuse already-completed items.
+export const DRILL_TYPES = ['fill-blank', 'predict', 'debug', 'edge-case'];
+export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
+function loadFilters() {
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem(FILTERS_KEY)) || {}; } catch { stored = {}; }
+  // Keep only known values, preserving the allowed order; missing key ⇒ all selected (default).
+  const clean = (values, allowed) => (Array.isArray(values) ? allowed.filter((v) => values.includes(v)) : [...allowed]);
+  return {
+    types: clean(stored.types, DRILL_TYPES),
+    difficulties: clean(stored.difficulties, DIFFICULTIES),
+    includeCompleted: Boolean(stored.includeCompleted),
+  };
+}
 
 // Colour theme (device-local). 'auto' follows the OS via `prefers-color-scheme`; 'light'/'dark'
 // force it. Applied as `data-theme` on <html> (see app.js applyTheme). Default: auto.
@@ -36,10 +63,12 @@ export function freshCoach() {
 
 export const appState = {
   language: localStorage.getItem(LANGUAGE_KEY) === 'JavaScript' ? 'JavaScript' : 'Python',
-  // Global UI scale, colour theme, + whether the settings panel is open.
+  // Global UI scale, colour theme, + the settings panel (whether open, and which tab).
   uiScale: loadUiScale(),
   theme: loadTheme(),
+  reducedMotion: loadReducedMotion(),
   settingsOpen: false,
+  settingsTab: 'settings', // 'settings' | 'filters'
   screen: 'home',
   currentCardId: null,
   lessonStep: 0,
@@ -47,20 +76,22 @@ export const appState = {
   walkthroughMode: 'browse',
   randomWalkthroughHistory: [],
   randomWalkthroughIndex: -1,
-  drillDifficulty: 'All',
   drillQueue: [],
   drillIndex: 0,
+  // Sort order for the drill-picker browse list: 'default' | 'name' | 'difficulty' | 'type'.
+  drillSort: 'default',
+  // When the current random drill is already solved, we gate it behind an "Already done — do it
+  // again?" prompt; this flips true once the learner chooses to redo it, and resets on advance.
+  drillRedo: false,
   // Home mode cards expand in place into their start options (Random vs Pick), one at a time.
   drillsExpanded: false,
   walkthroughExpanded: false,
   // One-shot: which card ('drills'|'walkthroughs'|null) just opened, so only a fresh open plays the
   // expand animation — re-renders while open (e.g. toggling the checkbox) must not replay it.
   animateCard: null,
-  // Shared "random" setting: include items already completed (default: skip them). Applies to both
-  // random drills and random walkthroughs.
-  includeCompleted: false,
-  // Pick/filter screen selection.
-  drillFilter: { difficulty: 'All', type: 'All' },
+  // The single source of truth for content filters (drill types, difficulties, and whether random
+  // reuses completed items). Owned by the settings panel's Filters tab; see loadFilters/setFilters.
+  filters: loadFilters(),
   codeFixIndex: 0,
   complexityStage: 0,
   algorithm: { available: [], answer: [] },
@@ -148,6 +179,34 @@ export function setTheme(theme) {
   appState.theme = value;
   localStorage.setItem(THEME_KEY, value);
   return value;
+}
+
+// Set the reduced-motion override (device-local). Applied by app.js applyReducedMotion().
+export function setReducedMotion(on) {
+  appState.reducedMotion = Boolean(on);
+  localStorage.setItem(REDUCED_MOTION_KEY, appState.reducedMotion ? '1' : '0');
+  return appState.reducedMotion;
+}
+
+// Clear device-local learning progress — per-problem states AND solved drills — behind a confirm in
+// the UI. Deliberately keeps preferences (language, theme, text size, filters, reduced-motion).
+export function resetProgress() {
+  localStorage.removeItem(STATE_KEY);
+  localStorage.removeItem(DRILL_KEY);
+}
+
+// Merge a patch into the content filters (device-local) and persist. Returns the new filters.
+export function setFilters(patch) {
+  appState.filters = { ...appState.filters, ...patch };
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(appState.filters));
+  return appState.filters;
+}
+
+// Toggle one value in a list-valued filter ('types' or 'difficulties').
+export function toggleFilterValue(key, value) {
+  const current = appState.filters[key] || [];
+  const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+  return setFilters({ [key]: next });
 }
 
 export function resetLesson(cardId) {

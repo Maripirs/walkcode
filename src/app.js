@@ -1,10 +1,10 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, DEFAULT_UI_SCALE, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress, setTheme, setUiScale, THEMES } from './lib/state.js';
-import { shuffle } from './lib/ui.js';
+import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setTheme, setUiScale, THEMES, toggleFilterValue } from './lib/state.js';
+import { gearGlyph, shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
 import { renderReview, bindReview, draftKey } from './views/review.js';
-import { renderDrill, bindDrillAnswer } from './views/drill.js';
+import { renderDrill, bindDrillAnswer, TYPE_LABELS } from './views/drill.js';
 import { renderDrillPicker } from './views/drill-picker.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
@@ -31,12 +31,15 @@ function beginWalkthrough(card) {
   openWalkthrough(card);
 }
 
-// Random walkthroughs draw from built problems, skipping ones already completed unless the shared
-// "include completed" toggle is on (falling back to all if every problem is done).
+// Random walkthroughs draw from built problems within the selected difficulties (M11), skipping
+// ones already completed unless the shared "include completed" filter is on. Each narrowing falls
+// back to the wider pool if it would otherwise leave nothing to pick.
 function eligibleBuiltCards() {
-  if (appState.includeCompleted) return builtCards;
-  const unsolved = builtCards.filter((card) => getProgress(card.id) !== 'Solved');
-  return unsolved.length ? unsolved : builtCards;
+  const byDifficulty = builtCards.filter((card) => appState.filters.difficulties.includes(card.difficulty));
+  const pool = byDifficulty.length ? byDifficulty : builtCards;
+  if (appState.filters.includeCompleted) return pool;
+  const unsolved = pool.filter((card) => getProgress(card.id) !== 'Solved');
+  return unsolved.length ? unsolved : pool;
 }
 
 function randomBuiltCard(excludeId = '') {
@@ -65,26 +68,27 @@ function walkthroughSummary() {
   return { total: builtCards.length, solved: builtCards.filter((card) => getProgress(card.id) === 'Solved').length };
 }
 
-// Drills matching the pick/filter screen's current type + difficulty selection.
+// Drills matching the current filters (drill types + difficulties) — the single source of truth in
+// the settings panel's Filters tab. A drill passes only if its type AND difficulty are both selected.
 function filteredDrills() {
-  const { difficulty, type } = appState.drillFilter;
-  return drillItems().filter((drill) => (difficulty === 'All' || drill.difficulty === difficulty)
-    && (type === 'All' || (drill.exercise?.type || 'fill-blank') === type));
+  const { types, difficulties } = appState.filters;
+  return drillItems().filter((drill) => types.includes(drill.exercise?.type || 'fill-blank')
+    && difficulties.includes(drill.difficulty));
 }
 
 function startDrillQueue(queue) {
   appState.drillQueue = queue;
   appState.drillIndex = 0;
+  appState.drillRedo = false;
   appState.screen = 'drill';
   render();
 }
 
-// Random reps: shuffle the (difficulty-filtered) drills, skipping completed ones unless the shared
-// toggle says otherwise (falling back to all if that would leave nothing).
-function startDrills(difficulty = appState.drillDifficulty) {
-  appState.drillDifficulty = difficulty;
-  let pool = drillItems().filter((item) => difficulty === 'All' || item.difficulty === difficulty);
-  if (!appState.includeCompleted) {
+// Random reps: shuffle the filtered drills, skipping completed ones unless the shared
+// include-completed filter says otherwise (falling back to all if that would leave nothing).
+function startDrills() {
+  let pool = filteredDrills();
+  if (!appState.filters.includeCompleted) {
     const unsolved = pool.filter((drill) => !isDrillSolved(drill.id));
     pool = unsolved.length ? unsolved : pool;
   }
@@ -114,6 +118,14 @@ function applyTheme() {
   if (appState.theme === 'auto') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', appState.theme);
 }
+
+// Explicit reduced-motion override → `data-reduced-motion` on <html>, which styles.css uses to
+// disable the expand/transition animations (on top of the OS prefers-reduced-motion support).
+function applyReducedMotion() {
+  const root = document.documentElement;
+  if (appState.reducedMotion) root.setAttribute('data-reduced-motion', '');
+  else root.removeAttribute('data-reduced-motion');
+}
 // Keep anything JS-derived in sync if the OS flips while on 'auto' (the visuals already update via
 // the CSS media query alone; this listener is a belt-and-braces no-op for theming). Guarded and
 // wrapped so a browser without MediaQueryList.addEventListener (older iOS Safari uses addListener)
@@ -131,40 +143,82 @@ let settingsEl = null;
 function renderSettings() {
   if (!settingsEl) { settingsEl = document.createElement('div'); settingsEl.id = 'settings-overlay'; document.body.appendChild(settingsEl); }
   if (!appState.settingsOpen) { settingsEl.innerHTML = ''; return; }
+  const tab = appState.settingsTab === 'filters' ? 'filters' : 'settings';
   const pct = Math.round(appState.uiScale * 100);
+  const { types, difficulties, includeCompleted } = appState.filters;
+
+  const settingsBody = `
+    <span class="settings-label">Code language</span>
+    <div class="lang-segment">
+      <button data-set-language="JavaScript" class="${appState.language === 'JavaScript' ? 'active' : ''}">JavaScript</button>
+      <button data-set-language="Python" class="${appState.language === 'Python' ? 'active' : ''}">Python</button>
+    </div>
+    <span class="settings-label">Theme</span>
+    <div class="lang-segment theme-segment">
+      ${THEMES.map((t) => `<button data-set-theme="${t}" class="${appState.theme === t ? 'active' : ''}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
+    </div>
+    <span class="settings-label">Text size</span>
+    <div class="size-stepper">
+      <button data-scale="-1" aria-label="Smaller">−</button>
+      <span class="size-readout">${pct}%</span>
+      <button data-scale="1" aria-label="Larger">+</button>
+    </div>
+    <button class="size-reset" data-scale-reset>Reset to default</button>
+    <span class="settings-label">Motion</span>
+    <label class="switch-row"><span>Reduce motion</span>
+      <input type="checkbox" data-toggle-reduced-motion ${appState.reducedMotion ? 'checked' : ''}></label>
+    <span class="settings-label">Progress</span>
+    <button class="reset-progress" data-reset-progress>Reset all progress…</button>`;
+
+  const filtersBody = `
+    <span class="settings-label">Random</span>
+    <label class="switch-row"><span>Include ones I’ve already completed</span>
+      <input type="checkbox" data-toggle-include ${includeCompleted ? 'checked' : ''}></label>
+    <span class="settings-label">Drill types</span>
+    <div class="chips">
+      ${DRILL_TYPES.map((t) => `<button class="chip ${types.includes(t) ? 'on' : ''}" data-toggle-type="${t}" aria-pressed="${types.includes(t)}">${TYPE_LABELS[t]}</button>`).join('')}
+    </div>
+    <span class="settings-label">Difficulty</span>
+    <div class="seg-multi">
+      ${DIFFICULTIES.map((d) => `<button class="seg ${difficulties.includes(d) ? 'on' : ''}" data-toggle-difficulty="${d}" aria-pressed="${difficulties.includes(d)}">${d}</button>`).join('')}
+    </div>`;
+
   settingsEl.innerHTML = `
     <div class="settings-backdrop" data-settings-close></div>
     <div class="settings-panel" role="dialog" aria-label="Settings">
-      <div class="settings-row"><b>Settings</b><button class="settings-x" data-settings-close aria-label="Close">×</button></div>
-      <span class="settings-label">Code language</span>
-      <div class="lang-segment">
-        <button data-set-language="JavaScript" class="${appState.language === 'JavaScript' ? 'active' : ''}">JavaScript</button>
-        <button data-set-language="Python" class="${appState.language === 'Python' ? 'active' : ''}">Python</button>
+      <div class="settings-row"><span class="settings-icon" aria-hidden="true">${gearGlyph()}</span><button class="settings-x" data-settings-close aria-label="Close">×</button></div>
+      <div class="settings-tabs" role="tablist">
+        <button class="settings-tab ${tab === 'settings' ? 'active' : ''}" data-settings-tab="settings" role="tab" aria-selected="${tab === 'settings'}">Settings</button>
+        <button class="settings-tab ${tab === 'filters' ? 'active' : ''}" data-settings-tab="filters" role="tab" aria-selected="${tab === 'filters'}">Filters</button>
       </div>
-      <span class="settings-label">Theme</span>
-      <div class="lang-segment theme-segment">
-        ${THEMES.map((t) => `<button data-set-theme="${t}" class="${appState.theme === t ? 'active' : ''}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
-      </div>
-      <span class="settings-label">Text size</span>
-      <div class="size-stepper">
-        <button data-scale="-1" aria-label="Smaller">−</button>
-        <span class="size-readout">${pct}%</span>
-        <button data-scale="1" aria-label="Larger">+</button>
-      </div>
-      <button class="size-reset" data-scale-reset>Reset to default</button>
+      ${tab === 'filters' ? filtersBody : settingsBody}
     </div>`;
+
   const refresh = () => { applyScale(); renderSettings(); };
   settingsEl.querySelectorAll('[data-settings-close]').forEach((b) => b.addEventListener('click', () => { appState.settingsOpen = false; renderSettings(); }));
+  settingsEl.querySelectorAll('[data-settings-tab]').forEach((b) => b.addEventListener('click', () => { appState.settingsTab = b.dataset.settingsTab; renderSettings(); }));
   // Language change re-renders the whole view (content is language-specific); render() rebuilds this panel too.
   settingsEl.querySelectorAll('[data-set-language]').forEach((b) => b.addEventListener('click', () => { setLanguage(b.dataset.setLanguage); render(); }));
   settingsEl.querySelectorAll('[data-set-theme]').forEach((b) => b.addEventListener('click', () => { setTheme(b.dataset.setTheme); applyTheme(); renderSettings(); }));
   settingsEl.querySelectorAll('[data-scale]').forEach((b) => b.addEventListener('click', () => { setUiScale(appState.uiScale + Number(b.dataset.scale) * 0.05); refresh(); }));
-  settingsEl.querySelector('[data-scale-reset]').addEventListener('click', () => { setUiScale(DEFAULT_UI_SCALE); refresh(); });
+  settingsEl.querySelector('[data-scale-reset]')?.addEventListener('click', () => { setUiScale(DEFAULT_UI_SCALE); refresh(); });
+  settingsEl.querySelector('[data-toggle-reduced-motion]')?.addEventListener('change', (e) => { setReducedMotion(e.target.checked); applyReducedMotion(); });
+  settingsEl.querySelector('[data-reset-progress]')?.addEventListener('click', () => {
+    if (!window.confirm('Reset all progress? This clears every solved problem and drill on this device. Your language, theme, text size, and filters are kept.')) return;
+    resetProgress();
+    render(); // reflect the cleared tallies/states everywhere
+  });
+  // Filter controls — the single source of truth. render() updates both the panel and the screen
+  // behind it (e.g. the drill picker's live list).
+  settingsEl.querySelector('[data-toggle-include]')?.addEventListener('change', (e) => { setFilters({ includeCompleted: e.target.checked }); render(); });
+  settingsEl.querySelectorAll('[data-toggle-type]').forEach((b) => b.addEventListener('click', () => { toggleFilterValue('types', b.dataset.toggleType); render(); }));
+  settingsEl.querySelectorAll('[data-toggle-difficulty]').forEach((b) => b.addEventListener('click', () => { toggleFilterValue('difficulties', b.dataset.toggleDifficulty); render(); }));
 }
 
 function render() {
   applyScale();
   applyTheme();
+  applyReducedMotion();
   renderSettings();
   if (appState.screen === 'home') {
     root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary() });
@@ -289,11 +343,11 @@ function applyRouteSnapshot(snapshot) {
   appState.lessonStep = snapshot.lessonStep || 0;
   appState.walkthroughMode = snapshot.walkthroughMode || 'browse';
   appState.walkthroughPickerOpen = Boolean(snapshot.walkthroughPickerOpen);
-  if (snapshot.drillDifficulty) appState.drillDifficulty = snapshot.drillDifficulty;
   appState.drillsExpanded = Boolean(snapshot.drillsExpanded);
   appState.walkthroughExpanded = Boolean(snapshot.walkthroughExpanded);
-  appState.includeCompleted = Boolean(snapshot.includeCompleted);
-  if (snapshot.drillFilter) appState.drillFilter = snapshot.drillFilter;
+  // Filters persist in localStorage (loaded at startup), so appState.filters is already current;
+  // adopt the snapshot's copy only if present, keeping Back/Forward consistent.
+  if (snapshot.filters) appState.filters = snapshot.filters;
   appState.randomWalkthroughHistory = snapshot.randomWalkthroughHistory || [];
   appState.randomWalkthroughIndex = snapshot.randomWalkthroughIndex ?? -1;
   if (appState.screen === 'lesson') {
@@ -304,7 +358,7 @@ function applyRouteSnapshot(snapshot) {
     appState.stepBuilderFallback = false;
   }
   if (appState.screen === 'drill' && !appState.drillQueue.length) {
-    appState.drillQueue = shuffle(drillItems().filter((item) => appState.drillDifficulty === 'All' || item.difficulty === appState.drillDifficulty));
+    appState.drillQueue = shuffle(filteredDrills());
     appState.drillIndex = 0;
   }
 }
@@ -330,14 +384,25 @@ function renderDrillScreen() {
   const lesson = lessonFor(card, appState.language);
   // Drill exercises arrive with both language variants already resolved (see assemble.js).
   const exercise = appState.language === 'Python' ? drill.pythonExercise : drill.exercise;
-  root.innerHTML = renderDrill({ state: appState, drill, lesson, exercise, solved: isDrillSolved(drill.id) });
-  bindDrillAnswer(
-    root,
-    exercise,
-    () => { appState.drillIndex += 1; render(); },
-    () => markDrillSolved(drill.id),
-  );
-  root.querySelector('[data-drill-difficulty]').addEventListener('change', (event) => startDrills(event.target.value));
+  const queueDone = appState.drillQueue.reduce((n, item) => n + (isDrillSolved(item.id) ? 1 : 0), 0);
+  const alreadyDone = isDrillSolved(drill.id) && !appState.drillRedo;
+  root.innerHTML = renderDrill({ state: appState, drill, lesson, exercise, solved: isDrillSolved(drill.id), redo: appState.drillRedo, queueDone });
+  if (alreadyDone) {
+    // Interstitial for a completed drill: let the learner choose to redo it (reveal) or move on.
+    root.querySelector('[data-redo-drill]')?.addEventListener('click', () => { appState.drillRedo = true; render(); });
+  } else {
+    bindDrillAnswer(root, exercise, advanceDrill, () => markDrillSolved(drill.id));
+  }
+  // Skip advances past the current drill (works on both the drill and the "already done" prompt).
+  root.querySelectorAll('[data-skip-drill]').forEach((b) => b.addEventListener('click', advanceDrill));
+}
+
+// Move to the next drill in the queue (wraps + reshuffles at the end via renderDrillScreen), and
+// clear the redo gate so a completed drill we land on shows its prompt again.
+function advanceDrill() {
+  appState.drillIndex += 1;
+  appState.drillRedo = false;
+  render();
 }
 
 function renderLessonScreen() {
@@ -477,7 +542,8 @@ function toggleModeCard(next) {
   if (appState.drillsExpanded && !next.drillsExpanded) closingKey = 'drills';
   else if (appState.walkthroughExpanded && !next.walkthroughExpanded) closingKey = 'walkthroughs';
   const panel = closingKey ? root.querySelector(`.mode-card-group[data-card="${closingKey}"] .mode-expand`) : null;
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = appState.reducedMotion
+    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   if (!panel || reduceMotion) { apply(); return; }
   let done = false;
   const finish = () => { if (done) return; done = true; apply(); };
@@ -508,20 +574,14 @@ function bindSharedControls() {
     appState.screen = 'drill-picker';
     render();
   }));
-  // Shared random toggle (drills + walkthroughs). Persists on the state; re-render to reflect it.
-  root.querySelectorAll('[data-include-completed]').forEach((box) => box.addEventListener('change', () => {
-    appState.includeCompleted = box.checked;
-    render();
+  // "Adjust in Filters" links (home chooser + drill picker) open the settings panel on its Filters
+  // tab — the single place those controls now live.
+  root.querySelectorAll('[data-open-filters]').forEach((button) => button.addEventListener('click', () => {
+    appState.settingsOpen = true;
+    appState.settingsTab = 'filters';
+    renderSettings();
   }));
-  // Pick/filter screen controls.
-  root.querySelectorAll('[data-filter-type]').forEach((select) => select.addEventListener('change', () => {
-    appState.drillFilter = { ...appState.drillFilter, type: select.value };
-    render();
-  }));
-  root.querySelectorAll('[data-filter-difficulty]').forEach((select) => select.addEventListener('change', () => {
-    appState.drillFilter = { ...appState.drillFilter, difficulty: select.value };
-    render();
-  }));
+  root.querySelectorAll('[data-drill-sort]').forEach((select) => select.addEventListener('change', () => { appState.drillSort = select.value; render(); }));
   root.querySelectorAll('[data-shuffle-filtered]').forEach((button) => button.addEventListener('click', () => startDrillQueue(shuffle(filteredDrills()))));
   root.querySelectorAll('[data-drill-id]').forEach((button) => button.addEventListener('click', () => startPickedDrill(button.dataset.drillId)));
   root.querySelectorAll('[data-open-library]').forEach((button) => button.addEventListener('click', () => {
@@ -561,6 +621,7 @@ if (window.location.pathname === '/review') {
 
 applyScale(); // scale even the loading screen so there's no first-paint size jump
 applyTheme(); // theme the loading screen too, so there's no first-paint colour flash
+applyReducedMotion();
 root.innerHTML = '<section class="home"><h1>Loading…</h1></section>';
 loadContent().then((bundle) => {
   initContent(bundle);

@@ -1,4 +1,4 @@
-import { difficultyTag, escapeText, topBar } from '../lib/ui.js';
+import { difficultyTag, escapeText, filtersLink, topBar } from '../lib/ui.js';
 
 const DIFFICULTY_BANDS = ['Easy', 'Medium', 'Hard'];
 
@@ -41,19 +41,30 @@ function browseList(state, problems, progressLabel) {
   const showPending = state.reviewMode || isReviewer;
   const row = (card) => problemRow(card, progressLabel, isReviewer ? reviewMap.get(card.title) : null);
 
-  const built = problems.filter((card) => card.isBuilt);
+  // The Filters tab's difficulties also narrow the walkthrough library (M11). A strict subset shows
+  // a summary + a link to widen it; selecting none shows an empty-state.
+  const selectedDifficulties = state.filters?.difficulties || DIFFICULTY_BANDS;
+  const difficultyFilterActive = selectedDifficulties.length < DIFFICULTY_BANDS.length;
+  const filterNote = difficultyFilterActive
+    ? `<p class="picker-filter-summary">Difficulty: ${DIFFICULTY_BANDS.filter((l) => selectedDifficulties.includes(l)).join(', ') || 'none'} · ${filtersLink('Adjust')}</p>`
+    : '';
+
+  const built = problems.filter((card) => card.isBuilt && selectedDifficulties.includes(card.difficulty));
   const bands = DIFFICULTY_BANDS
+    .filter((level) => selectedDifficulties.includes(level))
     .map((level) => [level, built.filter((card) => card.difficulty === level)])
     .filter(([, cards]) => cards.length);
-  const bandsHtml = `<div class="problem-list">${bands.map(([level, cards]) => `
+  const bandsHtml = bands.length
+    ? `<div class="problem-list">${bands.map(([level, cards]) => `
     <div class="band">
       <div class="band-head">${level}<small>${cards.length}</small></div>
       ${cards.map(row).join('')}
-    </div>`).join('')}</div>`;
+    </div>`).join('')}</div>`
+    : '<p class="brief">No problems match your difficulty filter — widen it in Filters to see more.</p>';
 
   let reviewHtml = '';
   if (showPending) {
-    const pending = problems.filter((card) => card.isComplete && !card.isBuilt);
+    const pending = problems.filter((card) => card.isComplete && !card.isBuilt && selectedDifficulties.includes(card.difficulty));
     reviewHtml = `<div class="review-section">
       <div class="band-head review">Pending review<small>${pending.length}</small></div>
       ${pending.length
@@ -65,7 +76,7 @@ function browseList(state, problems, progressLabel) {
   const brief = isReviewer
     ? '<b>Reviewing as owner.</b> Each row shows its review status — open a problem to walk its five stages and Approve/Reject each. “Live · not yet reviewed” problems are already published (via the code allowlist); rejecting a stage takes one back down.'
     : `Every problem is a complete five-step walkthrough, ordered from easier to harder.${state.reviewMode ? ' <b>Review mode is on</b> — pending problems appear below.' : ''}`;
-  return `<p class="brief">${brief}</p>${bandsHtml}${reviewHtml}`;
+  return `<p class="brief">${brief}</p>${filterNote}${bandsHtml}${reviewHtml}`;
 }
 
 // The library is now purely the browse list — the choose-vs-random decision moved to the home

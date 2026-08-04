@@ -5,12 +5,6 @@ import { sourceLink } from '../lib/problem-source.js';
 // blanked out. This is a content guideline (enforced by review), not a runtime gate.
 export const MAX_DRILL_CONTEXT_LINES = 36;
 
-function difficultyPicker(selected) {
-  return `<label class="difficulty-picker">Difficulty <select data-drill-difficulty>
-    ${['All', 'Easy', 'Medium', 'Hard'].map((level) => `<option value="${level}" ${selected === level ? 'selected' : ''}>${level}</option>`).join('')}
-  </select></label>`;
-}
-
 function problemDetails(lesson, drill) {
   const details = lesson.inputOutput?.length
     ? lesson.inputOutput
@@ -104,24 +98,48 @@ function drillBody(exercise, language) {
     <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>`;
 }
 
-export function renderDrill({ state, drill, lesson, exercise, solved = false }) {
+// The random-drill top bar: same on every card, showing solved-progress through the shuffled set.
+function drillTopBar(state, queueDone) {
+  // Progress through the shuffled set, not position: skipping doesn't complete anything, and the
+  // queue loops, so a "you are on N of M" position reads as nonsensical. Count what's solved.
+  return topBar({ title: `Random code drill · ${queueDone}/${state.drillQueue.length} done`, language: state.language });
+}
+
+export function renderDrill({ state, drill, lesson, exercise, solved = false, redo = false, queueDone = 0 }) {
   const type = exercise.type || 'fill-blank';
-  const typeLabel = TYPE_LABELS[type];
+  // Glue the type label's words with nbsp so it drops to its own line as a whole instead of wrapping
+  // mid-phrase; .drill-type's overflow-wrap lets it break only if it can't fit on a line at all.
+  const typeLabelHtml = escapeText(TYPE_LABELS[type]).replaceAll(' ', '&nbsp;');
   const doneBadge = solved ? '<span class="drill-done">✓ done before</span>' : '';
+  // Header + title are IDENTICAL for the normal drill and the already-done prompt — only the content
+  // section below differs — so the Skip button keeps its fixed spot in the card head either way.
+  const header = `<div class="drill-card-head">
+      <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())} · <span class="drill-type">${typeLabelHtml}</span>${doneBadge}</div>
+      <button class="drill-skip" data-skip-drill>Skip →</button>
+    </div>
+    <h1>${escapeText(drill.title)}${difficultyTag(drill.difficulty)}</h1>`;
+
+  // Already-completed drill (e.g. skipped back around to it): same header, only the content becomes a
+  // prompt so the learner redoes it or moves on (skip lives in the shared header above).
+  if (solved && !redo) {
+    return `${drillTopBar(state, queueDone)}
+    <article class="drill-card">
+      ${header}
+      <div class="drill-redo">
+        <p><b>✓ Already done.</b> You’ve completed this drill. Want to run it again?</p>
+        <button class="drill-redo-yes" data-redo-drill>Do it again →</button>
+      </div>
+    </article>`;
+  }
+
   const interactive = type === 'debug'
     ? debugBlock(exercise)
     : `${drillBody(exercise, state.language)}
     <div class="choice-list">${shuffle(exercise.choices).map(choiceButton).join('')}</div>
     <div data-drill-feedback aria-live="polite"></div>`;
-  return `${topBar({
-    title: `Random code drill · ${state.drillIndex + 1}/${state.drillQueue.length}`,
-    language: state.language,
-    variant: 'drill-topbar',
-    extras: difficultyPicker(state.drillDifficulty),
-  })}
+  return `${drillTopBar(state, queueDone)}
   <article class="drill-card">
-    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())} · <span class="drill-type">${escapeText(typeLabel)}</span>${doneBadge}</div>
-    <h1>${escapeText(drill.title)}${difficultyTag(drill.difficulty)}</h1>
+    ${header}
     <section class="drill-context"><b>The problem</b>
       <p>${richText(lesson.explanation || drill.problemDescription || drill.context)}</p>
     </section>

@@ -44,10 +44,11 @@ export function difficultyTag(difficulty) {
   return `<span class="difficulty ${difficulty.toLowerCase()}">${difficulty}</span>`;
 }
 
-// Shared "random" option toggle: include items the learner has already completed. Used by both the
-// code-drills chooser and the random-walkthrough option; bound via [data-include-completed].
-export function includeCompletedToggle(checked) {
-  return `<label class="toggle-row"><input type="checkbox" data-include-completed ${checked ? 'checked' : ''}> Include ones I've already completed</label>`;
+// Link that opens the settings panel on its Filters tab (M11). The Filters tab is the single source
+// of truth for include-completed / drill types / difficulty, so the home chooser and drill picker
+// point here instead of carrying their own inline controls. Bound via [data-open-filters].
+export function filtersLink(label = 'Adjust in Filters') {
+  return `<button class="filters-link" data-open-filters>${escapeText(label)} →</button>`;
 }
 
 export function feedback(message, good) {
@@ -65,6 +66,12 @@ const HOME_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" st
 // now lives in the settings panel, so it is no longer in the bar.
 export function settingsGear() {
   return `<button class="gear icon-btn" data-settings-toggle aria-label="Settings" title="Settings">${GEAR_SVG}</button>`;
+}
+
+// The bare gear glyph (no button) — used as the settings panel's header mark so the header doesn't
+// repeat the word "Settings" already shown on the tab below it.
+export function gearGlyph() {
+  return GEAR_SVG;
 }
 
 export function topBar({ title, previous = '', next = '', extras = '', variant = '' }) {

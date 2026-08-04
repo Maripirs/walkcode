@@ -1,4 +1,4 @@
-import { includeCompletedToggle, settingsGear } from '../lib/ui.js';
+import { settingsGear } from '../lib/ui.js';
 
 // Both mode cards expand in place (no separate screen) into their two ways to start: a random one
 // — with the shared "include already completed" toggle — or the browse/pick path. `progress`
@@ -18,9 +18,8 @@ export function renderHome(state, progress = {}) {
     </button>
     ${state.drillsExpanded ? `<div class="mode-expand${openClass('drills')}">
       <button class="mode-sub" data-drills-random>
-        <b>Random reps →</b><span>A shuffled mix of every drill type.</span>
+        <b>Random reps →</b><span>A shuffled mix of your selected drill types.</span>
       </button>
-      ${includeCompletedToggle(state.includeCompleted)}
       <button class="mode-sub" data-drills-pick>
         <b>Pick or filter →</b><span>Browse drills by type and difficulty, then choose.</span>
       </button>
@@ -36,7 +35,6 @@ export function renderHome(state, progress = {}) {
       <button class="mode-sub" data-random-walkthrough>
         <b>Random walkthrough →</b><span>A finished five-step problem chosen for you.</span>
       </button>
-      ${includeCompletedToggle(state.includeCompleted)}
       <button class="mode-sub" data-open-library>
         <b>Pick a problem →</b><span>Browse every problem, easier to harder.</span>
       </button>
