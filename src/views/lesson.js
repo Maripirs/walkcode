@@ -35,27 +35,47 @@ function ensureAlgorithmState(state, lesson) {
 }
 
 // Recognize: lead with the full plain-language problem statement, then Input/Output/Example,
-// then the problem-specific intuition, then "what to notice", then a concept check.
+// then the concept check. The check is a *recognition* exercise, so it comes BEFORE the cues
+// that would name the answer: the intuition and "what to notice" are revealed as the
+// explanation only once the learner has committed to an answer (see the concept-choice handler).
 function recognitionPanel(lesson) {
   const concept = conceptOptions(lesson);
   const statement = lesson.explanation || lesson.brief;
+  // An optional fuller statement (authored for the subtler problems) follows the one-line
+  // summary; split blank-line-separated blocks into paragraphs.
+  const description = lesson.description
+    ? lesson.description.split('\n\n').map((para) => `<p>${richText(para)}</p>`).join('')
+    : '';
   const statementBlock = statement
-    ? `<section class="problem-explanation"><h3>What you’re solving</h3><p>${richText(statement)}</p></section>`
+    ? `<section class="problem-explanation"><h3>What you’re solving</h3><p>${richText(statement)}</p>${description}</section>`
     : '';
   const io = lesson.inputOutput
     ? `<section class="problem-explanation"><h3>Input</h3><p>${richText(lesson.inputOutput[0])}</p><h3>Output</h3><p>${richText(lesson.inputOutput[1])}</p><h3>Example</h3><pre class="code">${escapeCode(lesson.inputOutput[2])}</pre></section>`
     : '';
+  // Additional worked examples (edge cases and other inputs) in a collapsible panel, so they
+  // give the learner more to reason from without crowding the step. Examples don't name the
+  // pattern, so they can sit before the concept check.
+  const moreExamples = (lesson.examples && lesson.examples.length)
+    ? `<details class="more-examples"><summary>More examples (${lesson.examples.length})</summary>${lesson.examples.map((ex) => `<div class="example"><pre class="code">Input: ${escapeCode(ex.input)}\nOutput: ${escapeCode(ex.output)}</pre>${ex.note ? `<p class="example-note">${richText(ex.note)}</p>` : ''}</div>`).join('')}</details>`
+    : '';
   const intuition = lesson.intuition
     ? `<aside class="intuition"><b>Intuition</b><p>${richText(lesson.intuition)}</p></aside>`
     : '';
+  const notice = (lesson.concepts && lesson.concepts.length)
+    ? `<h3>What to notice</h3><ul>${lesson.concepts.map((item) => `<li>${richText(item)}</li>`).join('')}</ul>`
+    : '';
+  // Hidden until the concept check is answered, so these don't give the pattern away.
+  const reveal = (intuition || notice)
+    ? `<div class="recognition-reveal" data-recognition-reveal hidden>${intuition}${notice}</div>`
+    : '';
   return `${statementBlock}
     ${io}
-    ${intuition}
-    <h3>What to notice</h3><ul>${(lesson.concepts || []).map((item) => `<li>${richText(item)}</li>`).join('')}</ul>
+    ${moreExamples}
     <section class="quiz"><b>Concept check</b><p>Which data structure or idea is most important for solving this problem?</p>
       <div class="choice-list">${concept.choices.map((choice) => `<button data-concept-choice="${encodeURIComponent(choice)}">${escapeText(choice)}</button>`).join('')}</div>
       <div data-concept-feedback aria-live="polite"></div>
-    </section>`;
+    </section>
+    ${reveal}`;
 }
 
 // Guided AI coach (M9): the learner constructs the algorithm one step at a time. The coach
@@ -355,6 +375,8 @@ export function bindLesson(root, { state, card, lesson, rerender, finishLesson, 
         : `${escapeText(choice)} can be useful on other problems, but it does not match this input’s structure.`,
       choice === correct,
     );
+    // Now that they've answered, reveal the intuition + "what to notice" as the explanation.
+    root.querySelector('[data-recognition-reveal]')?.removeAttribute('hidden');
   }));
 
   enableStepSorting(root, state, rerender);

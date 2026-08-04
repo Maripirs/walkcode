@@ -13,6 +13,7 @@ import { supplementalCodeDrills } from './supplemental-drills.js';
 import { walkthroughUpgrades } from './walkthrough-upgrades.js';
 import { pythonExercises, pythonSolutions } from './languages.js';
 import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
+import { descriptionsByTitle, examplesByTitle } from './examples.js';
 
 export const LANGUAGES = ['JavaScript', 'Python'];
 
@@ -94,6 +95,9 @@ function lessonFor(card, language) {
       ? authored?.pythonCode || pythonSolutions[card.title]
       : base.code,
     inputOutput: authored?.inputOutput || briefs[card.title] || null,
+    // Extra worked examples + an optional fuller statement (enrichment; not part of isComplete).
+    examples: authored?.examples || examplesByTitle[card.title] || null,
+    description: authored?.description || descriptionsByTitle[card.title] || null,
     conceptChoices: authored?.conceptChoices || conceptChoices[card.title] || null,
     // Problem-specific "aha" shown on the Recognize step (authored lessons only).
     intuition: authored?.intuition || null,

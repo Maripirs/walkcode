@@ -137,8 +137,8 @@ commands I prepare or run.
 - [x] **M5** — Content to the database — **done & verified**: problems, code examples, and exercises served from Postgres via `/api` on the live domain; you confirmed the deployed revision on `walkcode.maripi.net` (2026-08-03)
 - [x] **M6** — UI/UX restructure — **done & verified (2026-08)**: learning-first stepper (Understand→Algorithm→Code→Complexity→Review), guided coach *or* drag-drop, human copy, browser back/forward + refresh persistence. Deployed.
 - [x] **M9** — LLM-assisted algorithm coach — **done & deployed (2026-08)**: Socratic step-by-step build via Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder. Live on `walkcode.maripi.net`.
-- [ ] **M8** — Hardening: nightly Postgres backups + budget alert — **⬅ next milestone**
-- [ ] **M7** — In-browser code editor + execution (client-side; JS now, Python via Pyodide) — planned after M8
+- [x] **M8** — Hardening: nightly Postgres backups + $5 budget + hard kill-switch — **done & verified (2026-08)**: nightly `pg_dump`→GCS (30-day retention), test-restore matched live row counts, budget wired to a Pub/Sub-triggered Cloud Function that disables billing at the cap
+- [ ] **M7** — In-browser code editor + execution (client-side; JS now, Python via Pyodide) — **⬅ next milestone**
 
 ### M0 — Foundations (accounts & tooling)
 - [x] **Status: Done** — authed to `walkcode-504322`; APIs `run`, `artifactregistry`, `cloudbuild`, `compute` enabled; Docker installed.
@@ -342,17 +342,35 @@ commands I prepare or run.
   problem, get correct pass/fail + output, runaway code is bounded by a timeout, and users
   who never run code pay no runtime-download cost.
 
-### M8 — Hardening (pulled from Backlog) — ⬅ NEXT MILESTONE
-- [ ] **Status: next up (2026-08).** More relevant now that prod holds DB content **and** calls a paid-tier-capable LLM: a **budget alert** is the priority, plus nightly Postgres backups.
-- [ ] **Goal:** safe to leave running unattended.
-- [ ] **You:** decide whether you want the absolute billing kill-switch.
-- [ ] **Me:** nightly `pg_dump` → Cloud Storage cron; recovery runbook; budget alert.
-- [ ] **Test plan (you):** **backup check** — list the Cloud Storage bucket and confirm today's
-  dump is there. **Restore drill (with me)** — we restore the latest dump into a throwaway DB
-  and you confirm your data (a user + their progress) comes back intact. **Alert check** —
-  confirm the **budget-alert email** reaches your inbox (we trigger a test or verify the
-  config + notification address). If you opted for the kill-switch, confirm it's wired.
-- [ ] **Done when:** a test restore succeeds and a budget alert is live.
+### M8 — Hardening (pulled from Backlog) — ✅ DONE & VERIFIED (2026-08)
+- [x] **Status: DONE & VERIFIED (2026-08).** Both tracks live. **Backups:** GCS bucket
+  `gs://walkcode-504322-pg-backups` (us-central1, uniform access, public-access-prevention,
+  **30-day lifecycle-delete** retention → inside the 5 GB free tier); nightly root cron on the VM
+  (`12 8 * * *` UTC) runs `/opt/walkcode/pg-backup.sh` (`server/scripts/pg-backup.sh` in-repo):
+  `pg_dump -Fc walkcode` → `gcloud storage cp` using the VM SA. **Two infra fixes were required:**
+  the VM SA's OAuth scope was `devstorage.read_only` (widened to `read_write` via a brief
+  stop/`set-service-account`/start — internal IP `10.128.0.2` and `DATABASE_URL` unchanged) + bucket-scoped
+  `roles/storage.objectAdmin`; and **Private Google Access was OFF** on the `default`/us-central1 subnet
+  (a no-external-IP VM can't reach `storage.googleapis.com` without it) — now **enabled**. **Verified:**
+  dumps land in the bucket, and a **test-restore into a scratch DB matched the live row counts exactly**
+  (problems 151, lessons 302, drills 60, topics 18). **Budget + hard kill-switch (your call):** a **$5/mo**
+  Cloud Billing budget (thresholds 50/90/100%, emails billing admins) publishes to Pub/Sub topic
+  `billing-killswitch`; a **Gen2 Cloud Function** `billing-killswitch` (source `ops/killswitch/`, runs as
+  least-priv SA `killswitch-fn@…` with `roles/billing.projectManager`) disables project billing **only when
+  actual spend ≥ cap** (warning/forecast alerts are no-ops). **Verified:** function `ACTIVE`; a safe
+  under-cap self-test event logged `cost=1 cap=5 → no action` (no billing change). **Runbook:**
+  `docs/RUNBOOK.md` (backup verify, safe + destructive restore, VM rebuild, and **how to re-enable billing
+  if the kill-switch fires**). *(By design, if the kill-switch fires the site AND DB go offline until billing
+  is manually re-linked.)*
+- [x] **Goal:** safe to leave running unattended.
+- [x] **You:** decided — **alert + hard kill-switch**, **$5** budget, default billing-admin email.
+- [x] **Me:** nightly `pg_dump` → Cloud Storage cron; recovery runbook (`docs/RUNBOOK.md`); budget + kill-switch.
+- [x] **Test plan (you):** **backup check** — `gcloud storage ls gs://walkcode-504322-pg-backups/` shows
+  dumps (I verified; a fresh one lands after 08:12 UTC nightly). **Restore drill** — done: scratch-DB restore
+  matched live row counts. **Alert check** — a budget-alert email reaches billing admins once real spend
+  crosses a threshold; you can eyeball the budget in Console → Billing → Budgets & alerts. Kill-switch wired
+  and under-cap-safe (verified).
+- [x] **Done when:** a test restore succeeds and a budget alert is live. **Both satisfied.**
 
 ### M9 — LLM-assisted algorithm coach
 - [x] **Status: DONE & DEPLOYED (2026-08)** — live on `walkcode.maripi.net` (rev `walkcode-00006`), Groq key in Secret Manager. **key created and tested
@@ -484,10 +502,12 @@ good shape after the whole-line rework; the weakest link is the **5-step walkthr
 - **Harder problems need a more thorough explanation.** Hard-tier problems especially need a fuller
   problem statement / worked intuition on the **Understand** step — the current brief + single example
   is thin for them. Scale explanation depth with difficulty.
-- **More examples for every problem.** All problems would benefit from additional worked examples
-  (multiple input/output cases, an edge case or two). These can be **collapsible** so they don't crowd
-  the Understand step. Likely a lesson-schema addition (e.g. an `examples` array) rendered under a
-  collapsible section, plus authoring across the built set.
+- **More examples for every problem.** ~~All problems would benefit from additional worked examples~~
+  **Done for the live/complete set (2026-08):** added `examples` (`{input, output, note}`, verified against
+  each real solution) + an optional fuller `description` to the schema (`src/data/examples.js`, wired in
+  `assemble.js`, rendered in a **collapsible "More examples"** on the Understand step). All **28
+  complete problems now carry 3 examples** (primary + 2, edge cases included); 8 subtler/Hard problems got a
+  fuller description. The 121 title-only WIP problems get examples as they're authored toward Built.
 
 ### Strengths to preserve
 Clean render-on-state loop with no framework/build step; cohesive warm visual system; mobile-first
@@ -507,8 +527,9 @@ calls for M6 (UI/UX) and M9 (Groq provider) are settled.
 
 **Still on you, ahead:**
 
-1. **M8:** decide whether you want the absolute billing **kill-switch** (vs. just a budget alert).
-2. **M7:** the **runner-scope** product call — which surfaces get the in-browser editor (see *Open questions*).
+1. **M7:** the **runner-scope** product call — which surfaces get the in-browser editor (see *Open questions*).
+
+*(M8 settled: alert + hard kill-switch, $5 budget, default billing-admin email — done & verified.)*
 
 Everything else (Dockerfile, server, deploy commands, schema, seed, API + frontend, the code runner) is
 on me — I'll prepare each and walk you through anything interactive.

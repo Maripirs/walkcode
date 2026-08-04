@@ -69,6 +69,7 @@
 .rail-status{margin:8px 0 0;color:var(--muted);font-size:13px;font-weight:700}
 .step-title{font-size:20px;margin:0 0 10px}
 .intuition{margin:14px 0;padding:13px 14px;border:1px solid #f0c9a6;border-left:4px solid var(--coral);border-radius:0 11px 11px 0;background:#fff7f0}.intuition b{display:block;color:#9a4738;font-size:13px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}.intuition p{margin:0;color:#5b4a3f;line-height:1.5}
+.more-examples{margin:12px 0;padding:10px 13px;border:1px solid var(--line);border-radius:11px;background:#faf9f4}.more-examples summary{color:var(--teal);font-weight:800;cursor:pointer}.more-examples[open] summary{margin-bottom:6px}.more-examples .example+.example{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.example-note{margin:6px 0 0;color:var(--muted);font-size:14px;line-height:1.45}
 /* "Go to another problem" — the second navigation axis, visually separated from the step flow. */
 .lesson-footer{margin-top:22px;padding-top:16px;border-top:1px dashed var(--line)}.lesson-footer-label{display:block;color:var(--muted);font-size:13px;font-weight:700;margin-bottom:8px}.lesson-footer-actions{display:flex;gap:8px}.lesson-footer-actions button{flex:1;padding:11px;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:800;color:var(--ink)}.lesson-footer-actions button[disabled]{opacity:.45;cursor:default}.lesson-footer-actions .primary{background:var(--teal);border-color:var(--teal);color:#fff}
 

@@ -28,7 +28,7 @@ Two ways content reaches production:
 1. Add the title to `curriculum.js` under its category.
 2. Add a plain-language explanation in `lesson-records.js`.
 3. Add or update a full lesson record in `lesson-records.js` when the problem needs authored concepts, algorithm steps, code, fixes, and complexity.
-4. Add input, output, and a concrete example in `lesson-records.js`.
+4. Add input, output, and a concrete example in `lesson-records.js`. For at least two examples total, add extra worked cases to `examplesByTitle` in `examples.js` (`{input, output, note?}` — favor edge cases; author every output from the real solution). Optionally add a fuller statement to `descriptionsByTitle` for subtler/Hard problems. Both are enrichment (they don't affect completeness) and render on the Understand step — examples in a collapsible "More examples", the description under the statement. Keep them free of approach spoilers (they show before the concept check).
 5. Add a one-line problem-specific `intuition` (the "aha" for recognizing/approaching the problem — no code, no spoiler) to the lesson record. It renders on the Recognize step; omit it for WIP problems rather than writing a generic hint.
 6. **Review & certify to publish (final step).** Authoring the fields above makes a problem *content-complete*, but it stays hidden until certified. Preview it via review mode (`?review=1`), and when you're satisfied add its title to `certifiedTitles` in `src/data/assemble.js` — that's the gate that shows it to learners. `node server/scripts/validate-content.mjs` fails if a certified problem is incomplete and lists pending-review problems. (No `distractors` — the Algorithm builder is a pure ordering task.)
 7. Add an ordered concept-choice list in `lesson-records.js`; the first value is the answer key, but the UI randomizes its display position.
@@ -41,7 +41,7 @@ Two ways content reaches production:
 
 A problem earns `✓ Built` only when all five stages are concrete, tailored, and interactive:
 
-1. **Recognize** — the full problem statement, then input, output, example, a problem-specific intuition, and a concept check.
+1. **Recognize** — the full problem statement, then input, output, example, then the concept check. The problem-specific intuition and "what to notice" cues name the pattern, so they stay **hidden until the learner answers the check** and are then revealed as the explanation (don't put them above the check — it spoils the recognition).
 2. **Algorithm** — usable, ordered solution steps. The offline builder shuffles them and the learner drags them into order; the AI coach (M9) walks the learner through building them.
 3. **Code fixes** — multiple short exercises from the actual solution.
 4. **Complexity** — guided reasoning about total work and extra memory.
