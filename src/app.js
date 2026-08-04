@@ -195,6 +195,7 @@ function applyRouteSnapshot(snapshot) {
   appState.walkthroughPickerOpen = Boolean(snapshot.walkthroughPickerOpen);
   if (snapshot.drillDifficulty) appState.drillDifficulty = snapshot.drillDifficulty;
   appState.drillsExpanded = Boolean(snapshot.drillsExpanded);
+  appState.walkthroughExpanded = Boolean(snapshot.walkthroughExpanded);
   appState.includeCompleted = Boolean(snapshot.includeCompleted);
   if (snapshot.drillFilter) appState.drillFilter = snapshot.drillFilter;
   appState.randomWalkthroughHistory = snapshot.randomWalkthroughHistory || [];
@@ -372,9 +373,15 @@ function bindSharedControls() {
     setLanguage(select.value);
     render();
   }));
-  // Code-drills chooser: the home card expands to Random vs Pick/filter.
+  // Home mode cards expand in place; opening one collapses the other.
   root.querySelectorAll('[data-toggle-drills]').forEach((button) => button.addEventListener('click', () => {
     appState.drillsExpanded = !appState.drillsExpanded;
+    appState.walkthroughExpanded = false;
+    render();
+  }));
+  root.querySelectorAll('[data-toggle-walkthroughs]').forEach((button) => button.addEventListener('click', () => {
+    appState.walkthroughExpanded = !appState.walkthroughExpanded;
+    appState.drillsExpanded = false;
     render();
   }));
   root.querySelectorAll('[data-drills-random]').forEach((button) => button.addEventListener('click', () => startDrills()));

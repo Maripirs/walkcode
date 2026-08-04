@@ -22,8 +22,9 @@ export const appState = {
   drillDifficulty: 'All',
   drillQueue: [],
   drillIndex: 0,
-  // Code-drill chooser (M10): the home "Code drills" card expands to Random vs Pick/filter.
+  // Home mode cards expand in place into their start options (Random vs Pick), one at a time.
   drillsExpanded: false,
+  walkthroughExpanded: false,
   // Shared "random" setting: include items already completed (default: skip them). Applies to both
   // random drills and random walkthroughs.
   includeCompleted: false,

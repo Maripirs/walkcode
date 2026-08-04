@@ -1,4 +1,4 @@
-import { difficultyTag, escapeText, includeCompletedToggle, topBar } from '../lib/ui.js';
+import { difficultyTag, escapeText, topBar } from '../lib/ui.js';
 
 const DIFFICULTY_BANDS = ['Easy', 'Medium', 'Hard'];
 
@@ -38,23 +38,12 @@ function browseList(state, problems, progressLabel) {
   return `<p class="brief">${brief}</p>${bandsHtml}${reviewHtml}`;
 }
 
+// The library is now purely the browse list — the choose-vs-random decision moved to the home
+// card's in-place dropdown, so reaching here already means "pick a problem".
 export function renderLibrary({ state, problems, progressLabel }) {
-  const list = state.walkthroughPickerOpen
-    ? browseList(state, problems, progressLabel)
-    : '<p class="brief">Choose one of the two options above to begin.</p>';
-
   return `${topBar({ title: 'Full walkthroughs', language: state.language })}
     <section>
-      <h1 class="mode-heading">How do you want to start?</h1>
-      <div class="walkthrough-start">
-        <button class="walkthrough-option ${state.walkthroughPickerOpen ? 'selected' : ''}" data-browse-walkthrough>
-          <b>Choose a problem</b><span>Browse every problem, easier to harder.</span>
-        </button>
-        <button class="walkthrough-option" data-random-walkthrough>
-          <b>Random walkthrough</b><span>Start a finished five-step problem chosen for you.</span>
-        </button>
-      </div>
-      ${includeCompletedToggle(state.includeCompleted)}
-      ${list}
+      <h1 class="mode-heading">Choose a problem</h1>
+      ${browseList(state, problems, progressLabel)}
     </section>`;
 }
