@@ -126,6 +126,31 @@ function validateDebug(where, exercise, runJs) {
   if (runJs && exercise.input && exercise.correctReturns !== undefined) verifyDebugExecution(where, exercise, lines);
 }
 
+// Edge-case: each choice is an input; running call(choice) must yield `target` for the correct
+// choice and something else for every other — so exactly one choice is the answer.
+function verifyEdgeCaseExecution(where, exercise) {
+  const expected = expectedValue(exercise.target);
+  for (const choice of exercise.choices || []) {
+    let result;
+    try { result = runCode(exercise.code, `${exercise.call}(${choice})`); }
+    catch (error) { errors.push(`${where}: edge-case choice ${JSON.stringify(choice)} threw — ${error.message}`); continue; }
+    const hitsTarget = JSON.stringify(result) === JSON.stringify(expected);
+    if (choice === exercise.correct && !hitsTarget) {
+      errors.push(`${where}: correct input ${JSON.stringify(choice)} returns ${JSON.stringify(result)}, not the target ${JSON.stringify(exercise.target)}`);
+    }
+    if (choice !== exercise.correct && hitsTarget) {
+      errors.push(`${where}: distractor ${JSON.stringify(choice)} also yields the target — the answer isn't unique`);
+    }
+  }
+}
+
+function validateEdgeCase(where, exercise, runJs) {
+  if (typeof exercise.call !== 'string' || !exercise.call.trim()) errors.push(`${where}: edge-case drill is missing a call (function name)`);
+  if (exercise.target === undefined) errors.push(`${where}: edge-case drill is missing target`);
+  validateChoices(where, exercise);
+  if (runJs && exercise.call && exercise.target !== undefined) verifyEdgeCaseExecution(where, exercise);
+}
+
 // runJs: only the JavaScript variant is executed to verify its answer (we can't run Python here).
 function validateExercise(where, exercise, runJs = false) {
   if (!exercise || typeof exercise.code !== 'string') {
@@ -136,6 +161,7 @@ function validateExercise(where, exercise, runJs = false) {
   if (type === 'fill-blank') validateFillBlank(where, exercise);
   else if (type === 'predict') validatePredict(where, exercise, runJs);
   else if (type === 'debug') validateDebug(where, exercise, runJs);
+  else if (type === 'edge-case') validateEdgeCase(where, exercise, runJs);
   else errors.push(`${where}: unknown drill type ${JSON.stringify(type)}`);
 }
 

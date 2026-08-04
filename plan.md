@@ -138,7 +138,7 @@ commands I prepare or run.
 - [x] **M6** — UI/UX restructure — **done & verified (2026-08)**: learning-first stepper (Understand→Algorithm→Code→Complexity→Review), guided coach *or* drag-drop, human copy, browser back/forward + refresh persistence. Deployed.
 - [x] **M9** — LLM-assisted algorithm coach — **done & deployed (2026-08)**: Socratic step-by-step build via Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder. Live on `walkcode.maripi.net`.
 - [x] **M8** — Hardening: nightly Postgres backups + $5 budget + hard kill-switch — **done & verified (2026-08)**: nightly `pg_dump`→GCS (30-day retention), test-restore matched live row counts, budget wired to a Pub/Sub-triggered Cloud Function that disables billing at the cap
-- [ ] **M10** — Typed code drills (fill-blank + behavior-prediction + edge-case + debugging) — **🚧 in progress**: predict (15) + debug (7) live, execution-verified; edge-case next
+- [ ] **M10** — Typed code drills (fill-blank + behavior-prediction + edge-case + debugging) — **🚧 all 4 types built & execution-verified**: predict (15) + debug (7) + edge-case (5); scale + on-device eyeball remain
 - [ ] **M7** — In-browser code editor + execution — **moved to Backlog (2026-08)**: doesn't fit the scaffolded, mobile-first, recognition-first model right now; revisit later
 
 ### M0 — Foundations (accounts & tooling)
@@ -445,21 +445,25 @@ commands I prepare or run.
   within the free tier, and the step is fully functional with the LLM path disabled.
 
 ### M10 — Typed code drills — 🚧 IN PROGRESS (2026-08)
-- [x] **Phases 1–3 done (2026-08) — foundation + prediction + debugging.** Added `type` to the drill
+- [x] **Phases 1–4 done (2026-08) — all four drill types built & execution-verified.** Added `type` to the drill
   model (absent ⇒ `fill-blank`, so **every existing drill is untouched**). `views/drill.js` switches on
   type and labels each drill's type in the eyebrow; the shuffled queue **interleaves** the types.
   - **Predict** (`src/data/prediction-drills.js`) — **15 drills across 14 problems** (JS + Python):
     a self-contained function + a call, choices are candidate return values.
   - **Debug** (`src/data/debug-drills.js`) — **7 drills** (JS + Python): a two-step card (spot the buggy
-    line → pick the fix), authored as a structured spec that `assemble.js` flattens per language.
+    line → pick the fix), authored as a structured spec that `assemble.js` flattens per language. The
+    two-step interaction is behaviorally tested (10/10 assertions on the bind logic).
+  - **Edge-case** (`src/data/edge-case-drills.js`) — **5 drills**: a function + "which input yields this
+    result?"; choices are input literals (shared across languages), one hits `target`.
   - **Validator executes the JS** (the key quality lever): predict code is run against its call and must
-    equal `correct`; debug runs the buggy code (must differ) **and** the fixed code (buggy line → fix,
-    must equal `correctReturns`), so a wrong answer or non-manifesting bug can't ship.
-  - Predict inputs were chosen to differ from the shown worked example so "Read more" can't spoil them.
-  - Verified: syntax clean, validator **164 exercises / 82 drills** (all predict+debug JS executed),
-    render checks for both types, local `/api/content` serves 30 predict + 14 debug exercises.
-  - Remaining: (4) **edge-case** drills; scale predict/debug across more of the 28; a quick manual eyeball
-    of the two-step debug interaction on-device.
+    equal `correct`; debug runs the buggy code (must differ) **and** the fixed code (must equal
+    `correctReturns`); edge-case runs `call(choice)` for every choice (only the correct one may hit
+    `target`). A wrong answer, non-manifesting bug, or non-unique edge case can't ship.
+  - Predict/edge-case inputs were chosen to differ from the shown worked example so "Read more" can't spoil them.
+  - Verified: syntax clean, validator **174 exercises / 87 drills** (all predict+debug+edge-case JS executed),
+    render checks for every type, local `/api/content` serves 30 predict + 14 debug + 10 edge-case exercises.
+  - Remaining: scale the new types across more of the 28; a quick on-device eyeball of the two-step debug
+    interaction and the overall drill-type mix.
 - [ ] **Goal:** make "fill the blank" **one of several drill types**, so a learner practices the
   full spread of code-reading skills — not just line synthesis. New types: **behavior prediction**
   (trace code → pick the output), **edge-case analysis** (pick the input/case that behaves

@@ -16,6 +16,7 @@ import { briefs, complexityLessons, conceptChoices, fallback, featured, problemE
 import { descriptionsByTitle, examplesByTitle } from './examples.js';
 import { predictionDrills } from './prediction-drills.js';
 import { debugDrills } from './debug-drills.js';
+import { edgeCaseDrills } from './edge-case-drills.js';
 
 export const LANGUAGES = ['JavaScript', 'Python'];
 
@@ -150,6 +151,19 @@ function debugItem(title, spec, index) {
   };
 }
 
+// An edge-case drill (M10) shares its input literals across languages (list/string/int syntax is
+// identical), so only the function code and its name differ per language.
+function edgeCaseItem(title, spec, index) {
+  const base = { type: 'edge-case', prompt: spec.prompt, choices: spec.choices, correct: spec.correct, target: spec.target, why: spec.why, wrong: spec.wrong };
+  return {
+    title,
+    index,
+    difficulty: difficultyFor(title),
+    exercise: { ...base, code: spec.code, call: spec.call },
+    pythonExercise: { ...base, code: spec.pythonCode, call: spec.pythonCall },
+  };
+}
+
 // Raw drill queue. Whole-line fill-blank drills (the default type) plus the typed drills (M10).
 // The app shuffles this list, so the new types interleave with the fill-blank ones automatically.
 function rawDrillItems() {
@@ -161,7 +175,8 @@ function rawDrillItems() {
   })));
   const predictions = Object.entries(predictionDrills).flatMap(([title, specs]) => specs.map((spec, index) => predictionItem(title, spec, index)));
   const debugs = Object.entries(debugDrills).flatMap(([title, specs]) => specs.map((spec, index) => debugItem(title, spec, index)));
-  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills, ...predictions, ...debugs];
+  const edgeCases = Object.entries(edgeCaseDrills).flatMap(([title, specs]) => specs.map((spec, index) => edgeCaseItem(title, spec, index)));
+  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills, ...predictions, ...debugs, ...edgeCases];
 }
 
 // Deterministic, dependency-free content hash (djb2). Runs identically in Node and the

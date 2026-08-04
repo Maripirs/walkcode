@@ -59,6 +59,7 @@ const TYPE_LABELS = {
   'fill-blank': 'Fill the blank',
   predict: 'Predict the output',
   debug: 'Find the bug',
+  'edge-case': 'Spot the edge case',
 };
 
 // Debug drill (M10): a two-step card — spot the buggy line, then pick its replacement. Step 2
@@ -92,6 +93,11 @@ function drillBody(exercise, language) {
       <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${escapeCode(exercise.code)}</pre></section>
       ${call}
       <p class="drill-choose-hint">Choose the value it returns.</p>`;
+  }
+  if (type === 'edge-case') {
+    return `${prompt}
+      <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${escapeCode(exercise.code)}</pre></section>
+      <p class="drill-choose-hint">Choose the input.</p>`;
   }
   return `${prompt}
     <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${highlightBlank(exercise.code, language)}</pre></section>
