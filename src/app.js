@@ -1,10 +1,11 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, freshCoach, getProgress, progressLabel, resetLesson, setLanguage, setProgress } from './lib/state.js';
+import { appState, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress } from './lib/state.js';
 import { shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
 import { renderReview, bindReview, draftKey } from './views/review.js';
 import { renderDrill, bindDrillAnswer } from './views/drill.js';
+import { renderDrillPicker } from './views/drill-picker.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
 import { renderLesson, bindLesson } from './views/lesson.js';
@@ -30,10 +31,19 @@ function beginWalkthrough(card) {
   openWalkthrough(card);
 }
 
+// Random walkthroughs draw from built problems, skipping ones already completed unless the shared
+// "include completed" toggle is on (falling back to all if every problem is done).
+function eligibleBuiltCards() {
+  if (appState.includeCompleted) return builtCards;
+  const unsolved = builtCards.filter((card) => getProgress(card.id) !== 'Solved');
+  return unsolved.length ? unsolved : builtCards;
+}
+
 function randomBuiltCard(excludeId = '') {
-  const choices = builtCards.filter((card) => card.id !== excludeId);
-  const pool = choices.length ? choices : builtCards;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const pool = eligibleBuiltCards();
+  const choices = pool.filter((card) => card.id !== excludeId);
+  const from = choices.length ? choices : pool;
+  return from[Math.floor(Math.random() * from.length)];
 }
 
 function startRandomWalkthrough() {
@@ -45,16 +55,48 @@ function startRandomWalkthrough() {
   openWalkthrough(card);
 }
 
-function startDrills(difficulty = appState.drillDifficulty) {
-  appState.drillDifficulty = difficulty;
-  appState.drillQueue = shuffle(drillItems().filter((item) => difficulty === 'All' || item.difficulty === difficulty));
+function drillSummary() {
+  const items = drillItems();
+  return { total: items.length, solved: drillSolvedCount(items.map((drill) => drill.id)) };
+}
+
+// Drills matching the pick/filter screen's current type + difficulty selection.
+function filteredDrills() {
+  const { difficulty, type } = appState.drillFilter;
+  return drillItems().filter((drill) => (difficulty === 'All' || drill.difficulty === difficulty)
+    && (type === 'All' || (drill.exercise?.type || 'fill-blank') === type));
+}
+
+function startDrillQueue(queue) {
+  appState.drillQueue = queue;
   appState.drillIndex = 0;
   appState.screen = 'drill';
   render();
 }
 
+// Random reps: shuffle the (difficulty-filtered) drills, skipping completed ones unless the shared
+// toggle says otherwise (falling back to all if that would leave nothing).
+function startDrills(difficulty = appState.drillDifficulty) {
+  appState.drillDifficulty = difficulty;
+  let pool = drillItems().filter((item) => difficulty === 'All' || item.difficulty === difficulty);
+  if (!appState.includeCompleted) {
+    const unsolved = pool.filter((drill) => !isDrillSolved(drill.id));
+    pool = unsolved.length ? unsolved : pool;
+  }
+  startDrillQueue(shuffle(pool));
+}
+
+// Pick one from the filter screen: start with that drill, then the rest of the filtered set.
+function startPickedDrill(id) {
+  const set = filteredDrills();
+  const picked = set.find((drill) => drill.id === id) || drillItems().find((drill) => drill.id === id);
+  if (!picked) return;
+  startDrillQueue([picked, ...shuffle(set.filter((drill) => drill.id !== id))]);
+}
+
 function render() {
-  if (appState.screen === 'home') root.innerHTML = renderHome(appState);
+  if (appState.screen === 'home') root.innerHTML = renderHome(appState, drillSummary());
+  if (appState.screen === 'drill-picker') root.innerHTML = renderDrillPicker({ state: appState, drills: drillItems(), isDrillSolved });
   if (appState.screen === 'library') root.innerHTML = renderLibrary({
     state: appState,
     // All ordered cards; the library shows only certified (isBuilt) problems, plus — in owner
@@ -152,6 +194,9 @@ function applyRouteSnapshot(snapshot) {
   appState.walkthroughMode = snapshot.walkthroughMode || 'browse';
   appState.walkthroughPickerOpen = Boolean(snapshot.walkthroughPickerOpen);
   if (snapshot.drillDifficulty) appState.drillDifficulty = snapshot.drillDifficulty;
+  appState.drillsExpanded = Boolean(snapshot.drillsExpanded);
+  appState.includeCompleted = Boolean(snapshot.includeCompleted);
+  if (snapshot.drillFilter) appState.drillFilter = snapshot.drillFilter;
   appState.randomWalkthroughHistory = snapshot.randomWalkthroughHistory || [];
   appState.randomWalkthroughIndex = snapshot.randomWalkthroughIndex ?? -1;
   if (appState.screen === 'lesson') {
@@ -188,8 +233,13 @@ function renderDrillScreen() {
   const lesson = lessonFor(card, appState.language);
   // Drill exercises arrive with both language variants already resolved (see assemble.js).
   const exercise = appState.language === 'Python' ? drill.pythonExercise : drill.exercise;
-  root.innerHTML = renderDrill({ state: appState, drill, lesson, exercise });
-  bindDrillAnswer(root, exercise, () => { appState.drillIndex += 1; render(); });
+  root.innerHTML = renderDrill({ state: appState, drill, lesson, exercise, solved: isDrillSolved(drill.id) });
+  bindDrillAnswer(
+    root,
+    exercise,
+    () => { appState.drillIndex += 1; render(); },
+    () => markDrillSolved(drill.id),
+  );
   root.querySelector('[data-drill-difficulty]').addEventListener('change', (event) => startDrills(event.target.value));
 }
 
@@ -322,7 +372,32 @@ function bindSharedControls() {
     setLanguage(select.value);
     render();
   }));
-  root.querySelectorAll('[data-start-drills]').forEach((button) => button.addEventListener('click', () => startDrills()));
+  // Code-drills chooser: the home card expands to Random vs Pick/filter.
+  root.querySelectorAll('[data-toggle-drills]').forEach((button) => button.addEventListener('click', () => {
+    appState.drillsExpanded = !appState.drillsExpanded;
+    render();
+  }));
+  root.querySelectorAll('[data-drills-random]').forEach((button) => button.addEventListener('click', () => startDrills()));
+  root.querySelectorAll('[data-drills-pick]').forEach((button) => button.addEventListener('click', () => {
+    appState.screen = 'drill-picker';
+    render();
+  }));
+  // Shared random toggle (drills + walkthroughs). Persists on the state; re-render to reflect it.
+  root.querySelectorAll('[data-include-completed]').forEach((box) => box.addEventListener('change', () => {
+    appState.includeCompleted = box.checked;
+    render();
+  }));
+  // Pick/filter screen controls.
+  root.querySelectorAll('[data-filter-type]').forEach((select) => select.addEventListener('change', () => {
+    appState.drillFilter = { ...appState.drillFilter, type: select.value };
+    render();
+  }));
+  root.querySelectorAll('[data-filter-difficulty]').forEach((select) => select.addEventListener('change', () => {
+    appState.drillFilter = { ...appState.drillFilter, difficulty: select.value };
+    render();
+  }));
+  root.querySelectorAll('[data-shuffle-filtered]').forEach((button) => button.addEventListener('click', () => startDrillQueue(shuffle(filteredDrills()))));
+  root.querySelectorAll('[data-drill-id]').forEach((button) => button.addEventListener('click', () => startPickedDrill(button.dataset.drillId)));
   root.querySelectorAll('[data-open-library]').forEach((button) => button.addEventListener('click', () => {
     appState.screen = 'library';
     appState.walkthroughPickerOpen = false;
@@ -366,7 +441,7 @@ loadContent().then((bundle) => {
   // same screen/problem (and step) instead of resetting to home. A missing card falls back to the
   // library via renderLessonScreen.
   const saved = window.history.state;
-  if (window.location.pathname !== '/review' && saved && ['home', 'library', 'drill', 'lesson', 'review'].includes(saved.screen)) {
+  if (window.location.pathname !== '/review' && saved && ['home', 'library', 'drill', 'drill-picker', 'lesson', 'review'].includes(saved.screen)) {
     applyRouteSnapshot(saved);
     currentRouteKey = routeKey(appState);
   }

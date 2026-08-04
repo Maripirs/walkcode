@@ -55,7 +55,7 @@ function choiceButton(choice) {
 //   fill-blank — the solution with one line blanked; choices are candidate lines. (default)
 //   predict    — a complete function + a call; choices are candidate return values.
 // `type` is absent on legacy drills, so it defaults to fill-blank and they render unchanged.
-const TYPE_LABELS = {
+export const TYPE_LABELS = {
   'fill-blank': 'Fill the blank',
   predict: 'Predict the output',
   debug: 'Find the bug',
@@ -104,9 +104,10 @@ function drillBody(exercise, language) {
     <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>`;
 }
 
-export function renderDrill({ state, drill, lesson, exercise }) {
+export function renderDrill({ state, drill, lesson, exercise, solved = false }) {
   const type = exercise.type || 'fill-blank';
   const typeLabel = TYPE_LABELS[type];
+  const doneBadge = solved ? '<span class="drill-done">✓ done before</span>' : '';
   const interactive = type === 'debug'
     ? debugBlock(exercise)
     : `${drillBody(exercise, state.language)}
@@ -119,7 +120,7 @@ export function renderDrill({ state, drill, lesson, exercise }) {
     extras: difficultyPicker(state.drillDifficulty),
   })}
   <article class="drill-card">
-    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())} · <span class="drill-type">${escapeText(typeLabel)}</span></div>
+    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())} · <span class="drill-type">${escapeText(typeLabel)}</span>${doneBadge}</div>
     <h1>${escapeText(drill.title)}${difficultyTag(drill.difficulty)}</h1>
     <section class="drill-context"><b>The problem</b>
       <p>${richText(lesson.explanation || drill.problemDescription || drill.context)}</p>
@@ -135,7 +136,7 @@ export function renderDrill({ state, drill, lesson, exercise }) {
 // Two-step debug drill: pick the buggy line (step 1), then its fix (step 2). Step 2 unlocks only
 // after step 1 is right; "Next" appears only after the fix is right. Wrong picks give feedback and
 // let the learner retry.
-function bindDebug(root, exercise, onNext) {
+function bindDebug(root, exercise, onNext, onSolved) {
   const step1 = root.querySelector('[data-debug-step1]');
   const step2 = root.querySelector('[data-debug-step2]');
   const lineFeedback = root.querySelector('[data-debug-line-feedback]');
@@ -170,6 +171,7 @@ function bindDebug(root, exercise, onNext) {
     );
     nextSlot.innerHTML = '';
     if (correct) {
+      onSolved?.();
       step2.querySelectorAll('[data-debug-fix]').forEach((other) => { other.disabled = true; });
       solutionDetailsElement.open = true;
       nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
@@ -178,8 +180,8 @@ function bindDebug(root, exercise, onNext) {
   }));
 }
 
-export function bindDrillAnswer(root, exercise, onNext) {
-  if ((exercise.type || 'fill-blank') === 'debug') { bindDebug(root, exercise, onNext); return; }
+export function bindDrillAnswer(root, exercise, onNext, onSolved) {
+  if ((exercise.type || 'fill-blank') === 'debug') { bindDebug(root, exercise, onNext, onSolved); return; }
   const feedbackSlot = root.querySelector('[data-drill-feedback]');
   const nextSlot = root.querySelector('[data-drill-next]');
   const solutionDetailsElement = root.querySelector('.drill-solution-details');
@@ -195,6 +197,7 @@ export function bindDrillAnswer(root, exercise, onNext) {
       );
       nextSlot.innerHTML = '';
       if (correct) {
+        onSolved?.();
         solutionDetailsElement.open = true;
         nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
         nextSlot.querySelector('[data-next-drill]').addEventListener('click', onNext);

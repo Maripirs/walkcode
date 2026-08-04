@@ -217,8 +217,16 @@ export function assembleBundle() {
     };
   });
 
+  // Stable per-drill id (for device-local progress and the pick-a-drill screen). Deterministic:
+  // `${type}:${title}:${n}` where n counts within a (type, title) group in assembly order.
+  const idCounts = new Map();
   const drills = rawDrillItems().map((item) => {
+    const type = item.exercise?.type || 'fill-blank';
+    const key = `${type}:${item.title}`;
+    const n = idCounts.get(key) || 0;
+    idCounts.set(key, n + 1);
     const drill = {
+      id: `${key}:${n}`,
       title: item.title,
       difficulty: item.difficulty,
       index: item.index,

@@ -51,6 +51,12 @@ export function difficultyTag(difficulty) {
   return `<span class="difficulty ${difficulty.toLowerCase()}">${difficulty}</span>`;
 }
 
+// Shared "random" option toggle: include items the learner has already completed. Used by both the
+// code-drills chooser and the random-walkthrough option; bound via [data-include-completed].
+export function includeCompletedToggle(checked) {
+  return `<label class="toggle-row"><input type="checkbox" data-include-completed ${checked ? 'checked' : ''}> Include ones I've already completed</label>`;
+}
+
 export function feedback(message, good) {
   return `<p class="answer-feedback ${good ? 'good' : 'bad'}">${message}</p>`;
 }

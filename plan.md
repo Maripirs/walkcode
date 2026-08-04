@@ -462,8 +462,16 @@ commands I prepare or run.
   - Predict/edge-case inputs were chosen to differ from the shown worked example so "Read more" can't spoil them.
   - Verified: syntax clean, validator **174 exercises / 87 drills** (all predict+debug+edge-case JS executed),
     render checks for every type, local `/api/content` serves 30 predict + 14 debug + 10 edge-case exercises.
-  - Remaining: scale the new types across more of the 28; a quick on-device eyeball of the two-step debug
-    interaction and the overall drill-type mix.
+- [x] **Drill progress + chooser (2026-08).** Each drill now has a **stable `id`** (`assemble.js`), and
+  device-local **progress** (`walkcode-drills` in `localStorage`; solved on a correct answer, or the correct
+  fix for debug). The home **"Code drills" card expands in place** (no new screen) into **Random reps** vs
+  **Pick or filter**; Random carries a shared **"include ones I've already completed"** toggle that also
+  governs **random walkthroughs** (skips `Solved` problems by default). **Pick or filter** opens a new
+  `drill-picker` screen — a filterable list showing each drill's **type + difficulty + done state**; tap one
+  to start there or shuffle the filtered set. Verified: render smoke for every new view, 87 unique ids, real
+  headless-Chrome boot (home shows "0/87 done", no runtime errors), progress persistence exercised in-browser.
+  - Remaining: scale the new types across more of the 28; a quick on-device eyeball of the chooser + two-step
+    debug interaction.
 - [ ] **Goal:** make "fill the blank" **one of several drill types**, so a learner practices the
   full spread of code-reading skills — not just line synthesis. New types: **behavior prediction**
   (trace code → pick the output), **edge-case analysis** (pick the input/case that behaves

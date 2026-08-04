@@ -1,5 +1,6 @@
 const STATE_KEY = 'walkcode-states';
 const LANGUAGE_KEY = 'walkcode-language';
+const DRILL_KEY = 'walkcode-drills';
 
 // The Socratic AI coach's opening question, and a fresh coach session (M9). `steps` is the
 // growing solution the learner builds; `prompt` is the current question; `input` survives the
@@ -21,6 +22,13 @@ export const appState = {
   drillDifficulty: 'All',
   drillQueue: [],
   drillIndex: 0,
+  // Code-drill chooser (M10): the home "Code drills" card expands to Random vs Pick/filter.
+  drillsExpanded: false,
+  // Shared "random" setting: include items already completed (default: skip them). Applies to both
+  // random drills and random walkthroughs.
+  includeCompleted: false,
+  // Pick/filter screen selection.
+  drillFilter: { difficulty: 'All', type: 'All' },
   codeFixIndex: 0,
   complexityStage: 0,
   algorithm: { available: [], answer: [] },
@@ -64,6 +72,29 @@ export function setProgress(cardId, value) {
   const progress = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
   progress[cardId] = value;
   localStorage.setItem(STATE_KEY, JSON.stringify(progress));
+}
+
+// Device-local drill progress (M10): a map of solved drill id -> 1 in localStorage, separate from
+// the per-problem `walkcode-states`. Drills are identified by their stable `id` (see assemble.js).
+function solvedDrills() {
+  return JSON.parse(localStorage.getItem(DRILL_KEY) || '{}');
+}
+
+export function isDrillSolved(id) {
+  return Boolean(id && solvedDrills()[id]);
+}
+
+export function markDrillSolved(id) {
+  if (!id) return;
+  const map = solvedDrills();
+  if (map[id]) return;
+  map[id] = 1;
+  localStorage.setItem(DRILL_KEY, JSON.stringify(map));
+}
+
+export function drillSolvedCount(ids) {
+  const map = solvedDrills();
+  return ids.reduce((count, id) => count + (map[id] ? 1 : 0), 0);
 }
 
 export function setLanguage(language) {

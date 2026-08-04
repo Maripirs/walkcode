@@ -18,6 +18,9 @@ export function routeSnapshot(state) {
     walkthroughMode: state.walkthroughMode,
     walkthroughPickerOpen: state.walkthroughPickerOpen,
     drillDifficulty: state.drillDifficulty,
+    drillsExpanded: state.drillsExpanded,
+    includeCompleted: state.includeCompleted,
+    drillFilter: state.drillFilter,
     randomWalkthroughHistory: state.randomWalkthroughHistory,
     randomWalkthroughIndex: state.randomWalkthroughIndex,
   };

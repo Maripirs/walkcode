@@ -1,4 +1,4 @@
-import { difficultyTag, escapeText, topBar } from '../lib/ui.js';
+import { difficultyTag, escapeText, includeCompletedToggle, topBar } from '../lib/ui.js';
 
 const DIFFICULTY_BANDS = ['Easy', 'Medium', 'Hard'];
 
@@ -54,6 +54,7 @@ export function renderLibrary({ state, problems, progressLabel }) {
           <b>Random walkthrough</b><span>Start a finished five-step problem chosen for you.</span>
         </button>
       </div>
+      ${includeCompletedToggle(state.includeCompleted)}
       ${list}
     </section>`;
 }
