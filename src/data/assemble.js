@@ -14,6 +14,8 @@ import { walkthroughUpgrades } from './walkthrough-upgrades.js';
 import { pythonExercises, pythonSolutions } from './languages.js';
 import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
 import { descriptionsByTitle, examplesByTitle } from './examples.js';
+import { predictionDrills } from './prediction-drills.js';
+import { debugDrills } from './debug-drills.js';
 
 export const LANGUAGES = ['JavaScript', 'Python'];
 
@@ -111,7 +113,45 @@ function lessonFor(card, language) {
   return lesson;
 }
 
-// Raw drill queue in the same order the app renders it today.
+// A behavior-prediction drill (M10) carries both language variants already built (its code differs
+// per language), so assembleBundle uses them directly instead of localizing a shared exercise.
+function predictionItem(title, spec, index) {
+  const base = { type: 'predict', prompt: spec.prompt, choices: spec.choices, correct: spec.correct, why: spec.why, wrong: spec.wrong };
+  return {
+    title,
+    index,
+    difficulty: difficultyFor(title),
+    exercise: { ...base, code: spec.code, input: spec.input },
+    pythonExercise: { ...base, code: spec.pythonCode, input: spec.pythonInput },
+  };
+}
+
+// A debugging drill (M10) is a two-step drill (spot the wrong line, then pick the fix). The
+// structured spec authors JS + Python line text once; this flattens it into the per-language
+// exercise shape the view and validator consume (choices as plain strings, feedback keyed by line).
+function debugItem(title, spec, index) {
+  const build = (code, input, buggy, fix, lines, fixes) => ({
+    type: 'debug', prompt: spec.prompt, code, input, correctReturns: spec.correctReturns,
+    buggyLine: buggy, whyLine: spec.whyLine,
+    lineChoices: [buggy, ...lines.map((o) => o.text)],
+    wrongLine: Object.fromEntries(lines.map((o) => [o.text, o.note])),
+    fix, whyFix: spec.whyFix,
+    fixChoices: [fix, ...fixes.map((o) => o.text)],
+    wrongFix: Object.fromEntries(fixes.map((o) => [o.text, o.note])),
+  });
+  return {
+    title,
+    index,
+    difficulty: difficultyFor(title),
+    exercise: build(spec.code, spec.input, spec.bug.line, spec.fix.line,
+      spec.otherLines.map((o) => ({ text: o.line, note: o.note })), spec.otherFixes.map((o) => ({ text: o.line, note: o.note }))),
+    pythonExercise: build(spec.pythonCode, spec.pythonInput, spec.bug.py, spec.fix.py,
+      spec.otherLines.map((o) => ({ text: o.py, note: o.note })), spec.otherFixes.map((o) => ({ text: o.py, note: o.note }))),
+  };
+}
+
+// Raw drill queue. Whole-line fill-blank drills (the default type) plus the typed drills (M10).
+// The app shuffles this list, so the new types interleave with the fill-blank ones automatically.
 function rawDrillItems() {
   const lessonDrills = Object.entries(codeExercises).flatMap(([title, exercises]) => exercises.map((exercise, index) => ({
     title,
@@ -119,7 +159,9 @@ function rawDrillItems() {
     index,
     difficulty: difficultyFor(title),
   })));
-  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills];
+  const predictions = Object.entries(predictionDrills).flatMap(([title, specs]) => specs.map((spec, index) => predictionItem(title, spec, index)));
+  const debugs = Object.entries(debugDrills).flatMap(([title, specs]) => specs.map((spec, index) => debugItem(title, spec, index)));
+  return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills, ...predictions, ...debugs];
 }
 
 // Deterministic, dependency-free content hash (djb2). Runs identically in Node and the

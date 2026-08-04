@@ -53,7 +53,16 @@ Do not badge generic or draft content as Built.
 
 ## Drills and choices
 
-- **Whole-line selection.** Every drill shows the full short solution with exactly one line replaced by a highlighted `___`, and the choices are **complete candidate lines** — the learner picks the whole correct line, never a single token. An exercise is `{ prompt, code, choices, correct, why, wrong }`: `code` is the full solution containing one `___` line; `choices` are full lines (one equals `correct`); `wrong` maps each incorrect line to feedback. Nothing is masked, so there is nothing to reverse-engineer — the correct line simply is not shown anywhere else.
+Drills are **typed** (M10). A drill's `type` picks how it renders/validates; absent ⇒ `fill-blank`, so legacy drills are unchanged. The randomized queue **interleaves** all types. Types:
+
+- **`fill-blank`** (default) — line synthesis. See "Whole-line selection" below.
+- **`predict`** (`prediction-drills.js`, `predictionDrills`) — behavior prediction. Author a self-contained, human-traceable function (JS + Python) plus a call (`input`/`pythonInput`); `choices` are candidate return values; `correct` is the exact value. Favor a call whose input/answer isn't already shown in the problem's worked example (or the "Read more" panel spoils it).
+- **`debug`** (`debug-drills.js`, `debugDrills`) — a two-step drill: a full function with exactly one wrong line; the learner spots the buggy line, then picks the fix. Author `code`/`pythonCode` (with the bug), `bug`/`fix` (`{line, py}` trimmed line text), `otherLines`/`otherFixes` (distractors + notes), `whyLine`/`whyFix`, and an `input` + `correctReturns`.
+- **The validator EXECUTES the JS variant** of predict/debug: `node server/scripts/validate-content.mjs` runs predict code against its call and asserts the result equals `correct`; for debug it runs the buggy code (must differ) and the fixed code (buggy line → fix, must equal `correctReturns`). So a wrong answer or a bug that doesn't manifest fails the build. Keep the Python variant a faithful mirror (it's structurally checked, not executed).
+
+**Whole-line selection** (`fill-blank`):
+
+- Every fill-blank drill shows the full short solution with exactly one line replaced by a highlighted `___`, and the choices are **complete candidate lines** — the learner picks the whole correct line, never a single token. An exercise is `{ prompt, code, choices, correct, why, wrong }`: `code` is the full solution containing one `___` line; `choices` are full lines (one equals `correct`); `wrong` maps each incorrect line to feedback. Nothing is masked, so there is nothing to reverse-engineer — the correct line simply is not shown anywhere else.
 - The correct line must be **unique** in the shown solution (no other identical line), or blanking it would leave the answer visible elsewhere. When a solution repeats a line (e.g. `left += 1` twice), blank a different, unique line.
 - Code-fix exercises automatically feed the randomized drill queue.
 - Standalone drills belong in `extraCodeDrills` or `supplemental-drills.js` and need context, JavaScript and Python variants, and difficulty. Every supplemental drill also needs a JavaScript and Python full solution in `supplemental-solutions.js`; supplemental drills build their shown code with the `blank(fullCode, correctLine)` helper, so the display is always the real solution with one line removed.

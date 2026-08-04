@@ -138,7 +138,8 @@ commands I prepare or run.
 - [x] **M6** — UI/UX restructure — **done & verified (2026-08)**: learning-first stepper (Understand→Algorithm→Code→Complexity→Review), guided coach *or* drag-drop, human copy, browser back/forward + refresh persistence. Deployed.
 - [x] **M9** — LLM-assisted algorithm coach — **done & deployed (2026-08)**: Socratic step-by-step build via Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder. Live on `walkcode.maripi.net`.
 - [x] **M8** — Hardening: nightly Postgres backups + $5 budget + hard kill-switch — **done & verified (2026-08)**: nightly `pg_dump`→GCS (30-day retention), test-restore matched live row counts, budget wired to a Pub/Sub-triggered Cloud Function that disables billing at the cap
-- [ ] **M7** — In-browser code editor + execution (client-side; JS now, Python via Pyodide) — **⬅ next milestone**
+- [ ] **M10** — Typed code drills (fill-blank + behavior-prediction + edge-case + debugging) — **🚧 in progress**: predict (15) + debug (7) live, execution-verified; edge-case next
+- [ ] **M7** — In-browser code editor + execution — **moved to Backlog (2026-08)**: doesn't fit the scaffolded, mobile-first, recognition-first model right now; revisit later
 
 ### M0 — Foundations (accounts & tooling)
 - [x] **Status: Done** — authed to `walkcode-504322`; APIs `run`, `artifactregistry`, `cloudbuild`, `compute` enabled; Docker installed.
@@ -315,7 +316,16 @@ commands I prepare or run.
   navigation is unambiguous, and the learner-facing copy is clean. Phases 1–2 are the must-haves;
   3–6 are the polish that makes it feel finished.
 
-### M7 — In-browser code editor + execution
+### M7 — In-browser code editor + execution — ⬇ MOVED TO BACKLOG (2026-08)
+- [ ] **Status: deferred to Backlog (2026-08).** A blank-canvas editor fights the app's identity —
+  it's deliberately *scaffolded recognition* (recognize → order → select whole lines), not
+  from-scratch authoring, and it's mobile-first (typing full solutions on a phone is poor). If
+  execution is ever added, the fit is a **runner/checker on already-visible code** (run the
+  assembled solution against the authored examples, pass/fail), not a text editor — and even that
+  needs per-problem input drivers (many stored solutions aren't self-contained: `ListNode`/`TreeNode`,
+  closure-scoped helpers) plus order-insensitive comparison for some outputs. Superseded as the near-term
+  priority by **M10 (typed code drills)**, which extends the existing recognition model instead of
+  breaking from it. Full detail below is kept for whenever this is revisited.
 - [ ] **Goal:** learners can **write and run code in the browser** against a problem and see
   output/results, not just read and pick answers. **Client-side execution** (chosen): no
   server compute, scales to zero, no sandbox-escape risk on our infra.
@@ -434,6 +444,60 @@ commands I prepare or run.
 - [ ] **Done when:** algorithm-step feedback works end-to-end behind the server proxy, costs stay
   within the free tier, and the step is fully functional with the LLM path disabled.
 
+### M10 — Typed code drills — 🚧 IN PROGRESS (2026-08)
+- [x] **Phases 1–3 done (2026-08) — foundation + prediction + debugging.** Added `type` to the drill
+  model (absent ⇒ `fill-blank`, so **every existing drill is untouched**). `views/drill.js` switches on
+  type and labels each drill's type in the eyebrow; the shuffled queue **interleaves** the types.
+  - **Predict** (`src/data/prediction-drills.js`) — **15 drills across 14 problems** (JS + Python):
+    a self-contained function + a call, choices are candidate return values.
+  - **Debug** (`src/data/debug-drills.js`) — **7 drills** (JS + Python): a two-step card (spot the buggy
+    line → pick the fix), authored as a structured spec that `assemble.js` flattens per language.
+  - **Validator executes the JS** (the key quality lever): predict code is run against its call and must
+    equal `correct`; debug runs the buggy code (must differ) **and** the fixed code (buggy line → fix,
+    must equal `correctReturns`), so a wrong answer or non-manifesting bug can't ship.
+  - Predict inputs were chosen to differ from the shown worked example so "Read more" can't spoil them.
+  - Verified: syntax clean, validator **164 exercises / 82 drills** (all predict+debug JS executed),
+    render checks for both types, local `/api/content` serves 30 predict + 14 debug exercises.
+  - Remaining: (4) **edge-case** drills; scale predict/debug across more of the 28; a quick manual eyeball
+    of the two-step debug interaction on-device.
+- [ ] **Goal:** make "fill the blank" **one of several drill types**, so a learner practices the
+  full spread of code-reading skills — not just line synthesis. New types: **behavior prediction**
+  (trace code → pick the output), **edge-case analysis** (pick the input/case that behaves
+  specially or that the code mishandles), and **debugging** (buggy code → spot the bad line or pick
+  the fix). All stay **multiple-choice + per-choice feedback** (tap-friendly, mobile-first,
+  no-build) — this extends the recognition model rather than breaking from it (contrast M7).
+- [ ] **Key insight — two structural families** (so the machinery is shared, not four separate systems):
+  - **Pick-the-right-code** — choices are code lines; the snippet has a slot. `fill-blank` (slot is
+    a blank `___`, today's drill) and `debug` (slot holds a *wrong* line; pick the fix, or spot it).
+  - **Pick-the-right-outcome** — the snippet is whole; choices are values/cases. `predict` (code +
+    a concrete call → the return value) and `edge-case` (code → the input/case that matters).
+- [ ] **Schema (generalize the exercise object):** add `type: 'fill-blank' | 'predict' | 'edge-case'
+  | 'debug'` (absent ⇒ `'fill-blank'`, so **every existing drill is unchanged**). Keep `prompt`,
+  `code`, `choices`, `correct`, `why`, `wrong{}`; add optional `input` (the call/case shown for
+  predict/edge-case). Per-language variants continue via `languages.js`.
+- [ ] **Content reuse is the unlock:** the 28 complete problems now have **execution-verified
+  solutions + 3 verified examples each** — `predict` drills reuse those exact input→output pairs
+  (answers already proven correct), and `debug` drills come from mutating one line of a known-good
+  solution (the wrong-line feedback we already author *is* the bug explanation). So new types are
+  largely re-derivable from existing, validated content.
+- [ ] **Me:** (1) generalize `views/drill.js` to switch on `type` (blank marker vs. a flagged buggy
+  line vs. a plain snippet + input callout); (2) extend `server/scripts/validate-content.mjs` with a
+  per-type contract (predict/edge-case: correct ∈ choices, unique, feedback for every wrong,
+  answer ideally checkable against the real solution); (3) author the new-type drills; (4) label the
+  drill type in the UI so the learner knows what's being asked; keep DB/JSONB storage as-is (drills
+  are already whole-object JSONB).
+- [x] **You (product calls) — settled (2026-08):** ship **behavior-prediction first**; the drill
+  queue is **interleaved (mixed)** with each drill labeling its type; **debug is both** — a two-step
+  drill: spot the wrong line, then choose its fix. Build order: (1) type-generalized
+  schema/renderer/validator (fill-blank unchanged), (2) **predict**, (3) **debug** (two-step),
+  (4) **edge-case**.
+- [ ] **Test plan (you):** on the drill screen, get one of each type, answer right/wrong and confirm
+  the feedback is specific and correct; confirm existing fill-blank drills are visually and
+  behaviorally unchanged; validator passes with the new contracts; Python variants render.
+- [ ] **Done when:** the drill system supports all four types behind one shared model, existing
+  drills are untouched, the new types are authored across the complete set, and the validator
+  enforces each type's contract.
+
 ## UI/UX & quality review (backlog — captured 2026-08)
 
 A walkthrough of the current implementation to tackle later. The **drill** experience is in
@@ -527,9 +591,11 @@ calls for M6 (UI/UX) and M9 (Groq provider) are settled.
 
 **Still on you, ahead:**
 
-1. **M7:** the **runner-scope** product call — which surfaces get the in-browser editor (see *Open questions*).
+1. **M10 (typed code drills):** which types ship first (recommend **predict**), queue **interleaved
+   vs. selectable**, and whether **debug** is spot-the-bug / fix-the-bug / both.
 
-*(M8 settled: alert + hard kill-switch, $5 budget, default billing-admin email — done & verified.)*
+*(M8 settled: alert + hard kill-switch, $5 budget, default billing-admin email — done & verified.
+M7 in-browser editor moved to Backlog — doesn't fit the scaffolded, mobile-first model right now.)*
 
 Everything else (Dockerfile, server, deploy commands, schema, seed, API + frontend, the code runner) is
 on me — I'll prepare each and walk you through anything interactive.
@@ -615,6 +681,12 @@ still free within the e2-micro allowance.
 
 Not doing these now; revisit as traffic or risk tolerance changes:
 
+- **In-browser code editor + execution** (was M7, deferred 2026-08) — a blank-canvas editor fights
+  the app's scaffolded, mobile-first, recognition-first model. If revisited, the fit is a
+  **runner/checker on already-visible code** (run the assembled solution against the authored
+  examples → pass/fail), not a text editor — and it needs per-problem input drivers (many solutions
+  aren't self-contained) + order-insensitive comparison for some outputs. Full spec retained in the
+  M7 section above. Superseded near-term by **M10 (typed code drills)**.
 - **Accounts + progress sync** (moved here from M5) — user accounts so per-device progress
   (today `localStorage` only — `walkcode-states`) syncs across devices. A simple relational
   schema fits: a `users` table and a `progress` table keyed by `(user_id, card_id)` → state,
@@ -636,9 +708,11 @@ Not doing these now; revisit as traffic or risk tolerance changes:
 
 ## Open questions
 
-- **Runner scope (M7, still open):** which surfaces get the in-browser editor — drills only, full
-  lessons, or a scratch "try it" pane — and do runs check against expected output?
+- **Typed code drills (M10):** ship order (recommend **predict** first — biggest reuse from the
+  authored examples); drill queue **interleaved vs. type-selectable**; **debug** = spot-the-bug,
+  fix-the-bug, or both.
 
 **Settled:** ~~Node for the backend~~ (yes, used throughout) · ~~Content authoring (M5)~~ (auto-seed on
 deploy + direct DB writes; no admin endpoint) · ~~LLM provider/posture (M9)~~ (Groq, config-swappable) ·
-~~Auth / cross-device progress sync~~ (moved to Backlog; not shaping the near-term schema).
+~~Auth / cross-device progress sync~~ (moved to Backlog; not shaping the near-term schema) ·
+~~In-browser code editor (M7)~~ (moved to Backlog — doesn't fit the scaffolded, mobile-first model).

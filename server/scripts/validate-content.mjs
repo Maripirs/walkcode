@@ -13,15 +13,9 @@ import { assembleBundle, certifiedTitles } from '../../src/data/assemble.js';
 const BLANK = '___';
 const errors = [];
 
-function validateExercise(where, exercise) {
-  if (!exercise || typeof exercise.code !== 'string') {
-    errors.push(`${where}: missing exercise code`);
-    return;
-  }
-  const lines = exercise.code.split('\n');
-  const blanks = lines.filter((line) => line.trim() === BLANK).length;
-  if (blanks !== 1) errors.push(`${where}: expected exactly one blanked line, found ${blanks}`);
-
+// Shared across all drill types: the answer is offered, choices are distinct, and every wrong
+// choice explains itself.
+function validateChoices(where, exercise) {
   const choices = exercise.choices || [];
   if (!choices.includes(exercise.correct)) errors.push(`${where}: correct answer is not among the choices`);
 
@@ -35,11 +29,114 @@ function validateExercise(where, exercise) {
     const why = exercise.wrong?.[choice];
     if (!why || !String(why).trim()) errors.push(`${where}: missing wrong-answer feedback for ${JSON.stringify(choice)}`);
   }
+}
 
+// Fill-blank: exactly one blanked line, and the correct line is not visible elsewhere (no leak).
+function validateFillBlank(where, exercise) {
+  const lines = exercise.code.split('\n');
+  const blanks = lines.filter((line) => line.trim() === BLANK).length;
+  if (blanks !== 1) errors.push(`${where}: expected exactly one blanked line, found ${blanks}`);
+  validateChoices(where, exercise);
   const correctTrim = String(exercise.correct ?? '').trim();
   if (correctTrim && lines.some((line) => line.trim() === correctTrim)) {
     errors.push(`${where}: the correct line is still visible in the shown code (answer leak)`);
   }
+}
+
+// Runs a self-contained snippet against a call expression, returning the value. Used to prove that
+// authored predict answers / debug bugs actually hold. We only execute the JS variant (Node).
+function runCode(code, input) {
+  // eslint-disable-next-line no-new-func -- validating our own authored content, Node-only.
+  return Function(`"use strict";\n${code}\n;return (${input});`)();
+}
+
+// Parse `correct`/`correctReturns` (a string like "5" or "[1, 2]") to the value it denotes.
+function expectedValue(raw) {
+  try { return JSON.parse(raw); } catch { return raw; }
+}
+
+// A named choice set (predict/debug reuse this via their own field names).
+function validateChoiceSet(where, label, choices, correct, wrong) {
+  if (!choices.includes(correct)) errors.push(`${where}: ${label} correct answer is not among the choices`);
+  const seen = new Set();
+  for (const choice of choices) {
+    if (seen.has(choice)) errors.push(`${where}: ${label} duplicate choice ${JSON.stringify(choice)}`);
+    seen.add(choice);
+  }
+  for (const choice of choices) {
+    if (choice === correct) continue;
+    const why = wrong?.[choice];
+    if (!why || !String(why).trim()) errors.push(`${where}: ${label} missing feedback for ${JSON.stringify(choice)}`);
+  }
+}
+
+// Predict: needs a call, and — for the JS variant — the code is actually RUN against that call and
+// the result must equal `correct`, so a wrong authored answer can't slip through.
+function verifyPredictExecution(where, exercise) {
+  let result;
+  try { result = runCode(exercise.code, exercise.input); }
+  catch (error) { errors.push(`${where}: predict code threw when run — ${error.message}`); return; }
+  if (JSON.stringify(result) !== JSON.stringify(expectedValue(exercise.correct))) {
+    errors.push(`${where}: predict answer mismatch — code returns ${JSON.stringify(result)} but "correct" is ${JSON.stringify(exercise.correct)}`);
+  }
+}
+
+function validatePredict(where, exercise, runJs) {
+  if (typeof exercise.input !== 'string' || !exercise.input.trim()) errors.push(`${where}: predict drill is missing an input call`);
+  validateChoices(where, exercise);
+  if (runJs && exercise.input) verifyPredictExecution(where, exercise);
+}
+
+// Debug: the buggy line appears once, the fix isn't already shown, choices are real code lines, and
+// — for the JS variant — running the buggy code must differ from correctReturns while running the
+// FIXED code (buggy line swapped for the fix) must equal it. So the bug and its fix both hold up.
+function verifyDebugExecution(where, exercise, lines) {
+  let buggy;
+  try { buggy = runCode(exercise.code, exercise.input); }
+  catch (error) { errors.push(`${where}: buggy code threw when run — ${error.message}`); return; }
+  const idx = lines.findIndex((line) => line.trim() === String(exercise.buggyLine).trim());
+  if (idx < 0) return;
+  const indent = lines[idx].slice(0, lines[idx].length - lines[idx].trimStart().length);
+  const fixedLines = [...lines];
+  fixedLines[idx] = indent + String(exercise.fix).trim();
+  let fixed;
+  try { fixed = runCode(fixedLines.join('\n'), exercise.input); }
+  catch (error) { errors.push(`${where}: fixed code threw when run — ${error.message}`); return; }
+  if (JSON.stringify(fixed) !== JSON.stringify(expectedValue(exercise.correctReturns))) {
+    errors.push(`${where}: applying the fix returns ${JSON.stringify(fixed)} but correctReturns is ${JSON.stringify(exercise.correctReturns)}`);
+  }
+  if (JSON.stringify(buggy) === JSON.stringify(fixed)) {
+    errors.push(`${where}: buggy and fixed code return the same value ${JSON.stringify(buggy)} — the bug doesn't manifest on this input`);
+  }
+}
+
+function validateDebug(where, exercise, runJs) {
+  const lines = exercise.code.split('\n');
+  const trimmed = lines.map((line) => line.trim());
+  const bugCount = trimmed.filter((line) => line === String(exercise.buggyLine).trim()).length;
+  if (bugCount !== 1) errors.push(`${where}: the buggy line should appear exactly once in the code, found ${bugCount}`);
+  if (trimmed.includes(String(exercise.fix).trim())) errors.push(`${where}: the fix line is already visible in the code (answer leak)`);
+  for (const choice of exercise.lineChoices || []) {
+    if (!trimmed.includes(String(choice).trim())) errors.push(`${where}: step-1 choice is not a line in the code: ${JSON.stringify(choice)}`);
+  }
+  validateChoiceSet(where, 'step-1', exercise.lineChoices || [], exercise.buggyLine, exercise.wrongLine);
+  validateChoiceSet(where, 'step-2', exercise.fixChoices || [], exercise.fix, exercise.wrongFix);
+  if (typeof exercise.input !== 'string' || !exercise.input.trim()) errors.push(`${where}: debug drill is missing an input call`);
+  if (exercise.correctReturns === undefined) errors.push(`${where}: debug drill is missing correctReturns`);
+  if (runJs && exercise.input && exercise.correctReturns !== undefined) verifyDebugExecution(where, exercise, lines);
+}
+
+// runJs: only the JavaScript variant is executed to verify its answer (we can't run Python here).
+function validateExercise(where, exercise, runJs = false) {
+  if (!exercise || typeof exercise.code !== 'string') {
+    errors.push(`${where}: missing exercise code`);
+    return;
+  }
+  const type = exercise.type || 'fill-blank';
+  if (type === 'fill-blank') validateFillBlank(where, exercise);
+  else if (type === 'predict') validatePredict(where, exercise, runJs);
+  else if (type === 'debug') validateDebug(where, exercise, runJs);
+  else errors.push(`${where}: unknown drill type ${JSON.stringify(type)}`);
 }
 
 // The fields a problem needs to be publishable. Kept in sync with assemble.js `isComplete()`, plus
@@ -65,8 +162,8 @@ const bundle = assembleBundle();
 let count = 0;
 for (const drill of bundle.drills) {
   const label = `${drill.title}${drill.index !== undefined ? ` [#${drill.index}]` : ''}`;
-  validateExercise(`${label} (JavaScript)`, drill.exercise);
-  validateExercise(`${label} (Python)`, drill.pythonExercise);
+  validateExercise(`${label} (JavaScript)`, drill.exercise, true);
+  validateExercise(`${label} (Python)`, drill.pythonExercise, false);
   count += 2;
 }
 

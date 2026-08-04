@@ -44,14 +44,68 @@ function solutionDetails(lesson) {
   </details>`;
 }
 
-// One choice button. The full line of code is the label (escaped so it renders literally) and
-// the data attribute carries it verbatim for the answer check.
+// One choice button. The full line of code (or a value) is the label (escaped so it renders
+// literally) and the data attribute carries it verbatim for the answer check.
 function choiceButton(choice) {
   return `<button class="drill-choice" data-drill-choice="${encodeURIComponent(choice)}">${escapeCode(choice)}</button>`;
 }
 
+// A drill is one of several types (M10). Every type is still "read the code, pick a choice, get
+// feedback"; they differ in what the code shows and what the choices mean:
+//   fill-blank — the solution with one line blanked; choices are candidate lines. (default)
+//   predict    — a complete function + a call; choices are candidate return values.
+// `type` is absent on legacy drills, so it defaults to fill-blank and they render unchanged.
+const TYPE_LABELS = {
+  'fill-blank': 'Fill the blank',
+  predict: 'Predict the output',
+  debug: 'Find the bug',
+};
+
+// Debug drill (M10): a two-step card — spot the buggy line, then pick its replacement. Step 2
+// stays hidden until step 1 is answered correctly (revealed in bindDebug). Both steps carry their
+// own choice list + feedback slot, so this replaces the generic single choice-list for this type.
+function debugBlock(exercise) {
+  const lineButton = (choice, attr) => `<button class="drill-choice" data-${attr}="${encodeURIComponent(choice)}">${escapeCode(choice)}</button>`;
+  return `<p class="drill-prompt">${escapeText(exercise.prompt)}</p>
+    <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${escapeCode(exercise.code)}</pre></section>
+    <div class="debug-step" data-debug-step1>
+      <p class="drill-choose-hint">Step 1 — which line is the bug?</p>
+      <div class="choice-list">${shuffle(exercise.lineChoices).map((c) => lineButton(c, 'debug-line')).join('')}</div>
+      <div data-debug-line-feedback aria-live="polite"></div>
+    </div>
+    <div class="debug-step" data-debug-step2 hidden>
+      <p class="drill-choose-hint">Step 2 — pick the correct replacement.</p>
+      <div class="choice-list">${shuffle(exercise.fixChoices).map((c) => lineButton(c, 'debug-fix')).join('')}</div>
+      <div data-debug-fix-feedback aria-live="polite"></div>
+    </div>`;
+}
+
+// The prompt + code + per-type hint, which is the only part of the card that varies by type.
+function drillBody(exercise, language) {
+  const type = exercise.type || 'fill-blank';
+  const prompt = `<p class="drill-prompt">${escapeText(exercise.prompt)}</p>`;
+  if (type === 'predict') {
+    const call = exercise.input
+      ? `<div class="drill-input"><b>Call</b><pre class="code">${escapeCode(exercise.input)}</pre></div>`
+      : '';
+    return `${prompt}
+      <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${escapeCode(exercise.code)}</pre></section>
+      ${call}
+      <p class="drill-choose-hint">Choose the value it returns.</p>`;
+  }
+  return `${prompt}
+    <section class="drill-code-context"><pre class="code drill-context-code" tabindex="0">${highlightBlank(exercise.code, language)}</pre></section>
+    <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>`;
+}
+
 export function renderDrill({ state, drill, lesson, exercise }) {
-  const choices = shuffle(exercise.choices);
+  const type = exercise.type || 'fill-blank';
+  const typeLabel = TYPE_LABELS[type];
+  const interactive = type === 'debug'
+    ? debugBlock(exercise)
+    : `${drillBody(exercise, state.language)}
+    <div class="choice-list">${shuffle(exercise.choices).map(choiceButton).join('')}</div>
+    <div data-drill-feedback aria-live="polite"></div>`;
   return `${topBar({
     title: `Random code drill · ${state.drillIndex + 1}/${state.drillQueue.length}`,
     language: state.language,
@@ -59,26 +113,67 @@ export function renderDrill({ state, drill, lesson, exercise }) {
     extras: difficultyPicker(state.drillDifficulty),
   })}
   <article class="drill-card">
-    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())}</div>
+    <div class="eyebrow">${escapeText((drill.topic || lesson.topic).toUpperCase())} · <span class="drill-type">${escapeText(typeLabel)}</span></div>
     <h1>${escapeText(drill.title)}${difficultyTag(drill.difficulty)}</h1>
     <section class="drill-context"><b>The problem</b>
       <p>${richText(lesson.explanation || drill.problemDescription || drill.context)}</p>
     </section>
     ${problemDetails(lesson, drill)}
-    <p class="drill-prompt">${escapeText(exercise.prompt)}</p>
-    <section class="drill-code-context">
-      <pre class="code drill-context-code" tabindex="0">${highlightBlank(exercise.code, state.language)}</pre>
-    </section>
-    <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>
-    <div class="choice-list">${choices.map(choiceButton).join('')}</div>
-    <div data-drill-feedback aria-live="polite"></div>
+    ${interactive}
     ${solutionDetails(lesson)}
     <div data-drill-next></div>
     ${sourceLink(drill.title)}
   </article>`;
 }
 
+// Two-step debug drill: pick the buggy line (step 1), then its fix (step 2). Step 2 unlocks only
+// after step 1 is right; "Next" appears only after the fix is right. Wrong picks give feedback and
+// let the learner retry.
+function bindDebug(root, exercise, onNext) {
+  const step1 = root.querySelector('[data-debug-step1]');
+  const step2 = root.querySelector('[data-debug-step2]');
+  const lineFeedback = root.querySelector('[data-debug-line-feedback]');
+  const fixFeedback = root.querySelector('[data-debug-fix-feedback]');
+  const nextSlot = root.querySelector('[data-drill-next]');
+  const solutionDetailsElement = root.querySelector('.drill-solution-details');
+
+  root.querySelectorAll('[data-debug-line]').forEach((button) => button.addEventListener('click', () => {
+    const choice = decodeURIComponent(button.dataset.debugLine);
+    const correct = choice === exercise.buggyLine;
+    lineFeedback.innerHTML = feedback(
+      correct
+        ? `✓ That’s the bug. ${escapeText(exercise.whyLine)}`
+        : `Not quite. ${escapeText(exercise.wrongLine?.[choice] || 'That line is correct as written.')}`,
+      correct,
+    );
+    if (correct) {
+      step1.querySelectorAll('[data-debug-line]').forEach((other) => { other.disabled = true; });
+      step2.hidden = false;
+      step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }));
+
+  root.querySelectorAll('[data-debug-fix]').forEach((button) => button.addEventListener('click', () => {
+    const choice = decodeURIComponent(button.dataset.debugFix);
+    const correct = choice === exercise.fix;
+    fixFeedback.innerHTML = feedback(
+      correct
+        ? `✓ Fixed. ${escapeText(exercise.whyFix)}`
+        : `Not quite. ${escapeText(exercise.wrongFix?.[choice] || 'That replacement doesn’t fix the bug.')}`,
+      correct,
+    );
+    nextSlot.innerHTML = '';
+    if (correct) {
+      step2.querySelectorAll('[data-debug-fix]').forEach((other) => { other.disabled = true; });
+      solutionDetailsElement.open = true;
+      nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
+      nextSlot.querySelector('[data-next-drill]').addEventListener('click', onNext);
+    }
+  }));
+}
+
 export function bindDrillAnswer(root, exercise, onNext) {
+  if ((exercise.type || 'fill-blank') === 'debug') { bindDebug(root, exercise, onNext); return; }
   const feedbackSlot = root.querySelector('[data-drill-feedback]');
   const nextSlot = root.querySelector('[data-drill-next]');
   const solutionDetailsElement = root.querySelector('.drill-solution-details');
@@ -89,7 +184,7 @@ export function bindDrillAnswer(root, exercise, onNext) {
       feedbackSlot.innerHTML = feedback(
         correct
           ? `✓ Correct. ${escapeText(exercise.why)}`
-          : `Not quite. ${escapeText(exercise.wrong?.[choice] || 'That line does not preserve what this step needs.')}`,
+          : `Not quite. ${escapeText(exercise.wrong?.[choice] || 'That is not the right answer for this problem.')}`,
         correct,
       );
       nextSlot.innerHTML = '';
