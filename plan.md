@@ -448,40 +448,15 @@ commands I prepare or run.
   within the free tier, and the step is fully functional with the LLM path disabled.
 
 ### M10 — Typed code drills — DONE (built & verified locally; not yet deployed, 2026-08)
-**Goal:** make "fill the blank" **one of four drill types** so learners practice the full spread of
-code-reading skills, not just line synthesis. All types stay tap-friendly multiple-choice + per-choice
-feedback (mobile-first, no-build) — this **extends** the recognition model rather than breaking from it
-(contrast M7). `type` on the exercise defaults to `fill-blank`, so **every legacy drill is unchanged**; the
-shuffled queue **interleaves** types and each drill labels its type in the UI.
-
-**The four types** (JS + Python; `views/drill.js` switches on type):
-- **fill-blank** (60 drills) — the solution with one line blanked; choices are candidate lines.
-- **predict** (`src/data/prediction-drills.js`, **22 drills / 21 problems**) — a self-contained function + a
-  call; choices are candidate return values.
-- **debug** (`src/data/debug-drills.js`, **12 drills**) — two-step: spot the buggy line, then pick the fix.
-  Authored as a structured spec that `assemble.js` flattens per language; the two-step bind logic is
-  behaviorally tested (10/10 assertions).
-- **edge-case** (`src/data/edge-case-drills.js`, **11 drills**) — a function + "which input yields this
-  result?"; choices are input literals (shared across languages), exactly one hits `target`.
-
-**Quality lever — the validator EXECUTES the JS** (`server/scripts/validate-content.mjs`): predict runs
-against its call (must equal `correct`); debug runs the buggy code (must differ) **and** the fixed code (must
-equal `correctReturns`); edge-case runs `call(choice)` for every choice (only the correct one may hit
-`target`). So a wrong answer, a non-manifesting bug, or a non-unique edge case can't ship. Total: **210
-exercises / 105 drills**, all green. Still uncovered by the new types (order-insensitive or list/tree-heavy):
-Group Anagrams, Top K, Min Stack, Reverse Linked List, Merge Two Sorted Lists, Invert Binary Tree.
-
-**Drill progress + chooser:** each drill has a **stable `id`** (`assemble.js`), and device-local **progress**
-(`walkcode-drills` in `localStorage`) marks a drill solved on a correct answer (or the correct fix for debug).
-The home **"Code drills" card expands in place** (no separate screen) into **Random reps** vs **Pick or
-filter** → a new `drill-picker` screen (filter by type + difficulty; each row shows done state). A shared
-**"include already completed"** toggle governs both random drills and random walkthroughs (skips completed by
-default).
-
-**Product calls (settled):** predict shipped first; queue interleaved; debug is two-step (spot then fix).
-
-**Remaining:** deploy; an on-device eyeball of the chooser + two-step debug; optionally scale the new types to
-the six uncovered problems above.
+- [x] **Status: Built & verified locally; NOT yet deployed** (2026-08). `type` on the exercise defaults to `fill-blank`, so **every legacy drill is unchanged**; the shuffled queue **interleaves** types and each drill labels its type in the UI. **210 exercises / 105 drills**, validator green.
+- [x] **Goal:** make "fill the blank" **one of four drill types** so learners practice the full spread of code-reading skills, not just line synthesis — all still tap-friendly multiple-choice + per-choice feedback (mobile-first, no-build), **extending** the recognition model rather than breaking from it (contrast M7).
+- [x] **You:** product calls settled — predict shipped first; the queue interleaves types; debug is two-step (spot then fix).
+- [x] **Me:**
+  1. **Four drill types** (JS + Python; `views/drill.js` switches on type): **fill-blank** (60) — solution with one blanked line, choices are candidate lines; **predict** (`prediction-drills.js`, 22 drills / 21 problems) — a self-contained function + a call, choices are candidate return values; **debug** (`debug-drills.js`, 12) — two-step spot-the-bug then fix (structured spec `assemble.js` flattens per language; bind logic behaviorally tested 10/10); **edge-case** (`edge-case-drills.js`, 11) — a function + "which input yields this result?", choices are input literals, exactly one hits `target`.
+  2. **Executing validator** (`server/scripts/validate-content.mjs`): predict runs against its call (must equal `correct`); debug runs the buggy code (must differ) **and** the fixed code (must equal `correctReturns`); edge-case runs `call(choice)` for every choice (only the correct one may hit `target`) — so a wrong answer, a non-manifesting bug, or a non-unique edge case can't ship.
+  3. **Drill progress + chooser:** a stable `id` per drill (`assemble.js`) + device-local progress (`walkcode-drills` in `localStorage`); the home **"Code drills"** card expands in place into **Random reps** vs **Pick or filter** → the `drill-picker` screen (filter by type + difficulty; each row shows done state); a shared **"include already completed"** toggle governs random drills and random walkthroughs.
+- [ ] **Test plan (you):** on your phone — run a random session and confirm the four types interleave and each shows its type label; solve one of each and confirm it marks done; open the chooser and filter by type + difficulty; check the two-step debug (spot then fix). *(My side: validator + JS-execution checks pass. Still uncovered by the new types — order-insensitive or list/tree-heavy: Group Anagrams, Top K, Min Stack, Reverse Linked List, Merge Two Sorted Lists, Invert Binary Tree.)*
+- [ ] **Done when:** deployed, with the four typed drills serving interleaved and progress tracked. **Built & verified locally; deploy pending.**
 
 ### Post-M10 UX & review polish (built locally, not yet deployed, 2026-08)
 - **Understand step:** always leads with the full statement, then I/O + a collapsible "More examples", then
@@ -497,31 +472,20 @@ the six uncovered problems above.
   **Approve/Reject** shows while browsing **any** problem, and the library shows each problem's review status —
   so browsing and reviewing are unified (no longer split between `?review=1` preview and the `/review` page).
 
-### M11 — Settings & Filters panel — PLANNED (2026-08)
-**Goal:** consolidate app preferences and content filters into one **gear-opened overlay with two tabs**, replacing the scattered inline controls. Builds on interim work already on `main` locally — a body-level settings overlay, a global `zoom`-based text-size control, the minimal gear SVG in the top bar (Home + gear share the first line), and the JS/Python default flipped to **Python**. **Device-local only — no server/DB/API changes, no new dependencies, no build step.**
-
-**Decisions (settled with the owner):**
-- **One panel, two tabs** (`Settings | Filters`), opened by the top-bar gear — not two separate buttons.
-- **Filters tab is the single source of truth** — the home random toggle and the `drill-picker` screen read from it; their duplicated inline controls go away (a small "Adjust in Filters" link opens the tab).
-- **Theme: Light / Dark / Auto.** Controls **fit the data** — a slider only where it makes sense.
-
-**Settings tab:**
-- **Language** — JS/Python segmented control, moved **out of the top bar** (declutter). Reuses `setLanguage`.
-- **Theme** — Light / Dark / **Auto**, via CSS variables + `data-theme` on `:root`: `@media (prefers-color-scheme)` drives Auto, an explicit `data-theme="light|dark"` overrides it. Persist `walkcode-theme`. **Heaviest item:** every hardcoded color in `styles.css` (code-block bg, pills, review badges, feedback states, the `--paper/--ink/--line/…` set) must be audited and given a dark value — treat this as its own reviewable chunk.
-- **Text size** — the existing global scale, relocated here as a **slider** (0.7–1.3) with a % readout. Reuses `setUiScale`/`applyScale`.
-- **Reduced motion** — explicit override (sets `data-reduced-motion`; CSS disables the expand/transition animations, on top of the existing `prefers-reduced-motion` support).
-- **Reset progress** — clears `walkcode-states` + `walkcode-drills` behind a confirm; keeps language/theme/size/filters.
-
-**Filters tab (source of truth, persisted as `walkcode-filters`):**
-- **Include completed in random** — switch; backs `includeCompleted` (affects random drills **and** walkthroughs).
-- **Drill types** — multi-select chips: fill-blank / predict / debug / edge-case.
-- **Difficulty** — multi-select segmented: Easy / Medium / Hard; now also **filters the walkthrough library** (today an unfiltered easier→harder browse) and random-walkthrough picks, not just drills.
-
-**State & files:** `state.js` (consolidated `drillFilter` = `types[]` + `difficulties[]`, plus `theme`, `reducedMotion`, panel `open`/`tab`; setters + load/persist + `resetProgress`); `ui.js` (drop `languagePicker` from `topBar`; shared control helpers — segmented / chips / switch / slider); `app.js` (tabbed panel render + bindings; apply theme with a `matchMedia` listener for Auto, and reduced-motion; route the drill queue, random walkthrough, and library through the shared filters); `views/home.js`, `views/drill-picker.js`, `views/library.js` (remove inline filters / apply difficulty); `styles.css` (dark palette + theme structure, panel tabs, chips/segmented/switch/slider, reduced-motion overrides); docs (`CLAUDE.md`, `CONTRIBUTING.md`).
-
-**Phasing (each syntax-checked; commit at the owner's say-so):** (1) panel shell + tabs + gear (done) + move Language & Text size in; (2) **theme** Light/Dark/Auto — the big CSS pass, its own chunk; (3) filters consolidation + persistence; (4) difficulty→library, reset progress, reduced-motion; (5) docs.
-
-**Out of scope:** server changes, sort order, per-topic filters.
+### M11 — Settings & Filters panel — DONE (deployed 2026-08, revision `walkcode-00018-x99`)
+- [x] **Status: Built, committed, and deployed** (2026-08; Phase 2 `e16bc1a`, Phases 3–4 + polish `29d33d8`). Decisions settled with the owner (one panel / two tabs; Filters is the single source of truth; Light/Dark/Auto; controls fit the data). **Device-local only — no server/DB/API changes, no new dependencies, no build step.**
+- [ ] **Goal:** one gear-opened overlay with two tabs — **Settings** (language, Light/Dark/Auto theme, text size, reduced-motion, reset progress) and **Filters** (the single source of truth for include-completed, drill types, and difficulty — the last also filtering the walkthrough library). The scattered inline filter controls are removed and read from the panel.
+- [ ] **You:** nothing to set up — every design call is already made (layout, source-of-truth, theme options, control style, and the four extras: persist filters, reset progress, difficulty→library, reduced-motion). One thing to confirm as it lands: whether **85% stays the default text size** and the dark palette reads well on your phone.
+- **Me** — one checkbox per phase (each syntax-checked; committed on your say-so):
+  - [x] **Phase 1 — Panel shell.** Body-level overlay + gear (SVG); compact top bar with house/gear line-art icons; Language + Text size moved into the panel; Python default. *(done — commit `a21986f`)*
+  - [x] **Phase 2 — Theme (Light / Dark / Auto).** Every colour in `styles.css` became a semantic CSS variable (light in `:root`, full dark override under `:root[data-theme="dark"]` + the `prefers-color-scheme` media query). `data-theme` on `<html>`: Auto **removes** the attribute so the media query drives it live; light/dark force it; guarded `matchMedia` listener. Accent split into `--teal` (text/borders) vs `--teal-solid` (button surfaces) for dark contrast. Persist `walkcode-theme`. *(commit `e16bc1a`)*
+  - [x] **Phase 3 — Filters tab + consolidation.** `appState.filters = { types[], difficulties[], includeCompleted }` (persisted `walkcode-filters`) is the single source of truth; home chooser + `drill-picker` read from it (inline controls removed, "Adjust in Filters" link); top bar now **identical on every screen** (drill's `difficultyPicker`/`drill-topbar` variant removed).
+  - [x] **Phase 4 — Reach + extras.** Difficulty also filters the walkthrough library + random-walkthrough picks; Reset progress (confirm-gated); Reduce-motion override (`data-reduced-motion`).
+  - [x] **Phase 5 — Docs.** `CLAUDE.md` + `CONTRIBUTING.md` updated for the settings/filters model + theme tokens; also documented the macOS single-file-mount staleness gotcha.
+  - [x] **Owner-requested additions (during review, beyond the original plan).** Drill-picker **sort** (name/difficulty/type — was originally out of scope); same-title drills **numbered "(1 of N)"**; dropped the cryptic em-dash for not-done; random-drill **Skip** control; **"Already done — do it again?"** gate reusing the identical header; progress counter shows **solved/total** (not shuffle position); type label won't wrap mid-phrase; gear icon in the panel header (no duplicate "Settings"); site-wide **"Built by maripi"** footer.
+- [ ] **Test plan (you):** on your phone — (1) toggle Light/Dark/Auto and flip the device theme to confirm Auto follows while Light/Dark override; (2) drag the text-size slider and confirm it persists across reload; (3) set drill types + difficulty in Filters and confirm random reps, the pick list, and the library all honor them; (4) toggle include-completed and confirm random skips/adds completed items; (5) Reset progress clears solved/seen behind a confirm; (6) reduced-motion stops the expand animations; (7) the top bar looks **identical** on Code drills, Walkthroughs, and a lesson (no extra row on drills).
+- [ ] **Done when:** the gear opens a two-tab panel; theme (incl. Auto) works and persists; the Filters panel is the only place those filters live and it drives random / pick / library; the four extras work; and every preference persists per device — all with **no server changes**.
+- **Out of scope:** server changes, per-topic filters. *(Sort order was moved into scope at the owner's request during review.)*
 
 ## UI/UX & quality review — mostly resolved by M6/M10 (captured 2026-08)
 

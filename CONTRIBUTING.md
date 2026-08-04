@@ -18,10 +18,10 @@ Two ways content reaches production:
 - `src/data/walkthrough-upgrades.js` holds complete lesson records for existing roadmap problems upgraded from Work in progress to Built. Each record needs JavaScript/Python code, input/output/example, concept choices, ordered steps, two code fixes, and guided complexity.
 - `server/server.js` serves the static app and `/api/**`; `server/db.js` owns the schema, auto-seed, and the `/api/content` query. `server/llm.js` (M9) is the optional AI-feedback proxy behind `POST /api/algorithm-feedback` — provider-agnostic (OpenAI-compatible), config via `NVIDIA_API_KEY`/`LLM_BASE_URL`/`LLM_MODEL`, key never sent to the browser, off (route 503s) when no key is set. `pg` is the only backend dependency (the LLM proxy uses built-in `fetch`).
 - `src/views/` renders one screen each. Keep screen-specific markup and event logic in the relevant view.
-- `src/lib/state.js` owns device-local progress and UI state.
-- `src/lib/ui.js` owns shared rendering helpers such as answer shuffling, tags, feedback, and pickers.
-- `src/app.js` only coordinates navigation and connects views to data; do not add lesson content there.
-- `src/styles.css` contains the shared visual system.
+- `src/lib/state.js` owns device-local progress and UI state, plus the persisted prefs (language, theme, text size, reduce-motion) and the **`filters`** object (drill `types[]` + `difficulties[]` + `includeCompleted`) that is the single source of truth for content filtering.
+- `src/lib/ui.js` owns shared rendering helpers such as answer shuffling, tags, feedback, the top bar, the settings gear, and the "Adjust in Filters" link (`filtersLink`).
+- `src/app.js` only coordinates navigation and connects views to data; it also renders the two-tab settings/filters overlay and applies theme + reduce-motion. Do not add lesson content there.
+- `src/styles.css` contains the shared visual system. **Every colour is a semantic CSS variable** (a light value in `:root`, a dark override under `:root[data-theme="dark"]` and the `prefers-color-scheme` media query) — add new colours as tokens and **never hardcode a hex**, so both themes stay correct.
 
 ## Adding or upgrading a problem
 
@@ -82,11 +82,19 @@ Drills are **typed** (M10). A drill's `type` picks how it renders/validates; abs
 - User-facing content is escaped at render time (`escapeText`/`richText`/`escapeCode` in `ui.js`) because the DB is a supported authoring path. Don't interpolate authored prose raw. **This includes LLM output** — the M9 AI-coach response is untrusted and is escaped before rendering.
 - The Algorithm step's **AI coach (M9)** is a Socratic, step-by-step build: it asks a question, judges the learner's proposed step, appends an accepted step to the growing solution or nudges (never revealing the answer), and asks the next. It renders **only** when `/api/health` reports `features.algorithmFeedback`, and **replaces** the drag-and-drop builder while on; the deterministic drag-and-drop builder is the offline/no-key fallback and must stay fully functional. Never make the LLM path required.
 
+## Settings, filters, and theme (M11)
+
+- **One panel, two tabs**, opened by the top-bar gear — a body-level overlay appended outside the zoomed `<main>`. **Settings**: language, theme (Light/Dark/Auto), text size, reduce-motion, reset progress. **Filters**: include-completed, drill types, difficulty.
+- **The Filters tab is the single source of truth.** `appState.filters = { types[], difficulties[], includeCompleted }`, persisted as `walkcode-filters`. A drill passes only when **both** its type and difficulty are selected (empty set ⇒ nothing matches). The home chooser, the drill picker, **and** the walkthrough library all read from it, and difficulty also narrows the library and random-walkthrough picks. Don't reintroduce inline filter controls on those screens — link to the Filters tab with `filtersLink()` instead.
+- **Theme** is `data-theme` on `<html>`: `auto` **removes** the attribute so `@media (prefers-color-scheme)` drives it (and follows the OS live); `light`/`dark` force it; persisted as `walkcode-theme`. Because colours are CSS variables (see project map), theming needs no per-view work — just use the tokens. **Reduce-motion** sets `data-reduced-motion` and disables the expand/transition animations on top of `prefers-reduced-motion`.
+- **Reset progress** clears `walkcode-states` + `walkcode-drills` behind a confirm and keeps every pref.
+- **The top bar is identical on every screen** (Home · title · gear). Don't hang per-screen controls off it — e.g. the random-drill **Skip** lives in the card head, and a completed drill is gated behind an "Already done — do it again?" prompt that reuses the *same* header and only swaps the content.
+
 ## Before handing off changes
 
 - Run syntax checks for every file in `src/` and `server/` (`node --check`).
 - Run the drill validator: `node server/scripts/validate-content.mjs` (must pass — it enforces the whole-line drill contract for every JS and Python variant).
-- Run the app with `docker compose up` (app + Postgres) and confirm the site loads, `/api/content` serves, and the flows work: Home, library browse, random walkthrough, drill filtering, language switching, all five lesson steps, and device-local progress. After editing `src/data/**`, restart the app container so it re-seeds Postgres.
+- Run the app with `docker compose up` (app + Postgres) and confirm the site loads, `/api/content` serves, and the flows work: Home, library browse, random walkthrough, the Filters tab (drill types + difficulty) driving random/pick/library, language + theme (incl. Auto) switching, all five lesson steps, and device-local progress. After editing `src/data/**`, restart the app container so it re-seeds Postgres. After editing `index.html`, `docker compose up -d --force-recreate app` (single-file bind mounts on macOS go stale — the served file can truncate).
 - For drills, confirm each converted exercise has exactly one blanked line, `correct` among `choices`, feedback for every wrong line, and no other copy of the correct line in the shown code.
 - Keep the frontend dependency-free and the backend minimal (`pg` only); no bundler or build step.
 - Update this guide in the same change whenever a content schema or user workflow changes.
