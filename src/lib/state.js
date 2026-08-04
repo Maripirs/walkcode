@@ -188,6 +188,16 @@ export function setReducedMotion(on) {
   return appState.reducedMotion;
 }
 
+// Owner review mode (device-local). Reveals a triage view of problems still awaiting review and
+// hides fully-reviewed ones; the Settings toggle that drives this is shown only when a review token
+// is loaded. Persisted as `walkcode-review` (same key the `?review` URL param uses).
+export function setReviewMode(on) {
+  appState.reviewMode = Boolean(on);
+  if (appState.reviewMode) localStorage.setItem('walkcode-review', '1');
+  else localStorage.removeItem('walkcode-review');
+  return appState.reviewMode;
+}
+
 // Clear device-local learning progress — per-problem states AND solved drills — behind a confirm in
 // the UI. Deliberately keeps preferences (language, theme, text size, filters, reduced-motion).
 export function resetProgress() {

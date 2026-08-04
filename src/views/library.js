@@ -38,7 +38,7 @@ function problemRow(card, progressLabel, reviewProblem) {
 function browseList(state, problems, progressLabel) {
   const reviewMap = new Map((state.review?.problems || []).map((p) => [p.title, p]));
   const isReviewer = Boolean(state.review?.token) && reviewMap.size > 0;
-  const showPending = state.reviewMode || isReviewer;
+  const reviewMode = Boolean(state.reviewMode);
   const row = (card) => problemRow(card, progressLabel, isReviewer ? reviewMap.get(card.title) : null);
 
   // The Filters tab's difficulties also narrow the walkthrough library (M11). A strict subset shows
@@ -49,6 +49,18 @@ function browseList(state, problems, progressLabel) {
     ? `<p class="picker-filter-summary">Difficulty: ${DIFFICULTY_BANDS.filter((l) => selectedDifficulties.includes(l)).join(', ') || 'none'} · ${filtersLink('Adjust')}</p>`
     : '';
 
+  // Review mode (the reviewer-only Settings toggle): a triage view of ONLY problems still awaiting
+  // review — content-complete but not yet certified. Fully reviewed (certified/Built) problems are
+  // deliberately hidden so the owner can focus on what's left.
+  if (reviewMode) {
+    const pending = problems.filter((card) => card.isComplete && !card.isBuilt && selectedDifficulties.includes(card.difficulty));
+    const list = pending.length
+      ? `<div class="problem-list">${pending.map(row).join('')}</div>`
+      : '<p class="brief">Nothing awaiting review — every complete problem is certified.</p>';
+    return `<p class="brief"><b>Review mode is on.</b> Showing only problems awaiting review; fully reviewed problems are hidden (turn it off in Settings).</p>${filterNote}${list}`;
+  }
+
+  // Normal browse: only certified (Built) problems, one easier→harder progression in difficulty bands.
   const built = problems.filter((card) => card.isBuilt && selectedDifficulties.includes(card.difficulty));
   const bands = DIFFICULTY_BANDS
     .filter((level) => selectedDifficulties.includes(level))
@@ -62,21 +74,10 @@ function browseList(state, problems, progressLabel) {
     </div>`).join('')}</div>`
     : '<p class="brief">No problems match your difficulty filter — widen it in Filters to see more.</p>';
 
-  let reviewHtml = '';
-  if (showPending) {
-    const pending = problems.filter((card) => card.isComplete && !card.isBuilt && selectedDifficulties.includes(card.difficulty));
-    reviewHtml = `<div class="review-section">
-      <div class="band-head review">Pending review<small>${pending.length}</small></div>
-      ${pending.length
-        ? `<div class="problem-list">${pending.map(row).join('')}</div>`
-        : '<p class="brief">Nothing awaiting review — every complete problem is certified.</p>'}
-    </div>`;
-  }
-
   const brief = isReviewer
-    ? '<b>Reviewing as owner.</b> Each row shows its review status — open a problem to walk its five stages and Approve/Reject each. “Live · not yet reviewed” problems are already published (via the code allowlist); rejecting a stage takes one back down.'
-    : `Every problem is a complete five-step walkthrough, ordered from easier to harder.${state.reviewMode ? ' <b>Review mode is on</b> — pending problems appear below.' : ''}`;
-  return `<p class="brief">${brief}</p>${filterNote}${bandsHtml}${reviewHtml}`;
+    ? '<b>Reviewing as owner.</b> Each row shows its review status. Turn on <b>Review mode</b> in Settings to focus on problems still awaiting review.'
+    : 'Every problem is a complete five-step walkthrough, ordered from easier to harder.';
+  return `<p class="brief">${brief}</p>${filterNote}${bandsHtml}`;
 }
 
 // The library is now purely the browse list — the choose-vs-random decision moved to the home

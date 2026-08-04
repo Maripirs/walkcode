@@ -1,5 +1,5 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setTheme, setUiScale, THEMES, toggleFilterValue } from './lib/state.js';
+import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setReviewMode, setTheme, setUiScale, THEMES, toggleFilterValue } from './lib/state.js';
 import { gearGlyph, shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
@@ -168,7 +168,10 @@ function renderSettings() {
     <label class="switch-row"><span>Reduce motion</span>
       <input type="checkbox" data-toggle-reduced-motion ${appState.reducedMotion ? 'checked' : ''}></label>
     <span class="settings-label">Progress</span>
-    <button class="reset-progress" data-reset-progress>Reset all progress…</button>`;
+    <button class="reset-progress" data-reset-progress>Reset all progress…</button>${appState.review.token || appState.reviewMode ? `
+    <span class="settings-label">Reviewer</span>
+    <label class="switch-row"><span>Review mode <small class="switch-note">only awaiting-review problems</small></span>
+      <input type="checkbox" data-toggle-review-mode ${appState.reviewMode ? 'checked' : ''}></label>` : ''}`;
 
   const filtersBody = `
     <span class="settings-label">Random</span>
@@ -203,6 +206,7 @@ function renderSettings() {
   settingsEl.querySelectorAll('[data-scale]').forEach((b) => b.addEventListener('click', () => { setUiScale(appState.uiScale + Number(b.dataset.scale) * 0.05); refresh(); }));
   settingsEl.querySelector('[data-scale-reset]')?.addEventListener('click', () => { setUiScale(DEFAULT_UI_SCALE); refresh(); });
   settingsEl.querySelector('[data-toggle-reduced-motion]')?.addEventListener('change', (e) => { setReducedMotion(e.target.checked); applyReducedMotion(); });
+  settingsEl.querySelector('[data-toggle-review-mode]')?.addEventListener('change', (e) => { setReviewMode(e.target.checked); render(); });
   settingsEl.querySelector('[data-reset-progress]')?.addEventListener('click', () => {
     if (!window.confirm('Reset all progress? This clears every solved problem and drill on this device. Your language, theme, text size, and filters are kept.')) return;
     resetProgress();
