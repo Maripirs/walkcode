@@ -127,19 +127,21 @@ Each milestone is independently shippable and verifiable. **You** = things only 
 (accounts, billing, DNS, interactive auth, product calls). **Me** = code/config I write and
 commands I prepare or run.
 
-**Progress overview** (🚧 = in progress, ⏳ = waiting on an external step):
+**Progress overview** (every milestone below is done unless noted):
 
-- [x] **M0** — Foundations: project, billing, tooling, APIs enabled
-- [x] **M1** — Static site live on Cloud Run (`*.run.app`)
-- [x] **M2** — Custom domain + HTTPS — **done & verified**: `https://walkcode.maripi.net` live from Cloud Run with a valid Google-issued cert
-- [x] **M3** — Backend skeleton + local dev — **done & verified**: `/api/health` live in prod; `docker compose up` runs app + Postgres locally (host port 8088)
-- [x] **M4** — Postgres on the e2-micro VM — **done & verified**: private Cloud Run→Postgres path works (`/api/db-ping` OK), nothing on the public internet
-- [x] **M5** — Content to the database — **done & verified**: problems, code examples, and exercises served from Postgres via `/api` on the live domain; you confirmed the deployed revision on `walkcode.maripi.net` (2026-08-03)
-- [x] **M6** — UI/UX restructure — **done & verified (2026-08)**: learning-first stepper (Understand→Algorithm→Code→Complexity→Review), guided coach *or* drag-drop, human copy, browser back/forward + refresh persistence. Deployed.
-- [x] **M9** — LLM-assisted algorithm coach — **done & deployed (2026-08)**: Socratic step-by-step build via Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder. Live on `walkcode.maripi.net`.
-- [x] **M8** — Hardening: nightly Postgres backups + $5 budget + hard kill-switch — **done & verified (2026-08)**: nightly `pg_dump`→GCS (30-day retention), test-restore matched live row counts, budget wired to a Pub/Sub-triggered Cloud Function that disables billing at the cap
-- [ ] **M10** — Typed code drills (fill-blank + behavior-prediction + edge-case + debugging) — **🚧 all 4 types built & execution-verified**: predict (15) + debug (7) + edge-case (5); scale + on-device eyeball remain
-- [ ] **M7** — In-browser code editor + execution — **moved to Backlog (2026-08)**: doesn't fit the scaffolded, mobile-first, recognition-first model right now; revisit later
+- [x] **M0** — Foundations: GCP project, billing, tooling, APIs enabled.
+- [x] **M1** — Static site live on Cloud Run (`*.run.app`).
+- [x] **M2** — Custom domain + HTTPS: `https://walkcode.maripi.net` from Cloud Run, valid Google cert.
+- [x] **M3** — Backend skeleton + local dev: `/api/health`; `docker compose up` runs app + Postgres (port 8088).
+- [x] **M4** — Postgres on the always-free e2-micro VM; private Cloud Run→Postgres path; nothing on the public internet.
+- [x] **M5** — Content in Postgres, served over `/api/content`; DB, API, and offline fallback share one assembled bundle so they can't drift.
+- [x] **M6** — Learning-first UI restructure (Understand→Algorithm→Code→Complexity→Review; single stepper; escaped content). **Deployed.**
+- [x] **M9** — LLM algorithm coach (Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder). **Deployed.**
+- [x] **M8** — Hardening: nightly `pg_dump`→GCS backups (30-day retention) + $5 budget + hard billing kill-switch. **Live on GCP.**
+- [x] **M10** — Typed code drills (fill-blank + predict + debug + edge-case, 105 drills) + drill progress + the home chooser, plus the post-M10 UX/review polish. **Built & verified locally; NOT yet deployed.**
+- [ ] **M7** — In-browser code editor/runner — **backlogged** (doesn't fit the scaffolded, mobile-first model; see Backlog).
+
+**Current state (2026-08):** everything through **M6/M9 is live** on `walkcode.maripi.net`, and **M8's infra is live** on GCP. Everything **since** — Understand-step depth (examples + fuller descriptions), the concept-check spoiler fix, the whole **typed-drill system** + progress/chooser, the **home-card redesign** (in-place expand + animation, progress tallies), and the **review-flow** work — is committed to `main` locally and verified, but **not yet deployed** (prod still serves the pre-M10 revision). Immediate next steps: a content **review pass** (the `/review` flow now covers all complete problems), then **deploy**.
 
 ### M0 — Foundations (accounts & tooling)
 - [x] **Status: Done** — authed to `walkcode-504322`; APIs `run`, `artifactregistry`, `cloudbuild`, `compute` enabled; Docker installed.
@@ -444,155 +446,86 @@ commands I prepare or run.
 - [ ] **Done when:** algorithm-step feedback works end-to-end behind the server proxy, costs stay
   within the free tier, and the step is fully functional with the LLM path disabled.
 
-### M10 — Typed code drills — 🚧 IN PROGRESS (2026-08)
-- [x] **Phases 1–4 done (2026-08) — all four drill types built & execution-verified.** Added `type` to the drill
-  model (absent ⇒ `fill-blank`, so **every existing drill is untouched**). `views/drill.js` switches on
-  type and labels each drill's type in the eyebrow; the shuffled queue **interleaves** the types.
-  - **Predict** (`src/data/prediction-drills.js`) — **15 drills across 14 problems** (JS + Python):
-    a self-contained function + a call, choices are candidate return values.
-  - **Debug** (`src/data/debug-drills.js`) — **7 drills** (JS + Python): a two-step card (spot the buggy
-    line → pick the fix), authored as a structured spec that `assemble.js` flattens per language. The
-    two-step interaction is behaviorally tested (10/10 assertions on the bind logic).
-  - **Edge-case** (`src/data/edge-case-drills.js`) — **5 drills**: a function + "which input yields this
-    result?"; choices are input literals (shared across languages), one hits `target`.
-  - **Validator executes the JS** (the key quality lever): predict code is run against its call and must
-    equal `correct`; debug runs the buggy code (must differ) **and** the fixed code (must equal
-    `correctReturns`); edge-case runs `call(choice)` for every choice (only the correct one may hit
-    `target`). A wrong answer, non-manifesting bug, or non-unique edge case can't ship.
-  - Predict/edge-case inputs were chosen to differ from the shown worked example so "Read more" can't spoil them.
-  - Verified: syntax clean, validator **174 exercises / 87 drills** (all predict+debug+edge-case JS executed),
-    render checks for every type, local `/api/content` serves 30 predict + 14 debug + 10 edge-case exercises.
-- [x] **Drill progress + chooser (2026-08).** Each drill now has a **stable `id`** (`assemble.js`), and
-  device-local **progress** (`walkcode-drills` in `localStorage`; solved on a correct answer, or the correct
-  fix for debug). The home **"Code drills" card expands in place** (no new screen) into **Random reps** vs
-  **Pick or filter**; Random carries a shared **"include ones I've already completed"** toggle that also
-  governs **random walkthroughs** (skips `Solved` problems by default). **Pick or filter** opens a new
-  `drill-picker` screen — a filterable list showing each drill's **type + difficulty + done state**; tap one
-  to start there or shuffle the filtered set. Verified: render smoke for every new view, 87 unique ids, real
-  headless-Chrome boot (home shows "0/87 done", no runtime errors), progress persistence exercised in-browser.
-  - Remaining: scale the new types across more of the 28; a quick on-device eyeball of the chooser + two-step
-    debug interaction.
-- [ ] **Goal:** make "fill the blank" **one of several drill types**, so a learner practices the
-  full spread of code-reading skills — not just line synthesis. New types: **behavior prediction**
-  (trace code → pick the output), **edge-case analysis** (pick the input/case that behaves
-  specially or that the code mishandles), and **debugging** (buggy code → spot the bad line or pick
-  the fix). All stay **multiple-choice + per-choice feedback** (tap-friendly, mobile-first,
-  no-build) — this extends the recognition model rather than breaking from it (contrast M7).
-- [ ] **Key insight — two structural families** (so the machinery is shared, not four separate systems):
-  - **Pick-the-right-code** — choices are code lines; the snippet has a slot. `fill-blank` (slot is
-    a blank `___`, today's drill) and `debug` (slot holds a *wrong* line; pick the fix, or spot it).
-  - **Pick-the-right-outcome** — the snippet is whole; choices are values/cases. `predict` (code +
-    a concrete call → the return value) and `edge-case` (code → the input/case that matters).
-- [ ] **Schema (generalize the exercise object):** add `type: 'fill-blank' | 'predict' | 'edge-case'
-  | 'debug'` (absent ⇒ `'fill-blank'`, so **every existing drill is unchanged**). Keep `prompt`,
-  `code`, `choices`, `correct`, `why`, `wrong{}`; add optional `input` (the call/case shown for
-  predict/edge-case). Per-language variants continue via `languages.js`.
-- [ ] **Content reuse is the unlock:** the 28 complete problems now have **execution-verified
-  solutions + 3 verified examples each** — `predict` drills reuse those exact input→output pairs
-  (answers already proven correct), and `debug` drills come from mutating one line of a known-good
-  solution (the wrong-line feedback we already author *is* the bug explanation). So new types are
-  largely re-derivable from existing, validated content.
-- [ ] **Me:** (1) generalize `views/drill.js` to switch on `type` (blank marker vs. a flagged buggy
-  line vs. a plain snippet + input callout); (2) extend `server/scripts/validate-content.mjs` with a
-  per-type contract (predict/edge-case: correct ∈ choices, unique, feedback for every wrong,
-  answer ideally checkable against the real solution); (3) author the new-type drills; (4) label the
-  drill type in the UI so the learner knows what's being asked; keep DB/JSONB storage as-is (drills
-  are already whole-object JSONB).
-- [x] **You (product calls) — settled (2026-08):** ship **behavior-prediction first**; the drill
-  queue is **interleaved (mixed)** with each drill labeling its type; **debug is both** — a two-step
-  drill: spot the wrong line, then choose its fix. Build order: (1) type-generalized
-  schema/renderer/validator (fill-blank unchanged), (2) **predict**, (3) **debug** (two-step),
-  (4) **edge-case**.
-- [ ] **Test plan (you):** on the drill screen, get one of each type, answer right/wrong and confirm
-  the feedback is specific and correct; confirm existing fill-blank drills are visually and
-  behaviorally unchanged; validator passes with the new contracts; Python variants render.
-- [ ] **Done when:** the drill system supports all four types behind one shared model, existing
-  drills are untouched, the new types are authored across the complete set, and the validator
-  enforces each type's contract.
+### M10 — Typed code drills — DONE (built & verified locally; not yet deployed, 2026-08)
+**Goal:** make "fill the blank" **one of four drill types** so learners practice the full spread of
+code-reading skills, not just line synthesis. All types stay tap-friendly multiple-choice + per-choice
+feedback (mobile-first, no-build) — this **extends** the recognition model rather than breaking from it
+(contrast M7). `type` on the exercise defaults to `fill-blank`, so **every legacy drill is unchanged**; the
+shuffled queue **interleaves** types and each drill labels its type in the UI.
 
-## UI/UX & quality review (backlog — captured 2026-08)
+**The four types** (JS + Python; `views/drill.js` switches on type):
+- **fill-blank** (60 drills) — the solution with one line blanked; choices are candidate lines.
+- **predict** (`src/data/prediction-drills.js`, **22 drills / 21 problems**) — a self-contained function + a
+  call; choices are candidate return values.
+- **debug** (`src/data/debug-drills.js`, **12 drills**) — two-step: spot the buggy line, then pick the fix.
+  Authored as a structured spec that `assemble.js` flattens per language; the two-step bind logic is
+  behaviorally tested (10/10 assertions).
+- **edge-case** (`src/data/edge-case-drills.js`, **11 drills**) — a function + "which input yields this
+  result?"; choices are input literals (shared across languages), exactly one hits `target`.
 
-A walkthrough of the current implementation to tackle later. The **drill** experience is in
-good shape after the whole-line rework; the weakest link is the **5-step walkthrough** (framing
-+ copy + navigation) and a few latent tech-debt items. Grouped by area, roughly priority-ordered.
+**Quality lever — the validator EXECUTES the JS** (`server/scripts/validate-content.mjs`): predict runs
+against its call (must equal `correct`); debug runs the buggy code (must differ) **and** the fixed code (must
+equal `correctReturns`); edge-case runs `call(choice)` for every choice (only the correct one may hit
+`target`). So a wrong answer, a non-manifesting bug, or a non-unique edge case can't ship. Total: **210
+exercises / 105 drills**, all green. Still uncovered by the new types (order-insensitive or list/tree-heavy):
+Group Anagrams, Top K, Min Stack, Reverse Linked List, Merge Two Sorted Lists, Invert Binary Tree.
 
-### 1. Recognize step (step 1) — missing a comprehensive problem explanation ⬅ flagged
-- **Root cause:** `recognitionPanel()` in `src/views/lesson.js` shows **either** Input/Output/
-  Example (when `lesson.inputOutput` exists) **or** the plain-language `lesson.explanation` —
-  never both. Every **Built** lesson has `inputOutput`, so it shows the terse I/O spec (e.g.
-  "nums: an integer array; target: an integer") and **omits the full problem statement**. So the
-  built lessons — the ones learners actually use — never show the comprehensive "what is this
-  problem" narrative. This matches the reported feeling.
-- **Fix direction:** always lead with the problem statement (`explanation`/`brief`), *then* show
-  Input/Output/Example, *then* "What to notice". Consider a short worked intuition too.
-- The **hint** is generic and identical on every problem ("Name the input's shape first:
-  ordered, contiguous, hierarchical, connected, or repetitive."). Make it problem-specific or drop.
+**Drill progress + chooser:** each drill has a **stable `id`** (`assemble.js`), and device-local **progress**
+(`walkcode-drills` in `localStorage`) marks a drill solved on a correct answer (or the correct fix for debug).
+The home **"Code drills" card expands in place** (no separate screen) into **Random reps** vs **Pick or
+filter** → a new `drill-picker` screen (filter by type + difficulty; each row shows done state). A shared
+**"include already completed"** toggle governs both random drills and random walkthroughs (skips completed by
+default).
 
-### 2. Headers & copy — clunky spots
-- **Lesson top bar title is "{position} of 150"** (e.g. "42 of 150") — reads as a bare number,
-  not a name. Show the **problem title** (or topic) there; demote the position to a small subtitle.
-- **Eyebrow shows "· ✓ BUILT" to learners.** "Built" is an internal curation flag; surfacing it
-  is confusing. Drop it from the user-facing eyebrow (keep the WIP banner for unbuilt lessons).
-- **"Recognize the usable structure"** (and audit the other four stage headings) reads as jargon —
-  prefer plain language ("Understand the problem" / "Recognize the pattern").
-- Stage tabs ("1 Recognize" … "5 Review") are terse but fine; keep casing/spacing consistent.
+**Product calls (settled):** predict shipped first; queue interleaved; debug is two-step (spot then fix).
 
-### 3. Navigation flow — redundant/inconsistent
-- A lesson exposes **three navigation axes at once**: stage tabs (top of the article),
-  Previous/Next **step** (bottom bar), and Previous/Next **problem** (top bar). The stage tabs and
-  the bottom step buttons both move between steps — redundant and easy to conflate with
-  "next problem." Consolidate: make the tabs the primary step control and simplify/relabel the
-  bottom bar, and visually separate "move within this problem" from "go to another problem."
-- On **step 3 (Code fixes)** the bottom step bar is hidden when exercises exist (only the
-  per-exercise Continue shows) — an inconsistent affordance vs. the other steps.
-- **"Seen" vs "Solved"** progress states may be unclear to users; consider clearer labels or a
-  single completion state.
+**Remaining:** deploy; an on-device eyeball of the chooser + two-step debug; optionally scale the new types to
+the six uncovered problems above.
 
-### 4. Content quality gaps (beyond drills, which are now solid)
-- **Algorithm step (step 2) distractors are hardcoded in the view** (`ensureAlgorithmState` in
-  `lesson.js`) — the *same two generic distractors for every problem*, and content living in a
-  view (against this repo's own "no content in views" rule). Move to per-problem authored
-  distractors in the data layer and make them problem-specific.
-- Other **generic repeated copy**: the complexity "How to verify it" hint, the recognition hint —
-  make problem-specific or remove.
-- **127 of 150 problems are WIP** (only 23 Built). Their Recognize/Review steps are thin
-  fallbacks; decide whether to keep browsing WIP or hide it more firmly. **Resolved (2026-08):
-  WIP problems are now hidden from the library and random walkthroughs — only built & reviewed
-  problems are reachable (`app.js` filters `orderedCards()` to `isBuilt`).**
+### Post-M10 UX & review polish (built locally, not yet deployed, 2026-08)
+- **Understand step:** always leads with the full statement, then I/O + a collapsible "More examples", then
+  the concept check — and the answer-revealing cues (`intuition`, "what to notice") are **hidden until the
+  check is answered**, so the recognition check isn't spoiled. Examples/descriptions live in
+  `src/data/examples.js` (verified against each real solution).
+- **Home mode cards:** both **Code drills** and **Full walkthroughs** expand in place (no separate screen; one
+  open at a time; the panel animates **open and closed**, respecting reduced-motion) and each shows a
+  `solved/total done` tally. The library is now purely the easier→harder browse list.
+- **Review flow:** `/review` now lists **all content-complete problems**, including the 23 that were live via
+  the `certifiedTitles` code allowlist but **never actually reviewed** (badged "live · not yet reviewed";
+  rejecting a stage takes a live problem back down). Once the token is loaded, the inline five-stage
+  **Approve/Reject** shows while browsing **any** problem, and the library shows each problem's review status —
+  so browsing and reviewing are unified (no longer split between `?review=1` preview and the `/review` page).
 
-### 5. Implementation / tech-debt
-- **No automated tests.** The whole-line drill validator built during the drill rework (checks:
-  exactly one blank, `correct` ∈ `choices`, unique choices, feedback for every wrong line, and
-  no other copy of the correct line) should be committed as a real script (e.g.
-  `server/scripts/validate-content.mjs`) and added to the handoff checklist.
-- **Raw HTML interpolation** of user-facing content (`lesson.explanation`, `inputOutput`,
-  `concepts`, prompts) without escaping. Safe *today* because content is authored — but **M5 made
-  content DB-sourced and "write to the DB" a supported authoring path**, so a DB author could
-  inject markup/script. Escape/sanitize user-facing content now that the trust boundary moved.
-- **Code blocks use `white-space:pre-wrap`** so long lines wrap rather than scroll — OK on mobile
-  but wrapping can distort Python indentation; consider horizontal scroll for code, and keep lines
-  short (the ≤36-line rule bounds length, not width — some Hard drills have very long lines).
-- Minor: audit for dead CSS (e.g. `.fix`) now that the drill masking is gone.
+## UI/UX & quality review — mostly resolved by M6/M10 (captured 2026-08)
 
-### 6. Content depth (backlog — captured 2026-08)
-- **Harder problems need a more thorough explanation.** Hard-tier problems especially need a fuller
-  problem statement / worked intuition on the **Understand** step — the current brief + single example
-  is thin for them. Scale explanation depth with difficulty.
-- **More examples for every problem.** ~~All problems would benefit from additional worked examples~~
-  **Done for the live/complete set (2026-08):** added `examples` (`{input, output, note}`, verified against
-  each real solution) + an optional fuller `description` to the schema (`src/data/examples.js`, wired in
-  `assemble.js`, rendered in a **collapsible "More examples"** on the Understand step). All **28
-  complete problems now carry 3 examples** (primary + 2, edge cases included); 8 subtler/Hard problems got a
-  fuller description. The 121 title-only WIP problems get examples as they're authored toward Built.
+The 2026-08 diagnostic that drove M6 and the drill work is now **largely done**:
 
-### Strengths to preserve
-Clean render-on-state loop with no framework/build step; cohesive warm visual system; mobile-first
-layout; now DB-backed **and** offline-capable; and the drills are pedagogically strong (whole-line
-selection, no answer leak, correct per-language variants). Don't regress these while polishing.
+- **Recognize/Understand step** — leads with the full statement, then I/O + a collapsible "More
+  examples", then the concept check (the answer-revealing `intuition`/"what to notice" cues stay
+  hidden until it's answered); the generic hint was dropped. ✅
+- **Headers & copy** — problem title in the top bar, the internal "✓ BUILT" badge dropped from the
+  learner UI, plain-language stage names. ✅
+- **Navigation** — collapsed to one stepper + a separate "another problem" axis, consistent across
+  all five steps. ✅
+- **Algorithm step** — the generic hardcoded distractors were removed entirely (it's now a pure
+  ordering task, or the M9 AI coach); WIP problems hidden from the library and random walkthroughs. ✅
+- **Tech-debt** — the content validator is committed (`server/scripts/validate-content.mjs`, now
+  also *executes* typed drills) and user-facing content is escaped (`escapeText`/`richText`). ✅
+- **More examples** — done for the complete set: `examples` + optional fuller `description`
+  (`src/data/examples.js`, verified against each real solution); all 28 complete problems carry
+  3 examples, 8 got a fuller description. ✅
 
-**Overall read:** a solid MVP with a strong content/drill core. The highest-leverage improvements
-are (a) step-1 problem framing, (b) problem-specific algorithm-step distractors, and (c) escaping
-DB-sourced content — then the header/navigation polish.
+**Still open (small, low-priority):**
+- **Harder-problem explanation depth** — Hard-tier problems could use a fuller worked intuition on
+  Understand; scale explanation depth with difficulty. (The ~121 title-only WIP problems get
+  examples/depth as they're authored toward Built.)
+- **Code wrapping vs. indentation** — code blocks use `white-space:pre-wrap`; wrapping can distort
+  Python indentation on narrow screens. Consider horizontal scroll for code.
+- **Dead-CSS audit** (e.g. any leftover `.fix` from the old drill masking).
+
+**Strengths to preserve:** clean render-on-state loop with no framework/build step; cohesive warm
+visual system; mobile-first; DB-backed **and** offline-capable; pedagogically strong drills (whole-line
++ typed, no answer leak, correct per-language variants). Don't regress these while polishing.
 
 ## Your setup checklist (what only you can do)
 
@@ -603,14 +536,18 @@ calls for M6 (UI/UX) and M9 (Groq provider) are settled.
 
 **Still on you, ahead:**
 
-1. **M10 (typed code drills):** which types ship first (recommend **predict**), queue **interleaved
-   vs. selectable**, and whether **debug** is spot-the-bug / fix-the-bug / both.
+1. **Review the content** — the `/review#<token>` flow now covers **all** complete problems, including
+   the 23 that went live via the code allowlist without being reviewed. Walk them to actually vet them
+   (rejecting a stage takes a live problem back down).
+2. **Deploy the local batch** — everything since M6/M9 (the whole typed-drill system + UX/review work) is
+   committed to `main` locally but not deployed. Approve a Cloud Run deploy when you're happy on localhost.
+   Optional: set `REVIEW_TOKEN` as a Cloud Run secret so `/review` works on prod too.
+3. **(Optional) retire the `certifiedTitles` allowlist** once the 23 are reviewed, so per-stage review
+   becomes the single gate for what's live.
 
-*(M8 settled: alert + hard kill-switch, $5 budget, default billing-admin email — done & verified.
-M7 in-browser editor moved to Backlog — doesn't fit the scaffolded, mobile-first model right now.)*
-
-Everything else (Dockerfile, server, deploy commands, schema, seed, API + frontend, the code runner) is
-on me — I'll prepare each and walk you through anything interactive.
+*(All product calls settled: M6 UI/UX, M8 kill-switch + $5 budget, M9 Groq provider, M10 drill types.
+M7 in-browser editor is in the Backlog. Per the owner's request, do not commit or push without explicit
+per-change approval.)*
 
 ## Database choice detail
 
@@ -709,22 +646,20 @@ Not doing these now; revisit as traffic or risk tolerance changes:
   deferred; starting cloud-only, direct from Cloud Run.* Absorbs static traffic so the
   origin barely runs and egress stays tiny. The one control that bounds **network
   egress**, which instance limits do not. Revisit if traffic or egress ever grows.
-- **Budget alert** — Cloud Billing budget at a low threshold ($1 / $5) that emails us
-  early. Notification, not a stop.
-- **Absolute kill-switch (true hard cap)** — budget threshold → Pub/Sub → a Cloud
-  Function that **disables billing on the project**. Guarantees the bill can never grow;
-  tradeoff is the site goes offline when it fires. Add only if we want a literal
-  "can never be charged" guarantee.
 - **Instance right-sizing** — `--cpu`, `--memory=256Mi`, request-based CPU billing, and a
   modest `--timeout` to shrink billed work if we ever exceed free limits.
 
+*(The budget alert **and** the absolute hard kill-switch were built in **M8** — a $5 Cloud Billing
+budget → Pub/Sub → a Cloud Function that disables project billing at the cap — so they're no longer
+backlog items.)*
+
 ## Open questions
 
-- **Typed code drills (M10):** ship order (recommend **predict** first — biggest reuse from the
-  authored examples); drill queue **interleaved vs. type-selectable**; **debug** = spot-the-bug,
-  fix-the-bug, or both.
+- **When to deploy** the local batch (M10 + UX/review), and whether to do the content review pass on
+  localhost first or set `REVIEW_TOKEN` on prod and review there.
+- Whether to **retire the `certifiedTitles` allowlist** after reviewing the 23 (review as the single gate).
 
-**Settled:** ~~Node for the backend~~ (yes, used throughout) · ~~Content authoring (M5)~~ (auto-seed on
-deploy + direct DB writes; no admin endpoint) · ~~LLM provider/posture (M9)~~ (Groq, config-swappable) ·
-~~Auth / cross-device progress sync~~ (moved to Backlog; not shaping the near-term schema) ·
-~~In-browser code editor (M7)~~ (moved to Backlog — doesn't fit the scaffolded, mobile-first model).
+**Settled:** ~~Node for the backend~~ · ~~Content authoring (M5)~~ (auto-seed + direct DB writes) ·
+~~LLM provider/posture (M9)~~ (Groq, config-swappable) · ~~Auth / cross-device progress sync~~ (Backlog) ·
+~~In-browser code editor (M7)~~ (Backlog) · ~~Typed code drills (M10)~~ (predict-first, interleaved queue,
+two-step debug — all built) · ~~Cost cap (M8)~~ (alert + hard kill-switch, $5 budget).
