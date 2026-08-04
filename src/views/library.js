@@ -7,9 +7,11 @@ const DIFFICULTY_BANDS = ['Easy', 'Medium', 'Hard'];
 function reviewStatusPill(problem) {
   const total = problem.steps.length;
   const blocked = problem.steps.some((s) => s.status === 'rejected');
-  if (blocked) return '<span class="pill pill-warn">blocked</span>';
-  if (problem.approvedCount === total) return '<span class="pill pill-live">✓ reviewed</span>';
-  return `<span class="pill ${problem.isLive ? 'pill-live' : ''}">${problem.approvedCount}/${total}${problem.isLive ? ' · live' : ''}</span>`;
+  // A revision landed after the last decision — nudge a re-review (esp. a blocked problem you fixed).
+  const newVersion = problem.hasNewVersion ? '<span class="pill pill-newversion">🔄 new</span>' : '';
+  if (blocked) return `<span class="pill pill-warn">blocked</span>${newVersion}`;
+  if (problem.approvedCount === total) return `<span class="pill pill-live">✓ reviewed</span>${newVersion}`;
+  return `<span class="pill ${problem.isLive ? 'pill-live' : ''}">${problem.approvedCount}/${total}${problem.isLive ? ' · live' : ''}</span>${newVersion}`;
 }
 
 // A colored progress pill: green ✓ Done, amber In progress, muted Not started.

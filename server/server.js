@@ -7,7 +7,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
-import { ensureSeeded, getContentBundle, getReviews, upsertReview, reviewOutcome, REVIEW_STEPS, REVIEW_STEP_LABELS } from './db.js';
+import { ensureSeeded, getContentBundle, getReviews, upsertReview, reviewOutcome, problemContentHash, hasNewVersionSince, REVIEW_STEPS, REVIEW_STEP_LABELS } from './db.js';
 import { algorithmCoachTurn, llmEnabled } from './llm.js';
 
 // Secret that gates the /review approve/reject actions (a private link the owner holds).
@@ -146,10 +146,11 @@ function isNearDuplicate(candidate, existingList) {
   });
 }
 
-// Once the learner has assembled roughly this many steps, the algorithm is complete enough that
-// the coach wraps up — a backstop against an unbounded back-and-forth. Set with headroom because
-// decomposing decisions (condition, then each branch) produces more, smaller steps.
-const MAX_COACH_STEPS = 16;
+// The ONLY completion backstop now (the model's own completeness check does normal finishing).
+// Purely a runaway-loop failsafe, so it is set high and is NOT tied to the reference-algorithm
+// length: a learner is free to decompose the algorithm into many small, distinct steps, and we
+// only step in if the total grows implausibly large.
+const MAX_COACH_STEPS = 24;
 
 // POST /api/algorithm-feedback — one turn of the Socratic "build the algorithm" coach. Degrades
 // safely: no key → 503 {disabled}; the client then falls back to the deterministic step builder.
@@ -186,18 +187,17 @@ async function handleAlgorithmFeedback(req, res) {
     if (result.decision === 'accept') {
       result.feedback = acknowledgementOnly(result.feedback) || 'Nice — added to your algorithm.';
     }
-    // Completion backstops so it can't loop forever. Finish when the solution is at least as long
-    // as the canonical one (hard cap), OR when the learner is already past that length and this
-    // turn added nothing new (a revise/duplicate) — a sign the model is churning, not progressing.
+    // Runaway-loop failsafe ONLY. Normal completion is the model's own completeness check (it sets
+    // "done" once every required part is covered). We deliberately do NOT tie the cap to the
+    // reference-algorithm length: a learner may break the algorithm into more, finer steps than the
+    // canonical phrasing uses, and that granularity is welcome — a 4-step reference should never cap
+    // a 7-step breakdown. Just bound the total so a stuck model can't go forever; the learner can
+    // also finish manually at any point.
     const addedNew = result.decision === 'accept' && Boolean(result.acceptedStep);
     const total = acceptedSteps.length + (addedNew ? 1 : 0);
-    const refLen = referenceAlgorithm.length;
-    const hardCap = refLen > 0 ? refLen + 1 : MAX_COACH_STEPS;
-    // At/over the canonical length AND this turn added nothing new → the model is churning, wrap up.
-    const stalledAtLength = refLen > 0 && !addedNew && acceptedSteps.length >= refLen;
-    if (!result.done && (total >= hardCap || stalledAtLength)) {
+    if (!result.done && total >= MAX_COACH_STEPS) {
       result.done = true;
-      result.summary = result.summary || 'You’ve assembled the core steps — check them against the full solution in the Review step.';
+      result.summary = result.summary || 'You’ve assembled plenty of steps — check them against the full solution in the Review step.';
       result.nextPrompt = '';
     }
     return sendJson(res, 200, result);
@@ -238,6 +238,7 @@ async function handleReview(req, res) {
             difficulty: card.difficulty,
             isLive: card.isBuilt,
             approvedCount: reviewOutcome(byStep).approvedCount,
+            hasNewVersion: hasNewVersionSince(byStep, problemContentHash(bundle.lessons[card.id])),
             steps,
           };
         });

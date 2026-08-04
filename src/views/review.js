@@ -12,10 +12,13 @@ export function draftKey(title, step) {
 export function reviewBadge(problem) {
   const total = problem.steps.length;
   const blocked = problem.steps.some((s) => s.status === 'rejected');
-  if (blocked) return `<span class="rev-badge rejected">blocked · ${problem.approvedCount}/${total}</span>`;
-  if (problem.approvedCount === total) return '<span class="rev-badge live">✓ all approved — live</span>';
-  if (problem.isLive) return `<span class="rev-badge live">live · not yet reviewed (${problem.approvedCount}/${total})</span>`;
-  return `<span class="rev-badge pending">${problem.approvedCount}/${total} approved</span>`;
+  // Flag a problem whose content was revised after your last decision — most useful on a blocked
+  // problem you fixed, so you know to re-review rather than assume it is still the version you saw.
+  const newVersion = problem.hasNewVersion ? '<span class="rev-badge newversion">🔄 new version — re-review</span>' : '';
+  if (blocked) return `<span class="rev-badge rejected">blocked · ${problem.approvedCount}/${total}</span>${newVersion}`;
+  if (problem.approvedCount === total) return `<span class="rev-badge live">✓ all approved — live</span>${newVersion}`;
+  if (problem.isLive) return `<span class="rev-badge live">live · not yet reviewed (${problem.approvedCount}/${total})</span>${newVersion}`;
+  return `<span class="rev-badge pending">${problem.approvedCount}/${total} approved</span>${newVersion}`;
 }
 
 function problemCard(problem) {
@@ -41,11 +44,16 @@ export function renderReview({ state }) {
     body = tokenForm(review.error);
   } else if (review.loading && !review.loaded) {
     body = '<p class="brief">Loading pending builds…</p>';
-  } else if (!review.problems.length) {
-    body = `${errorBanner}<p class="brief">Nothing pending — every complete problem is certified.</p>`;
   } else {
-    body = `${errorBanner}<p class="brief">${review.problems.length} complete problem${review.problems.length > 1 ? 's' : ''} to review. Ones marked <b>live · not yet reviewed</b> are already published via the code allowlist but haven’t been walked through — reviewing them is how you actually vet them (rejecting a stage takes a live problem back down). Open one to walk through it: <b>each stage has its own feedback box and Approve/Reject</b>, and a problem is approved-live once <b>all five stages</b> are approved.</p>
-      <div class="review-list">${review.problems.map((problem) => problemCard(problem)).join('')}</div>`;
+    // Only surface builds that still need action — a fully-approved problem is live, so it drops off
+    // this list (it stays reachable, with its review pill, in the review-mode library).
+    const pending = review.problems.filter((problem) => !problem.isLive);
+    if (!pending.length) {
+      body = `${errorBanner}<p class="brief">Nothing to review — every complete build is live.</p>`;
+    } else {
+      body = `${errorBanner}<p class="brief">${pending.length} build${pending.length === 1 ? '' : 's'} to review. Open one to walk through it: <b>each stage has its own feedback box and Approve/Reject</b>, and a problem goes live once <b>all five stages</b> are approved. A blocked build stays here until its rejected stage is re-decided.</p>
+        <div class="review-list">${pending.map((problem) => problemCard(problem)).join('')}</div>`;
+    }
   }
   return `${topBar({ title: 'Review builds', language: state.language })}
     <section class="review-screen"><h1 class="mode-heading">Review pending builds</h1>${body}</section>`;

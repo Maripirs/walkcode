@@ -67,7 +67,22 @@ CREATE TABLE IF NOT EXISTS reviews (
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (title, step)
 );
+-- content_hash records the problem's content fingerprint at the moment of the decision, so the
+-- review UI can flag "new version available" when a rejected problem has since been revised.
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS content_hash text;
 `;
+
+// Stable, dependency-free (djb2) fingerprint of a problem's content — both language lesson bodies.
+// Recorded on each review decision; compared against the current content to detect a revision made
+// after the review. Language keys are sorted so the hash does not depend on row order.
+export function problemContentHash(bodiesByLanguage) {
+  const bodies = bodiesByLanguage || {};
+  const normalized = Object.keys(bodies).sort().map((lang) => [lang, bodies[lang]]);
+  const str = JSON.stringify(normalized);
+  let hash = 5381;
+  for (let i = 0; i < str.length; i += 1) hash = (hash * 33) ^ str.charCodeAt(i);
+  return `c${(hash >>> 0).toString(36)}`;
+}
 
 // The five walkthrough stages a problem is reviewed by. A problem publishes only when all five
 // are approved; a rejected stage blocks it.
@@ -150,21 +165,46 @@ export async function ensureSeeded() {
 // without a redeploy. Returns { title: { step: {status, feedback, updatedAt} } }.
 export async function getReviews() {
   const pool = await getPool();
-  const { rows } = await pool.query('SELECT title, step, status, feedback, updated_at FROM reviews');
+  const { rows } = await pool.query('SELECT title, step, status, feedback, content_hash, updated_at FROM reviews');
   const byTitle = {};
   for (const row of rows) {
-    (byTitle[row.title] ||= {})[row.step] = { status: row.status, feedback: row.feedback || '', updatedAt: row.updated_at };
+    (byTitle[row.title] ||= {})[row.step] = { status: row.status, feedback: row.feedback || '', contentHash: row.content_hash || null, updatedAt: row.updated_at };
   }
   return byTitle;
 }
 
 export async function upsertReview(title, step, status, feedback) {
   const pool = await getPool();
-  await pool.query(
-    `INSERT INTO reviews (title, step, status, feedback, updated_at) VALUES ($1, $2, $3, $4, now())
-     ON CONFLICT (title, step) DO UPDATE SET status = EXCLUDED.status, feedback = EXCLUDED.feedback, updated_at = now()`,
-    [title, step, status, feedback || null],
+  // Fingerprint the content this decision is being made against, so a later revision to the problem
+  // shows up as "new version available" until the reviewer looks again.
+  const { rows } = await pool.query(
+    'SELECT l.language, l.body FROM lessons l JOIN problems p ON p.id = l.problem_id WHERE p.title = $1',
+    [title],
   );
+  const bodies = {};
+  for (const row of rows) bodies[row.language] = row.body;
+  const contentHash = rows.length ? problemContentHash(bodies) : null;
+  await pool.query(
+    `INSERT INTO reviews (title, step, status, feedback, content_hash, updated_at) VALUES ($1, $2, $3, $4, $5, now())
+     ON CONFLICT (title, step) DO UPDATE SET status = EXCLUDED.status, feedback = EXCLUDED.feedback, content_hash = EXCLUDED.content_hash, updated_at = now()`,
+    [title, step, status, feedback || null, contentHash],
+  );
+}
+
+// Decide whether a blocked problem should be flagged "new version — re-review": true when a
+// REJECTED stage was judged against content that no longer matches the problem's current content,
+// so the rejection may no longer apply and deserves a fresh look.
+//
+// Keying off the rejected stages (not the latest decision of any kind) is deliberate:
+//  - Only blocked problems can flag — an approved/pending problem has no rejected stage, so the
+//    previously-reviewed-and-approved problems stay unmarked (no false "new version" noise).
+//  - A rejection recorded before this feature has a NULL hash, which differs from any current hash,
+//    so the currently-blocked-and-reworked problems surface right away.
+//  - Re-approving other stages doesn't clear the flag while a stale rejection still blocks it; the
+//    flag clears only once that rejected stage is itself re-decided against the current content.
+export function hasNewVersionSince(stepsForTitle, currentHash) {
+  const rejected = Object.values(stepsForTitle || {}).filter((d) => d.status === 'rejected');
+  return rejected.some((d) => d.contentHash !== currentHash);
 }
 
 // A problem is fully approved (publishable) when every stage is 'approved'; blocked if any is

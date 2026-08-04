@@ -251,9 +251,10 @@ function reviewStagePanel(state, card, step) {
   const value = draft !== undefined ? draft : stage.feedback;
   const total = problem.steps.length;
   const blocked = problem.steps.some((s) => s.status === 'rejected');
-  const summary = problem.approvedCount === total
+  const newVersionNote = problem.hasNewVersion ? ' · 🔄 revised since your last review — take another look' : '';
+  const summary = (problem.approvedCount === total
     ? '✓ All five stages approved — this problem is live.'
-    : `${problem.approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`;
+    : `${problem.approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`) + newVersionNote;
   // On the final (Review) stage, if you walked the whole thing without rejecting anything, offer a
   // one-tap approve-all instead of approving each remaining stage individually.
   const approveAll = (step === total - 1 && !blocked && problem.approvedCount < total)
