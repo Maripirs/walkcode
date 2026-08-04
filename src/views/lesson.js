@@ -1,5 +1,12 @@
 import { difficultyTag, escapeCode, escapeText, feedback, highlightBlank, richText, shuffle, topBar } from '../lib/ui.js';
 import { sourceLink } from '../lib/problem-source.js';
+import { draftKey } from './review.js';
+
+const STAGE_BADGE = {
+  approved: '<span class="rev-badge live">✓ approved</span>',
+  rejected: '<span class="rev-badge rejected">✕ rejected</span>',
+  pending: '<span class="rev-badge pending">• pending</span>',
+};
 
 // Technical tab labels (the interview vocabulary a learner should internalize) paired with a
 // friendly, plain-language header shown above each step's content.
@@ -157,6 +164,38 @@ function reviewPanel(lesson) {
     <details class="hint"><summary>Optional solution walkthrough</summary><ol>${(lesson.algorithm || []).map((item) => `<li>${richText(item)}</li>`).join('')}</ol><pre class="code">${escapeCode(lesson.code)}</pre></details>`;
 }
 
+// The problem currently being reviewed (owner walked in from /review), or null for a normal
+// learner. Present only when a review token loaded this pending problem's per-stage decisions.
+function reviewingProblem(state, card) {
+  if (!state.review?.token || !state.review.problems?.length) return null;
+  return state.review.problems.find((problem) => problem.title === card.title) || null;
+}
+
+// Inline review controls for the stage the owner is currently on — feedback + Approve/Reject right
+// where they experience it. A problem publishes only once all five stages are approved.
+function reviewStagePanel(state, card, step) {
+  const problem = reviewingProblem(state, card);
+  const stage = problem?.steps[step];
+  if (!stage) return '';
+  const draft = state.review.drafts[draftKey(card.title, stage.step)];
+  const value = draft !== undefined ? draft : stage.feedback;
+  const total = problem.steps.length;
+  const blocked = problem.steps.some((s) => s.status === 'rejected');
+  const summary = problem.approvedCount === total
+    ? '✓ All five stages approved — this problem is live.'
+    : `${problem.approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`;
+  return `<section class="lesson-review" data-review-stage="${escapeText(stage.step)}">
+    <div class="lesson-review-head"><b>Review this stage · ${escapeText(stepTabs[step])}</b>${STAGE_BADGE[stage.status] || STAGE_BADGE.pending}</div>
+    <textarea class="review-feedback" data-review-feedback rows="2" placeholder="Feedback for this stage — what to fix, or why it’s good…">${escapeText(value || '')}</textarea>
+    <div class="review-actions">
+      <button class="review-approve" data-review-action="approved">Approve stage</button>
+      <button class="review-reject" data-review-action="rejected">Reject</button>
+      <button class="review-reset" data-review-action="pending">Reset</button>
+    </div>
+    <p class="lesson-review-summary">${escapeText(summary)}</p>
+  </section>`;
+}
+
 // A tappable progress rail: it shows where you are, marks completed steps, and doubles as the
 // jump control — the single "move through the steps" axis.
 function progressRail(step) {
@@ -209,6 +248,7 @@ export function renderLesson({ state, card, lesson, difficulty, randomNavigation
       ${progressRail(step)}
       ${step === 0 ? '' : problemReminder(state, lesson)}
       <section class="content"><h2 class="step-title">${escapeText(stepHeaders[step])}</h2>${panel}</section>
+      ${reviewStagePanel(state, card, step)}
       <div class="bottom"><button data-previous-step ${step === 0 ? 'disabled' : ''}>← Previous step</button><button class="next" data-next-step>${lastStep ? 'Finish lesson ✓' : 'Next step →'}</button></div>
       ${problemFooter(randomNavigation)}
       ${sourceLink(card.title)}
@@ -269,7 +309,19 @@ function enableStepSorting(root, state, rerender) {
   });
 }
 
-export function bindLesson(root, { state, lesson, rerender, finishLesson, requestFeedback, resetCoach, finishCoach, useStepBuilder, useCoach }) {
+export function bindLesson(root, { state, card, lesson, rerender, finishLesson, requestFeedback, resetCoach, finishCoach, useStepBuilder, useCoach, saveReviewStage }) {
+  // Inline per-stage review (owner walked in from /review): keep typed feedback in state so a
+  // re-render doesn't drop it, and record the approve/reject decision for this exact stage.
+  const stagePanel = root.querySelector('[data-review-stage]');
+  if (stagePanel && card) {
+    const stepKey = stagePanel.dataset.reviewStage;
+    const textarea = stagePanel.querySelector('[data-review-feedback]');
+    textarea?.addEventListener('input', () => { state.review.drafts[draftKey(card.title, stepKey)] = textarea.value; });
+    stagePanel.querySelectorAll('[data-review-action]').forEach((button) => button.addEventListener('click', () => {
+      saveReviewStage?.(stepKey, button.dataset.reviewAction, textarea?.value || '');
+    }));
+  }
+
   // Guided AI coach (M9): keep the typed step in state so it survives the Algorithm step's
   // re-renders; submit a turn / restart via the coordinator (which owns the network call and
   // state transitions).

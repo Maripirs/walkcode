@@ -52,14 +52,12 @@
 .review-approve{background:var(--teal);border-color:var(--teal);color:#fff}
 .review-reject{background:#fff0e9;border-color:#e2b3a6;color:#9a4738}
 .review-reset{background:#fff;color:var(--muted)}
-.review-steps{display:grid;gap:10px}
-.review-step{border:1px solid #ece9df;border-radius:10px;padding:11px;background:#fbfaf6}
-.review-step-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.review-step-name{font-weight:800;font-size:14px}
-.review-step-head .rev-badge{margin-left:auto}
-.review-step-head .review-preview{margin-left:0;padding:5px 10px;min-height:32px;font-size:12px}
-.review-step .review-feedback{min-height:44px}
-.review-step .review-actions button{min-width:90px;padding:8px;min-height:38px;font-size:13px}
+/* Inline per-stage review panel, shown at the bottom of each lesson step while the owner reviews. */
+.lesson-review{margin:16px 0 4px;border:1px solid var(--teal);border-radius:12px;padding:13px;background:var(--soft)}
+.lesson-review-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.lesson-review-head b{font-size:14px;color:#0f5f5c}
+.lesson-review-head .rev-badge{margin-left:auto}
+.lesson-review-summary{margin:9px 0 0;font-size:12px;font-weight:700;color:#5e6b75}
 
 /* Progress rail: the single "move through the steps" control. Tappable, shows where you are,
    marks finished steps, and scrolls horizontally on narrow screens. */

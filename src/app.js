@@ -82,7 +82,6 @@ function renderReviewScreen() {
       appState.lessonStep = stepIndex;
       render();
     },
-    saveDecision: saveReviewDecision,
   });
   // Fetch on first entry (once a token is present).
   const review = appState.review;
@@ -210,8 +209,10 @@ function renderLessonScreen() {
   });
   bindLesson(root, {
     state: appState,
+    card,
     lesson,
     rerender: render,
+    saveReviewStage: (step, status, feedback) => saveReviewDecision(card.title, step, status, feedback),
     finishLesson: () => { setProgress(card.id, 'Solved'); render(); },
     requestFeedback: () => submitAlgorithmCoach(lesson),
     resetCoach: () => { appState.algorithmCoach = freshCoach(); render(); },
