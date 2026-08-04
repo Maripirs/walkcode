@@ -49,14 +49,14 @@ function recognitionPanel(lesson) {
   const statementBlock = statement
     ? `<section class="problem-explanation"><h3>What you’re solving</h3><p>${richText(statement)}</p>${description}</section>`
     : '';
-  const io = lesson.inputOutput
-    ? `<section class="problem-explanation"><h3>Input</h3><p>${richText(lesson.inputOutput[0])}</p><h3>Output</h3><p>${richText(lesson.inputOutput[1])}</p><h3>Example</h3><pre class="code">${escapeCode(lesson.inputOutput[2])}</pre></section>`
-    : '';
-  // Additional worked examples (edge cases and other inputs) in a collapsible panel, so they
-  // give the learner more to reason from without crowding the step. Examples don't name the
+  // Additional worked examples (edge cases and other inputs) tuck into the Example area as a small
+  // collapsible link, so they add reasoning material without crowding the step. They don't name the
   // pattern, so they can sit before the concept check.
   const moreExamples = (lesson.examples && lesson.examples.length)
-    ? `<details class="more-examples"><summary>More examples (${lesson.examples.length})</summary>${lesson.examples.map((ex) => `<div class="example"><pre class="code">Input: ${escapeCode(ex.input)}\nOutput: ${escapeCode(ex.output)}</pre>${ex.note ? `<p class="example-note">${richText(ex.note)}</p>` : ''}</div>`).join('')}</details>`
+    ? `<details class="more-examples"><summary>+${lesson.examples.length} more example${lesson.examples.length > 1 ? 's' : ''}</summary>${lesson.examples.map((ex) => `<div class="example"><pre class="code">Input: ${escapeCode(ex.input)}\nOutput: ${escapeCode(ex.output)}</pre>${ex.note ? `<p class="example-note">${richText(ex.note)}</p>` : ''}</div>`).join('')}</details>`
+    : '';
+  const io = lesson.inputOutput
+    ? `<section class="problem-explanation"><h3>Input</h3><p>${richText(lesson.inputOutput[0])}</p><h3>Output</h3><p>${richText(lesson.inputOutput[1])}</p><h3>Example</h3><pre class="code">${escapeCode(lesson.inputOutput[2])}</pre>${moreExamples}</section>`
     : '';
   const intuition = lesson.intuition
     ? `<aside class="intuition"><b>Intuition</b><p>${richText(lesson.intuition)}</p></aside>`
@@ -70,9 +70,10 @@ function recognitionPanel(lesson) {
     : '';
   return `${statementBlock}
     ${io}
-    ${moreExamples}
-    <section class="quiz"><b>Concept check</b><p>Which data structure or idea is most important for solving this problem?</p>
-      <div class="choice-list">${concept.choices.map((choice) => `<button data-concept-choice="${encodeURIComponent(choice)}">${escapeText(choice)}</button>`).join('')}</div>
+    <section class="quiz"><b>Approach check</b>
+      <div class="quiz-body"><p>Which general approach best fits this problem?</p>
+        <div class="choice-list">${concept.choices.map((choice) => `<button data-concept-choice="${encodeURIComponent(choice)}">${escapeText(choice)}</button>`).join('')}</div>
+      </div>
       <div data-concept-feedback aria-live="polite"></div>
     </section>
     ${reveal}`;
@@ -145,21 +146,65 @@ function problemReminder(state, lesson) {
   </details>`;
 }
 
+// All exercises in a lesson are the SAME full solution with one different line blanked. Combine
+// them: reconstruct the solution and blank every one of those lines at once, numbered top-to-bottom,
+// so the Code step shows the whole solution with N blanks and asks one question per blank — instead
+// of stepping through one blank at a time. Returns null if the exercises don't cleanly share one
+// solution (then codePanel falls back to a stacked per-exercise view). Also used by bindLesson to
+// map a blank number back to its exercise.
+export function codeBlanks(lesson) {
+  const exercises = lesson.exercises || [];
+  if (!exercises.length) return null;
+  const first = exercises[0];
+  const fullLines = first.code.split('\n').map((line) => {
+    if (line.trim() !== '___') return line;
+    const indent = line.slice(0, line.length - line.trimStart().length);
+    return indent + first.correct;
+  });
+  const seen = new Set();
+  const blanks = [];
+  for (const ex of exercises) {
+    const idx = fullLines.findIndex((line) => line.trim() === String(ex.correct).trim());
+    if (idx < 0 || seen.has(idx)) return null; // couldn't place it uniquely — bail to the fallback
+    seen.add(idx);
+    blanks.push({ ex, idx });
+  }
+  blanks.sort((a, b) => a.idx - b.idx).forEach((b, i) => { b.n = i + 1; });
+  return { fullLines, blanks };
+}
+
+function codeQuestion(n, exercise, label) {
+  return `<section class="code-question" data-code-question="${n}">
+    <p class="step-sub">${label}</p>
+    <div class="code-question-body">
+      <p>${escapeText(exercise.prompt || 'Choose the line that belongs in this blank.')}</p>
+      <div class="choice-list">${shuffle(exercise.choices).map((choice) => `<button data-code-choice="${encodeURIComponent(choice)}" data-code-blank="${n}">${escapeCode(choice)}</button>`).join('')}</div>
+    </div>
+    <div data-code-feedback="${n}" aria-live="polite"></div>
+  </section>`;
+}
+
 function codePanel(state, lesson) {
   if (!lesson.exercises.length) {
     return `<p>This lesson is still a draft. Its completed code exercises will be added before it earns a Built badge.</p><pre class="code">${escapeCode(lesson.code)}</pre>`;
   }
-  const index = Math.min(state.codeFixIndex, lesson.exercises.length - 1);
-  const exercise = lesson.exercises[index];
-  const choices = shuffle(exercise.choices);
-  const last = index === lesson.exercises.length - 1;
-  return `<p class="step-sub">Fix ${index + 1} of ${lesson.exercises.length}</p>
-    <p>${escapeText(exercise.prompt || 'Choose the line that preserves the algorithm’s invariant.')}</p>
-    <pre class="code">${highlightBlank(exercise.code, state.language)}</pre>
-    <p class="drill-choose-hint">Choose the line that belongs in the blank.</p>
-    <div class="choice-list">${choices.map((choice) => `<button data-code-choice="${encodeURIComponent(choice)}">${escapeCode(choice)}</button>`).join('')}</div>
-    <div data-code-feedback aria-live="polite"></div>
-    <button class="primary code-continue" data-next-code hidden>${last ? 'Continue to complexity →' : 'Next code fix →'}</button>`;
+  const built = codeBlanks(lesson);
+  if (!built) {
+    // Fallback: the exercises don't share one reconstructable solution, so stack each on its own.
+    return lesson.exercises.map((ex, i) => codeQuestion(i + 1, ex, `Fix ${i + 1} of ${lesson.exercises.length}`)
+      .replace('<section class="code-question">', `<section class="code-question"><pre class="code">${highlightBlank(ex.code, state.language)}</pre>`)).join('');
+  }
+  const comment = state.language === 'Python' ? '#' : '//';
+  const codeHtml = built.fullLines.map((line, idx) => {
+    const blank = built.blanks.find((b) => b.idx === idx);
+    if (!blank) return escapeCode(line);
+    const indent = line.slice(0, line.length - line.trimStart().length);
+    return `${escapeCode(indent)}<mark class="code-blank" data-blank-mark="${blank.n}">${comment} Blank ${blank.n} — pick below</mark>`;
+  }).join('\n');
+  const many = built.blanks.length > 1;
+  return `<p>The solution below has ${built.blanks.length} blank${many ? 's' : ''}. Answer ${many ? 'each question' : 'the question'} to fill ${many ? 'them' : 'it'} in.</p>
+    <pre class="code">${codeHtml}</pre>
+    ${built.blanks.map((b) => codeQuestion(b.n, b.ex, `Blank ${b.n}`)).join('')}`;
 }
 
 function complexityButtons(attribute, choices) {
@@ -169,14 +214,19 @@ function complexityButtons(attribute, choices) {
 function complexityPanel(state, lesson) {
   const guide = lesson.complexityGuide;
   if (!guide) return `<pre class="code">${escapeCode(lesson.code)}</pre><p>${richText(lesson.complexity)}</p>`;
-  const work = `<section class="complexity-step"><b>1. Count the work</b><p>${richText(guide.work)}</p>${complexityButtons('data-complexity-work', guide.workChoices)}<div data-complexity-feedback aria-live="polite"></div></section>`;
-  const memory = state.complexityStage >= 1 ? `<section class="complexity-step"><b>2. Count extra memory</b><p>${richText(guide.memory)}</p>${complexityButtons('data-complexity-memory', guide.memoryChoices)}<div data-memory-feedback aria-live="polite"></div></section>` : '';
-  const final = state.complexityStage >= 2 ? `<section class="complexity-step"><b>3. State the complexity</b><p>Combine your two observations.</p>${complexityButtons('data-complexity-final', guide.final)}<div data-final-feedback aria-live="polite"></div></section>` : '';
+  // All three stages are rendered up front; the later two start hidden and are revealed in place as
+  // each is answered (no full re-render), so answering never reshuffles choices or drops feedback.
+  // The question body (prompt + choices) collapses once answered correctly; the heading + feedback
+  // stay so the learner sees a growing summary.
+  const box = (key, hidden, heading, prompt, attr, choices, fb) => `<section class="complexity-step" data-complexity-box="${key}"${hidden ? ' hidden' : ''}><b>${heading}</b><div class="complexity-body"><p>${richText(prompt)}</p>${complexityButtons(attr, choices)}</div><div ${fb} aria-live="polite"></div></section>`;
+  const work = box('work', false, '1. Count the work', guide.work, 'data-complexity-work', guide.workChoices, 'data-complexity-feedback');
+  const memory = box('memory', state.complexityStage < 1, '2. Count extra memory', guide.memory, 'data-complexity-memory', guide.memoryChoices, 'data-memory-feedback');
+  const final = box('final', state.complexityStage < 2, '3. State the complexity', 'Combine your two observations.', 'data-complexity-final', guide.final, 'data-final-feedback');
   return `<p>Use the completed solution to derive the bound.</p><pre class="code">${escapeCode(lesson.code)}</pre>${work}${memory}${final}`;
 }
 
 function reviewPanel(lesson) {
-  return `<section class="problem-explanation"><h3>The key idea</h3><p>${richText(lesson.concepts?.[0] || lesson.topic)}</p>
+  return `<section class="problem-explanation review-summary"><h3>The key idea</h3><p>${richText(lesson.concepts?.[0] || lesson.topic)}</p>
       <h3>Why it fits</h3><p>${richText(lesson.explanation || lesson.brief)}</p>
       <h3>Remember</h3><ul>${(lesson.fixes || []).map((item) => `<li>${richText(item)}</li>`).join('')}</ul>
       <h3>Complexity</h3><p>${richText(lesson.complexity)}</p>
@@ -204,6 +254,11 @@ function reviewStagePanel(state, card, step) {
   const summary = problem.approvedCount === total
     ? '✓ All five stages approved — this problem is live.'
     : `${problem.approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`;
+  // On the final (Review) stage, if you walked the whole thing without rejecting anything, offer a
+  // one-tap approve-all instead of approving each remaining stage individually.
+  const approveAll = (step === total - 1 && !blocked && problem.approvedCount < total)
+    ? `<button class="review-approve-all" data-review-approve-all>Approve the whole problem — all ${total} stages ✓</button>`
+    : '';
   return `<section class="lesson-review" data-review-stage="${escapeText(stage.step)}">
     <div class="lesson-review-head"><b>Review this stage · ${escapeText(stepTabs[step])}</b>${STAGE_BADGE[stage.status] || STAGE_BADGE.pending}</div>
     <textarea class="review-feedback" data-review-feedback rows="2" placeholder="Feedback for this stage — what to fix, or why it’s good…">${escapeText(value || '')}</textarea>
@@ -212,6 +267,7 @@ function reviewStagePanel(state, card, step) {
       <button class="review-reject" data-review-action="rejected">Reject</button>
       <button class="review-reset" data-review-action="pending">Reset</button>
     </div>
+    ${approveAll}
     <p class="lesson-review-summary">${escapeText(summary)}</p>
   </section>`;
 }
@@ -288,6 +344,10 @@ function enableStepSorting(root, state, rerender) {
       const steps = Array.from(bank.querySelectorAll('.answer-step'));
       const startIndex = steps.indexOf(dragEl);
       if (startIndex < 0) return;
+      // Clear any "out of place" highlight the moment a step is grabbed — it's stale once you move.
+      steps.forEach((el) => el.classList.remove('step-right', 'step-wrong'));
+      const feedbackSlot = root.querySelector('[data-algorithm-feedback]');
+      if (feedbackSlot) feedbackSlot.innerHTML = '';
       const unit = dragEl.getBoundingClientRect().height + 8; // item height + grid gap
       const startY = event.clientY;
       let targetIndex = startIndex;
@@ -329,7 +389,7 @@ function enableStepSorting(root, state, rerender) {
   });
 }
 
-export function bindLesson(root, { state, card, lesson, rerender, finishLesson, requestFeedback, resetCoach, finishCoach, useStepBuilder, useCoach, saveReviewStage }) {
+export function bindLesson(root, { state, card, lesson, rerender, finishLesson, requestFeedback, resetCoach, finishCoach, useStepBuilder, useCoach, saveReviewStage, approveAllStages }) {
   // Inline per-stage review (owner walked in from /review): keep typed feedback in state so a
   // re-render doesn't drop it, and record the approve/reject decision for this exact stage.
   const stagePanel = root.querySelector('[data-review-stage]');
@@ -340,6 +400,7 @@ export function bindLesson(root, { state, card, lesson, rerender, finishLesson, 
     stagePanel.querySelectorAll('[data-review-action]').forEach((button) => button.addEventListener('click', () => {
       saveReviewStage?.(stepKey, button.dataset.reviewAction, textarea?.value || '');
     }));
+    stagePanel.querySelector('[data-review-approve-all]')?.addEventListener('click', () => approveAllStages?.());
   }
 
   // Guided AI coach (M9): keep the typed step in state so it survives the Algorithm step's
@@ -369,57 +430,80 @@ export function bindLesson(root, { state, card, lesson, rerender, finishLesson, 
   root.querySelectorAll('[data-concept-choice]').forEach((button) => button.addEventListener('click', () => {
     const choice = decodeURIComponent(button.dataset.conceptChoice);
     const correct = (lesson.conceptChoices || [lesson.topic])[0];
+    const right = choice === correct;
     root.querySelector('[data-concept-feedback]').innerHTML = feedback(
-      choice === correct
-        ? `✓ Correct. ${escapeText(correct)} is the central tool for this problem.`
-        : `${escapeText(choice)} can be useful on other problems, but it does not match this input’s structure.`,
-      choice === correct,
+      right
+        ? `✓ Correct. ${escapeText(correct)} is the right approach here.`
+        : `Not the best approach here — ${escapeText(choice)} is reasonable in general, but for this problem it either misses cases or is slower.`,
+      right,
     );
-    // Now that they've answered, reveal the intuition + "what to notice" as the explanation.
-    root.querySelector('[data-recognition-reveal]')?.removeAttribute('hidden');
+    if (right) {
+      // Collapse the question and reveal the intuition + "what to notice" as the explanation.
+      button.closest('.quiz')?.classList.add('solved');
+      root.querySelector('[data-recognition-reveal]')?.removeAttribute('hidden');
+    }
   }));
 
   enableStepSorting(root, state, rerender);
+  // Mark each step green if it's in its correct slot, amber if it's out of place — offered as an
+  // opt-in hint after a wrong check so it nudges without giving the order away outright.
+  const highlightMisplaced = () => {
+    root.querySelectorAll('[data-answer-bank] .answer-step').forEach((el, index) => {
+      const correctHere = el.dataset.answerStep === `required-${index}`;
+      el.classList.toggle('step-right', correctHere);
+      el.classList.toggle('step-wrong', !correctHere);
+    });
+  };
   root.querySelector('[data-check-algorithm]')?.addEventListener('click', () => {
     const correct = lesson.algorithm.map((_, index) => `required-${index}`);
     const answer = state.algorithm.answer;
     const rightOrder = answer.length === correct.length && answer.every((id, index) => id === correct[index]);
-    root.querySelector('[data-algorithm-feedback]').innerHTML = feedback(
-      rightOrder ? '✓ Correct — that’s the right order.' : 'Not quite — these steps are out of order. Rearrange them and check again.',
-      rightOrder,
-    );
+    root.querySelector('[data-algorithm-feedback]').innerHTML = rightOrder
+      ? feedback('✓ Correct — that’s the right order.', true)
+      : `${feedback('Not quite — some steps are out of order.', false)}<button class="algorithm-highlight" data-highlight-wrong>Highlight what’s out of place</button>`;
+    root.querySelector('[data-highlight-wrong]')?.addEventListener('click', highlightMisplaced);
   });
 
-  const exercise = lesson.exercises[state.codeFixIndex];
+  // Each blank is an independent question, answered in place (no more one-at-a-time "next fix").
+  const codeBuilt = codeBlanks(lesson);
   root.querySelectorAll('[data-code-choice]').forEach((button) => button.addEventListener('click', () => {
     const choice = decodeURIComponent(button.dataset.codeChoice);
+    const n = Number(button.dataset.codeBlank);
+    const exercise = codeBuilt ? codeBuilt.blanks.find((b) => b.n === n)?.ex : lesson.exercises[n - 1];
+    if (!exercise) return;
     const correct = choice === exercise.correct;
-    root.querySelector('[data-code-feedback]').innerHTML = feedback(correct
+    root.querySelector(`[data-code-feedback="${n}"]`).innerHTML = feedback(correct
       ? `✓ Correct. ${escapeText(exercise.why)}`
       : `Not quite. ${escapeText(exercise.wrong?.[choice] || 'That choice does not make this line work for this problem.')}`,
     correct);
-    if (correct) root.querySelector('[data-next-code]').hidden = false;
+    if (correct) {
+      // Fill the blank in the code preview with the answer (kept highlighted green), and collapse
+      // this question so the learner sees the growing, correct solution.
+      const mark = root.querySelector(`[data-blank-mark="${n}"]`);
+      if (mark) { mark.textContent = exercise.correct; mark.className = 'code-filled'; }
+      root.querySelector(`[data-code-question="${n}"]`)?.classList.add('solved');
+    }
   }));
-  root.querySelector('[data-next-code]')?.addEventListener('click', () => {
-    if (state.codeFixIndex < lesson.exercises.length - 1) state.codeFixIndex += 1;
-    else state.lessonStep = 3;
-    rerender();
-  });
 
   const guide = lesson.complexityGuide;
+  // Reveal the next stage in place (no re-render) so answering doesn't reshuffle earlier choices or
+  // wipe their feedback; lock a stage's buttons once it's answered correctly.
+  const revealStage = (key) => { const el = root.querySelector(`[data-complexity-box="${key}"]`); if (el) el.hidden = false; };
+  const collapseStage = (key) => { const el = root.querySelector(`[data-complexity-box="${key}"]`); if (el) el.classList.add('solved'); };
   root.querySelectorAll('[data-complexity-work]').forEach((button) => button.addEventListener('click', () => {
     const good = button.dataset.complexityWork === guide.workCorrect;
     root.querySelector('[data-complexity-feedback]').innerHTML = feedback(good ? escapeText(guide.workWhy) : 'Trace how much total work the loop or traversal can do before choosing again.', good);
-    if (good) { state.complexityStage = 1; rerender(); }
+    if (good) { state.complexityStage = Math.max(state.complexityStage, 1); collapseStage('work'); revealStage('memory'); }
   }));
   root.querySelectorAll('[data-complexity-memory]').forEach((button) => button.addEventListener('click', () => {
     const good = button.dataset.complexityMemory === guide.memoryCorrect;
     root.querySelector('[data-memory-feedback]').innerHTML = feedback(good ? escapeText(guide.memoryWhy) : 'Consider only extra storage whose size can grow with the input.', good);
-    if (good) { state.complexityStage = 2; rerender(); }
+    if (good) { state.complexityStage = Math.max(state.complexityStage, 2); collapseStage('memory'); revealStage('final'); }
   }));
   root.querySelectorAll('[data-complexity-final]').forEach((button) => button.addEventListener('click', () => {
     const good = button.dataset.complexityFinal === guide.finalCorrect;
     root.querySelector('[data-final-feedback]').innerHTML = feedback(good ? '✓ Correct. You combined work and memory into the final bound.' : 'Not quite. Revisit the work and memory observations, then try again.', good);
+    if (good) collapseStage('final');
   }));
 
   root.querySelector('[data-previous-step]')?.addEventListener('click', () => { state.lessonStep = Math.max(0, state.lessonStep - 1); rerender(); });

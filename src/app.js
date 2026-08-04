@@ -179,6 +179,28 @@ async function saveReviewDecision(title, step, status, feedback) {
   }
 }
 
+// Approve every not-yet-approved stage of a problem in one go (offered on the Review stage when
+// nothing was rejected), preserving any feedback already typed for each stage.
+async function approveAllReview(title) {
+  const review = appState.review;
+  const problem = review.problems.find((item) => item.title === title);
+  if (!problem || review.saving) return;
+  if (problem.steps.some((s) => s.status === 'rejected')) return; // don't bulk-approve a blocked problem
+  review.saving = `${title}::all`;
+  render();
+  let failed = false;
+  for (const s of problem.steps) {
+    if (s.status === 'approved') continue;
+    const feedback = review.drafts[draftKey(title, s.step)] ?? s.feedback ?? '';
+    const result = await postReview(review.token, title, s.step, 'approved', feedback);
+    if (!result.ok) { failed = true; break; }
+  }
+  review.saving = '';
+  if (failed) review.error = 'Could not approve every stage — some may not have saved.';
+  else for (const s of problem.steps) delete review.drafts[draftKey(title, s.step)];
+  await loadReview();
+}
+
 // ---- Browser history / back-button integration ----
 // Keeps window.history in step with appState so Back/Forward move between screens and visited
 // problems as a user expects, instead of leaving the site.
@@ -272,7 +294,8 @@ function renderLessonScreen() {
     lesson,
     rerender: render,
     saveReviewStage: (step, status, feedback) => saveReviewDecision(card.title, step, status, feedback),
-    finishLesson: () => { setProgress(card.id, 'Solved'); render(); },
+    approveAllStages: () => approveAllReview(card.title),
+    finishLesson: () => { setProgress(card.id, 'Solved'); appState.screen = 'library'; render(); },
     requestFeedback: () => submitAlgorithmCoach(lesson),
     resetCoach: () => { appState.algorithmCoach = freshCoach(); render(); },
     useStepBuilder: () => { appState.stepBuilderFallback = true; render(); },
@@ -486,6 +509,9 @@ loadContent().then((bundle) => {
   // Best-effort capability probe — resolves after first paint, then re-renders so optional
   // server features (e.g. AI feedback) appear without ever blocking initial load.
   loadFeatures().then((features) => { appState.features = features; render(); });
+  // If a review token is already loaded (owner), fetch the review list up front so the inline
+  // per-stage Approve/Reject shows while browsing ANY complete problem — not only from /review.
+  if (appState.review.token && !appState.review.loaded) loadReview();
 }).catch((error) => {
   console.error('Walkcode failed to load content', error);
   root.innerHTML = '<section class="home"><h1>Could not load Walkcode.</h1><p>Please refresh to try again.</p></section>';

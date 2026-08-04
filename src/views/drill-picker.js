@@ -12,7 +12,7 @@ function drillRow(drill, done) {
   return `<button class="problem drill-row" data-drill-id="${escapeText(drill.id)}">
     <span class="drill-row-title">${escapeText(drill.title)}</span>
     <span class="drill-row-type">${escapeText(TYPE_LABELS[typeOf(drill)])}</span>
-    ${difficultyTag(drill.difficulty)}<span class="pill">${done ? 'Done' : '—'}</span>
+    ${difficultyTag(drill.difficulty)}${done ? '<span class="pill pill-done">✓ Done</span>' : '<span class="pill">—</span>'}
   </button>`;
 }
 

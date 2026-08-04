@@ -154,7 +154,7 @@ function bindDebug(root, exercise, onNext, onSolved) {
       correct,
     );
     if (correct) {
-      step1.querySelectorAll('[data-debug-line]').forEach((other) => { other.disabled = true; });
+      button.closest('.choice-list')?.classList.add('collapsed');
       step2.hidden = false;
       step2.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -172,7 +172,7 @@ function bindDebug(root, exercise, onNext, onSolved) {
     nextSlot.innerHTML = '';
     if (correct) {
       onSolved?.();
-      step2.querySelectorAll('[data-debug-fix]').forEach((other) => { other.disabled = true; });
+      button.closest('.choice-list')?.classList.add('collapsed');
       solutionDetailsElement.open = true;
       nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
       nextSlot.querySelector('[data-next-drill]').addEventListener('click', onNext);
@@ -198,6 +198,7 @@ export function bindDrillAnswer(root, exercise, onNext, onSolved) {
       nextSlot.innerHTML = '';
       if (correct) {
         onSolved?.();
+        button.closest('.choice-list')?.classList.add('collapsed');
         solutionDetailsElement.open = true;
         nextSlot.innerHTML = '<button class="drill-next" data-next-drill>Next random drill →</button>';
         nextSlot.querySelector('[data-next-drill]').addEventListener('click', onNext);
