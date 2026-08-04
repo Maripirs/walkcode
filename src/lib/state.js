@@ -2,6 +2,16 @@ const STATE_KEY = 'walkcode-states';
 const LANGUAGE_KEY = 'walkcode-language';
 const DRILL_KEY = 'walkcode-drills';
 const UI_SCALE_KEY = 'walkcode-ui-scale';
+const THEME_KEY = 'walkcode-theme';
+
+// Colour theme (device-local). 'auto' follows the OS via `prefers-color-scheme`; 'light'/'dark'
+// force it. Applied as `data-theme` on <html> (see app.js applyTheme). Default: auto.
+export const THEMES = ['light', 'dark', 'auto'];
+export const DEFAULT_THEME = 'auto';
+function loadTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  return THEMES.includes(stored) ? stored : DEFAULT_THEME;
+}
 
 // Global UI scale (applied via `zoom` on <main>). Mobile-first default is a touch compact; the
 // settings panel lets the learner tune it. Clamped to a sane range so the app never breaks.
@@ -26,8 +36,9 @@ export function freshCoach() {
 
 export const appState = {
   language: localStorage.getItem(LANGUAGE_KEY) === 'JavaScript' ? 'JavaScript' : 'Python',
-  // Global UI scale + whether the settings panel is open.
+  // Global UI scale, colour theme, + whether the settings panel is open.
   uiScale: loadUiScale(),
+  theme: loadTheme(),
   settingsOpen: false,
   screen: 'home',
   currentCardId: null,
@@ -129,6 +140,14 @@ export function setUiScale(scale) {
   appState.uiScale = clamped;
   localStorage.setItem(UI_SCALE_KEY, String(clamped));
   return clamped;
+}
+
+// Set the colour theme (device-local). Applied by app.js applyTheme().
+export function setTheme(theme) {
+  const value = THEMES.includes(theme) ? theme : DEFAULT_THEME;
+  appState.theme = value;
+  localStorage.setItem(THEME_KEY, value);
+  return value;
 }
 
 export function resetLesson(cardId) {

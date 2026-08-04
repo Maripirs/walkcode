@@ -1,5 +1,5 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, DEFAULT_UI_SCALE, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress, setUiScale } from './lib/state.js';
+import { appState, DEFAULT_UI_SCALE, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, setLanguage, setProgress, setTheme, setUiScale, THEMES } from './lib/state.js';
 import { shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
@@ -106,6 +106,25 @@ function applyScale() {
   document.documentElement.style.setProperty('--ui-scale', String(appState.uiScale));
 }
 
+// Apply the colour theme by stamping `data-theme` on <html>. For 'auto' we remove the attribute
+// so the `@media (prefers-color-scheme)` rules in styles.css drive it (and follow OS changes live,
+// no JS needed); 'light'/'dark' force it regardless of the OS.
+function applyTheme() {
+  const root = document.documentElement;
+  if (appState.theme === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', appState.theme);
+}
+// Keep anything JS-derived in sync if the OS flips while on 'auto' (the visuals already update via
+// the CSS media query alone; this listener is a belt-and-braces no-op for theming). Guarded and
+// wrapped so a browser without MediaQueryList.addEventListener (older iOS Safari uses addListener)
+// can never throw here at module-eval time and stall the whole app.
+try {
+  const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  const onSchemeChange = () => { if (appState.theme === 'auto') applyTheme(); };
+  if (mq && mq.addEventListener) mq.addEventListener('change', onSchemeChange);
+  else if (mq && mq.addListener) mq.addListener(onSchemeChange);
+} catch { /* matchMedia unavailable — CSS drives Auto on its own */ }
+
 // The settings panel lives OUTSIDE <main> (appended to <body>), so it is not itself zoomed — the
 // control that changes the size shouldn't shrink with it. It's a plain overlay updated in place.
 let settingsEl = null;
@@ -122,6 +141,10 @@ function renderSettings() {
         <button data-set-language="JavaScript" class="${appState.language === 'JavaScript' ? 'active' : ''}">JavaScript</button>
         <button data-set-language="Python" class="${appState.language === 'Python' ? 'active' : ''}">Python</button>
       </div>
+      <span class="settings-label">Theme</span>
+      <div class="lang-segment theme-segment">
+        ${THEMES.map((t) => `<button data-set-theme="${t}" class="${appState.theme === t ? 'active' : ''}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
+      </div>
       <span class="settings-label">Text size</span>
       <div class="size-stepper">
         <button data-scale="-1" aria-label="Smaller">−</button>
@@ -134,12 +157,14 @@ function renderSettings() {
   settingsEl.querySelectorAll('[data-settings-close]').forEach((b) => b.addEventListener('click', () => { appState.settingsOpen = false; renderSettings(); }));
   // Language change re-renders the whole view (content is language-specific); render() rebuilds this panel too.
   settingsEl.querySelectorAll('[data-set-language]').forEach((b) => b.addEventListener('click', () => { setLanguage(b.dataset.setLanguage); render(); }));
+  settingsEl.querySelectorAll('[data-set-theme]').forEach((b) => b.addEventListener('click', () => { setTheme(b.dataset.setTheme); applyTheme(); renderSettings(); }));
   settingsEl.querySelectorAll('[data-scale]').forEach((b) => b.addEventListener('click', () => { setUiScale(appState.uiScale + Number(b.dataset.scale) * 0.05); refresh(); }));
   settingsEl.querySelector('[data-scale-reset]').addEventListener('click', () => { setUiScale(DEFAULT_UI_SCALE); refresh(); });
 }
 
 function render() {
   applyScale();
+  applyTheme();
   renderSettings();
   if (appState.screen === 'home') {
     root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary() });
@@ -535,6 +560,7 @@ if (window.location.pathname === '/review') {
 }
 
 applyScale(); // scale even the loading screen so there's no first-paint size jump
+applyTheme(); // theme the loading screen too, so there's no first-paint colour flash
 root.innerHTML = '<section class="home"><h1>Loading…</h1></section>';
 loadContent().then((bundle) => {
   initContent(bundle);
