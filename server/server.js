@@ -7,7 +7,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual } from 'node:crypto';
-import { ensureSeeded, getCertifications, getContentBundle, upsertCertification } from './db.js';
+import { ensureSeeded, getContentBundle, getReviews, upsertReview, reviewOutcome, REVIEW_STEPS, REVIEW_STEP_LABELS } from './db.js';
 import { algorithmCoachTurn, llmEnabled } from './llm.js';
 import { certifiedTitles } from '../src/data/assemble.js';
 
@@ -209,26 +209,36 @@ async function handleAlgorithmFeedback(req, res) {
   }
 }
 
-// Token-gated review: GET lists content-complete-but-uncertified problems with their decision +
-// feedback; POST records an approve/reject/pending decision (approve publishes within ~a minute).
+// Token-gated review: GET lists content-complete-but-uncertified problems, each broken into its
+// five stages with per-stage decision + feedback; POST records one stage's approve/reject/pending
+// decision. A problem publishes only once all five stages are approved (and none rejected).
 async function handleReview(req, res) {
   if (!REVIEW_TOKEN) return sendJson(res, 503, { disabled: true, error: 'Review is not configured.' });
   if (!validReviewToken(req.headers['x-review-token'])) return sendJson(res, 401, { error: 'Unauthorized.' });
 
   if (req.method === 'GET') {
     try {
-      const [bundle, certs] = await Promise.all([getContentBundle(), getCertifications()]);
+      const [bundle, reviews] = await Promise.all([getContentBundle(), getReviews()]);
       const problems = bundle.cards
         .filter((card) => card.isComplete && !certifiedTitles.has(card.title))
-        .map((card) => ({
-          id: card.id,
-          title: card.title,
-          topic: card.topic,
-          difficulty: card.difficulty,
-          isLive: card.isBuilt,
-          status: certs.byTitle[card.title]?.status || 'pending',
-          feedback: certs.byTitle[card.title]?.feedback || '',
-        }));
+        .map((card) => {
+          const byStep = reviews[card.title] || {};
+          const steps = REVIEW_STEPS.map((step, i) => ({
+            step,
+            label: REVIEW_STEP_LABELS[i],
+            status: byStep[step]?.status || 'pending',
+            feedback: byStep[step]?.feedback || '',
+          }));
+          return {
+            id: card.id,
+            title: card.title,
+            topic: card.topic,
+            difficulty: card.difficulty,
+            isLive: card.isBuilt,
+            approvedCount: reviewOutcome(byStep).approvedCount,
+            steps,
+          };
+        });
       return sendJson(res, 200, { problems });
     } catch (err) {
       console.error('/api/review GET failed', err);
@@ -240,12 +250,14 @@ async function handleReview(req, res) {
     let payload;
     try { payload = await readJsonBody(req); } catch { return sendJson(res, 400, { error: 'Invalid request.' }); }
     const title = String(payload.title || '').slice(0, 200);
+    const step = String(payload.step || '');
     const status = String(payload.status || '');
     const feedback = String(payload.feedback || '').slice(0, 4000);
     if (!title) return sendJson(res, 400, { error: 'Missing title.' });
+    if (!REVIEW_STEPS.includes(step)) return sendJson(res, 400, { error: 'Invalid step.' });
     if (!['approved', 'rejected', 'pending'].includes(status)) return sendJson(res, 400, { error: 'Invalid status.' });
     try {
-      await upsertCertification(title, status, feedback);
+      await upsertReview(title, step, status, feedback);
       return sendJson(res, 200, { ok: true });
     } catch (err) {
       console.error('/api/review POST failed', err);

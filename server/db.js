@@ -59,13 +59,20 @@ CREATE TABLE IF NOT EXISTS drills (
   position integer NOT NULL,
   body jsonb NOT NULL
 );
-CREATE TABLE IF NOT EXISTS certifications (
-  title text PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS reviews (
+  title text NOT NULL,
+  step text NOT NULL,
   status text NOT NULL,
   feedback text,
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (title, step)
 );
 `;
+
+// The five walkthrough stages a problem is reviewed by. A problem publishes only when all five
+// are approved; a rejected stage blocks it.
+export const REVIEW_STEPS = ['understand', 'algorithm', 'code', 'complexity', 'review'];
+export const REVIEW_STEP_LABELS = ['Understand', 'Algorithm', 'Code', 'Complexity', 'Review'];
 
 // Unique topics in card order — the order the library renders groups in.
 function topicsFrom(rich) {
@@ -139,41 +146,48 @@ export async function ensureSeeded() {
   }
 }
 
-// Review decisions live in the DB (not source), so they survive re-seeds and take effect without
-// a redeploy. Returns approved/rejected title sets plus per-title status+feedback.
-export async function getCertifications() {
+// Per-step review decisions live in the DB (not source), so they survive re-seeds and take effect
+// without a redeploy. Returns { title: { step: {status, feedback, updatedAt} } }.
+export async function getReviews() {
   const pool = await getPool();
-  const { rows } = await pool.query('SELECT title, status, feedback, updated_at FROM certifications');
-  const approved = new Set();
-  const rejected = new Set();
+  const { rows } = await pool.query('SELECT title, step, status, feedback, updated_at FROM reviews');
   const byTitle = {};
   for (const row of rows) {
-    if (row.status === 'approved') approved.add(row.title);
-    else if (row.status === 'rejected') rejected.add(row.title);
-    byTitle[row.title] = { status: row.status, feedback: row.feedback || '', updatedAt: row.updated_at };
+    (byTitle[row.title] ||= {})[row.step] = { status: row.status, feedback: row.feedback || '', updatedAt: row.updated_at };
   }
-  return { approved, rejected, byTitle };
+  return byTitle;
 }
 
-export async function upsertCertification(title, status, feedback) {
+export async function upsertReview(title, step, status, feedback) {
   const pool = await getPool();
   await pool.query(
-    `INSERT INTO certifications (title, status, feedback, updated_at) VALUES ($1, $2, $3, now())
-     ON CONFLICT (title) DO UPDATE SET status = EXCLUDED.status, feedback = EXCLUDED.feedback, updated_at = now()`,
-    [title, status, feedback || null],
+    `INSERT INTO reviews (title, step, status, feedback, updated_at) VALUES ($1, $2, $3, $4, now())
+     ON CONFLICT (title, step) DO UPDATE SET status = EXCLUDED.status, feedback = EXCLUDED.feedback, updated_at = now()`,
+    [title, step, status, feedback || null],
   );
+}
+
+// A problem is fully approved (publishable) when every stage is 'approved'; blocked if any is
+// 'rejected'.
+export function reviewOutcome(stepsForTitle) {
+  const steps = stepsForTitle || {};
+  return {
+    allApproved: REVIEW_STEPS.every((step) => steps[step]?.status === 'approved'),
+    anyRejected: REVIEW_STEPS.some((step) => steps[step]?.status === 'rejected'),
+    approvedCount: REVIEW_STEPS.filter((step) => steps[step]?.status === 'approved').length,
+  };
 }
 
 // Rebuilds the client-facing content bundle from the DB. Same shape as assembleClientBundle()
 // so the frontend cannot tell whether it was served from the DB or the offline fallback.
 export async function getContentBundle() {
   const pool = await getPool();
-  const [problemRows, lessonRows, drillRows, metaRows, certs] = await Promise.all([
+  const [problemRows, lessonRows, drillRows, metaRows, reviews] = await Promise.all([
     pool.query('SELECT id, topic, title, difficulty, is_built, position FROM problems WHERE is_card = true ORDER BY position'),
     pool.query('SELECT problem_id, language, body FROM lessons'),
     pool.query('SELECT body FROM drills ORDER BY position'),
     pool.query('SELECT version FROM content_meta WHERE id = 1'),
-    getCertifications(),
+    getReviews(),
   ]);
 
   const lessons = {};
@@ -183,10 +197,11 @@ export async function getContentBundle() {
 
   // isComplete is derived from the lesson body (JSONB already carries it) — no schema column.
   // isBuilt (shown to learners) = complete AND certified, where certified = the source allowlist
-  // OR a live DB approval, minus any live DB rejection (so /review publishes/unpublishes instantly).
+  // OR all five review stages approved, minus any live rejection (so /review publishes instantly).
   const cards = problemRows.rows.map((row) => {
     const isComplete = Boolean(lessons[row.id]?.JavaScript?.isComplete);
-    const certified = (row.is_built || certs.approved.has(row.title)) && !certs.rejected.has(row.title);
+    const { allApproved, anyRejected } = reviewOutcome(reviews[row.title]);
+    const certified = (row.is_built || allApproved) && !anyRejected;
     return {
       id: row.id,
       topic: row.topic,

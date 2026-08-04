@@ -52,6 +52,14 @@
 .review-approve{background:var(--teal);border-color:var(--teal);color:#fff}
 .review-reject{background:#fff0e9;border-color:#e2b3a6;color:#9a4738}
 .review-reset{background:#fff;color:var(--muted)}
+.review-steps{display:grid;gap:10px}
+.review-step{border:1px solid #ece9df;border-radius:10px;padding:11px;background:#fbfaf6}
+.review-step-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.review-step-name{font-weight:800;font-size:14px}
+.review-step-head .rev-badge{margin-left:auto}
+.review-step-head .review-preview{margin-left:0;padding:5px 10px;min-height:32px;font-size:12px}
+.review-step .review-feedback{min-height:44px}
+.review-step .review-actions button{min-width:90px;padding:8px;min-height:38px;font-size:13px}
 
 /* Progress rail: the single "move through the steps" control. Tappable, shows where you are,
    marks finished steps, and scrolls horizontally on narrow screens. */

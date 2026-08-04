@@ -77,12 +77,12 @@ export async function fetchReview(token) {
 }
 
 // Record an approve/reject/pending decision (+ feedback) for a problem.
-export async function postReview(token, title, status, feedback) {
+export async function postReview(token, title, step, status, feedback) {
   try {
     const response = await fetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', accept: 'application/json', 'X-Review-Token': token || '' },
-      body: JSON.stringify({ title, status, feedback }),
+      body: JSON.stringify({ title, step, status, feedback }),
     });
     let data = {};
     try { data = await response.json(); } catch { /* non-JSON */ }

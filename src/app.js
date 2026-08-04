@@ -3,7 +3,7 @@ import { appState, freshCoach, getProgress, progressLabel, resetLesson, setLangu
 import { shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
-import { renderReview, bindReview } from './views/review.js';
+import { renderReview, bindReview, draftKey } from './views/review.js';
 import { renderDrill, bindDrillAnswer } from './views/drill.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
@@ -75,7 +75,13 @@ function renderReviewScreen() {
   bindReview(root, {
     state: appState,
     loadReview,
-    previewProblem: (id) => { const card = cardsById.get(id); if (card) beginWalkthrough(card); },
+    previewProblem: (id, stepIndex = 0) => {
+      const card = cardsById.get(id);
+      if (!card) return;
+      beginWalkthrough(card);
+      appState.lessonStep = stepIndex;
+      render();
+    },
     saveDecision: saveReviewDecision,
   });
   // Fetch on first entry (once a token is present).
@@ -108,15 +114,15 @@ async function loadReview() {
   render();
 }
 
-async function saveReviewDecision(title, status, feedback) {
+async function saveReviewDecision(title, step, status, feedback) {
   const review = appState.review;
   if (review.saving) return;
-  review.saving = title;
+  review.saving = `${title}::${step}`;
   render();
-  const result = await postReview(review.token, title, status, feedback);
+  const result = await postReview(review.token, title, step, status, feedback);
   review.saving = '';
   if (result.ok) {
-    delete review.drafts[title];
+    delete review.drafts[draftKey(title, step)];
     await loadReview();
   } else {
     review.error = result.data?.error || 'Could not save your decision.';
