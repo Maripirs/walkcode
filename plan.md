@@ -139,6 +139,7 @@ commands I prepare or run.
 - [x] **M9** — LLM algorithm coach (Groq Llama-70B behind `/api/algorithm-feedback`; degrades to the drag-drop builder). **Deployed.**
 - [x] **M8** — Hardening: nightly `pg_dump`→GCS backups (30-day retention) + $5 budget + hard billing kill-switch. **Live on GCP.**
 - [x] **M10** — Typed code drills (fill-blank + predict + debug + edge-case, 105 drills) + drill progress + the home chooser, plus the post-M10 UX/review polish. **Built & verified locally; NOT yet deployed.**
+- [ ] **M11** — Settings & Filters panel: one gear-opened overlay with two tabs. **Settings** = language + Light/Dark/Auto theme + text size + reduced-motion + reset progress. **Filters** (single source of truth) = include-completed, drill types, difficulty — the last now also filtering the walkthrough library. Device-local, no server changes. **Planned.**
 - [ ] **M7** — In-browser code editor/runner — **backlogged** (doesn't fit the scaffolded, mobile-first model; see Backlog).
 
 **Current state (2026-08):** everything through **M6/M9 is live** on `walkcode.maripi.net`, and **M8's infra is live** on GCP. Everything **since** — Understand-step depth (examples + fuller descriptions), the concept-check spoiler fix, the whole **typed-drill system** + progress/chooser, the **home-card redesign** (in-place expand + animation, progress tallies), and the **review-flow** work — is committed to `main` locally and verified, but **not yet deployed** (prod still serves the pre-M10 revision). Immediate next steps: a content **review pass** (the `/review` flow now covers all complete problems), then **deploy**.
@@ -495,6 +496,32 @@ the six uncovered problems above.
   rejecting a stage takes a live problem back down). Once the token is loaded, the inline five-stage
   **Approve/Reject** shows while browsing **any** problem, and the library shows each problem's review status —
   so browsing and reviewing are unified (no longer split between `?review=1` preview and the `/review` page).
+
+### M11 — Settings & Filters panel — PLANNED (2026-08)
+**Goal:** consolidate app preferences and content filters into one **gear-opened overlay with two tabs**, replacing the scattered inline controls. Builds on interim work already on `main` locally — a body-level settings overlay, a global `zoom`-based text-size control, the minimal gear SVG in the top bar (Home + gear share the first line), and the JS/Python default flipped to **Python**. **Device-local only — no server/DB/API changes, no new dependencies, no build step.**
+
+**Decisions (settled with the owner):**
+- **One panel, two tabs** (`Settings | Filters`), opened by the top-bar gear — not two separate buttons.
+- **Filters tab is the single source of truth** — the home random toggle and the `drill-picker` screen read from it; their duplicated inline controls go away (a small "Adjust in Filters" link opens the tab).
+- **Theme: Light / Dark / Auto.** Controls **fit the data** — a slider only where it makes sense.
+
+**Settings tab:**
+- **Language** — JS/Python segmented control, moved **out of the top bar** (declutter). Reuses `setLanguage`.
+- **Theme** — Light / Dark / **Auto**, via CSS variables + `data-theme` on `:root`: `@media (prefers-color-scheme)` drives Auto, an explicit `data-theme="light|dark"` overrides it. Persist `walkcode-theme`. **Heaviest item:** every hardcoded color in `styles.css` (code-block bg, pills, review badges, feedback states, the `--paper/--ink/--line/…` set) must be audited and given a dark value — treat this as its own reviewable chunk.
+- **Text size** — the existing global scale, relocated here as a **slider** (0.7–1.3) with a % readout. Reuses `setUiScale`/`applyScale`.
+- **Reduced motion** — explicit override (sets `data-reduced-motion`; CSS disables the expand/transition animations, on top of the existing `prefers-reduced-motion` support).
+- **Reset progress** — clears `walkcode-states` + `walkcode-drills` behind a confirm; keeps language/theme/size/filters.
+
+**Filters tab (source of truth, persisted as `walkcode-filters`):**
+- **Include completed in random** — switch; backs `includeCompleted` (affects random drills **and** walkthroughs).
+- **Drill types** — multi-select chips: fill-blank / predict / debug / edge-case.
+- **Difficulty** — multi-select segmented: Easy / Medium / Hard; now also **filters the walkthrough library** (today an unfiltered easier→harder browse) and random-walkthrough picks, not just drills.
+
+**State & files:** `state.js` (consolidated `drillFilter` = `types[]` + `difficulties[]`, plus `theme`, `reducedMotion`, panel `open`/`tab`; setters + load/persist + `resetProgress`); `ui.js` (drop `languagePicker` from `topBar`; shared control helpers — segmented / chips / switch / slider); `app.js` (tabbed panel render + bindings; apply theme with a `matchMedia` listener for Auto, and reduced-motion; route the drill queue, random walkthrough, and library through the shared filters); `views/home.js`, `views/drill-picker.js`, `views/library.js` (remove inline filters / apply difficulty); `styles.css` (dark palette + theme structure, panel tabs, chips/segmented/switch/slider, reduced-motion overrides); docs (`CLAUDE.md`, `CONTRIBUTING.md`).
+
+**Phasing (each syntax-checked; commit at the owner's say-so):** (1) panel shell + tabs + gear (done) + move Language & Text size in; (2) **theme** Light/Dark/Auto — the big CSS pass, its own chunk; (3) filters consolidation + persistence; (4) difficulty→library, reset progress, reduced-motion; (5) docs.
+
+**Out of scope:** server changes, sort order, per-topic filters.
 
 ## UI/UX & quality review — mostly resolved by M6/M10 (captured 2026-08)
 
