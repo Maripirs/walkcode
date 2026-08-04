@@ -25,6 +25,9 @@ export const appState = {
   // Home mode cards expand in place into their start options (Random vs Pick), one at a time.
   drillsExpanded: false,
   walkthroughExpanded: false,
+  // One-shot: which card ('drills'|'walkthroughs'|null) just opened, so only a fresh open plays the
+  // expand animation — re-renders while open (e.g. toggling the checkbox) must not replay it.
+  animateCard: null,
   // Shared "random" setting: include items already completed (default: skip them). Applies to both
   // random drills and random walkthroughs.
   includeCompleted: false,

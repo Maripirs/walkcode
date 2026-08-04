@@ -1,15 +1,22 @@
 import { includeCompletedToggle, languagePicker } from '../lib/ui.js';
 
 // Both mode cards expand in place (no separate screen) into their two ways to start: a random one
-// — with the shared "include already completed" toggle — or the browse/pick path. `drills` carries
-// the drill progress summary { total, solved } so that card can show it.
-export function renderHome(state, drills = { total: 0, solved: 0 }) {
-  const drillCard = `<div class="mode-card-group ${state.drillsExpanded ? 'expanded' : ''}">
+// — with the shared "include already completed" toggle — or the browse/pick path. `progress`
+// carries each card's { total, solved } so both show a "<solved>/<total> done" tally. Only a card
+// named by `state.animateCard` gets the `opening` class, so the expand animates on a fresh open but
+// not on re-renders while already open (e.g. toggling the checkbox).
+export function renderHome(state, progress = {}) {
+  const drills = progress.drills || { total: 0, solved: 0 };
+  const walkthroughs = progress.walkthroughs || { total: 0, solved: 0 };
+  const tally = (p) => (p.total ? ` <em class="mode-progress">${p.solved}/${p.total} done</em>` : '');
+  const openClass = (name) => (state.animateCard === name ? ' opening' : '');
+
+  const drillCard = `<div class="mode-card-group ${state.drillsExpanded ? 'expanded' : ''}" data-card="drills">
     <button class="mode-card primary" data-toggle-drills aria-expanded="${state.drillsExpanded}">
       <b>Code drills</b>
-      <span>Quick reps — fill in code, predict output, find the bug, spot the edge case.${drills.total ? ` <em class="mode-progress">${drills.solved}/${drills.total} done</em>` : ''}</span>
+      <span>Quick reps — fill in code, predict output, find the bug, spot the edge case.${tally(drills)}</span>
     </button>
-    ${state.drillsExpanded ? `<div class="mode-expand">
+    ${state.drillsExpanded ? `<div class="mode-expand${openClass('drills')}">
       <button class="mode-sub" data-drills-random>
         <b>Random reps →</b><span>A shuffled mix of every drill type.</span>
       </button>
@@ -20,12 +27,12 @@ export function renderHome(state, drills = { total: 0, solved: 0 }) {
     </div>` : ''}
   </div>`;
 
-  const walkthroughCard = `<div class="mode-card-group ${state.walkthroughExpanded ? 'expanded' : ''}">
+  const walkthroughCard = `<div class="mode-card-group ${state.walkthroughExpanded ? 'expanded' : ''}" data-card="walkthroughs">
     <button class="mode-card" data-toggle-walkthroughs aria-expanded="${state.walkthroughExpanded}">
       <b>Full walkthroughs</b>
-      <span>Understand a problem, then work recognition → design → code → complexity → review.</span>
+      <span>Understand a problem, then work recognition → design → code → complexity → review.${tally(walkthroughs)}</span>
     </button>
-    ${state.walkthroughExpanded ? `<div class="mode-expand">
+    ${state.walkthroughExpanded ? `<div class="mode-expand${openClass('walkthroughs')}">
       <button class="mode-sub" data-random-walkthrough>
         <b>Random walkthrough →</b><span>A finished five-step problem chosen for you.</span>
       </button>

@@ -60,6 +60,11 @@ function drillSummary() {
   return { total: items.length, solved: drillSolvedCount(items.map((drill) => drill.id)) };
 }
 
+// Walkthrough progress: how many of the built (reachable) problems the learner has completed.
+function walkthroughSummary() {
+  return { total: builtCards.length, solved: builtCards.filter((card) => getProgress(card.id) === 'Solved').length };
+}
+
 // Drills matching the pick/filter screen's current type + difficulty selection.
 function filteredDrills() {
   const { difficulty, type } = appState.drillFilter;
@@ -95,7 +100,10 @@ function startPickedDrill(id) {
 }
 
 function render() {
-  if (appState.screen === 'home') root.innerHTML = renderHome(appState, drillSummary());
+  if (appState.screen === 'home') {
+    root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary() });
+    appState.animateCard = null; // one-shot: consumed by this render so re-renders don't replay it
+  }
   if (appState.screen === 'drill-picker') root.innerHTML = renderDrillPicker({ state: appState, drills: drillItems(), isDrillSolved });
   if (appState.screen === 'library') root.innerHTML = renderLibrary({
     state: appState,
@@ -363,6 +371,32 @@ function navigateRandomWalkthrough(direction) {
   openWalkthrough(card);
 }
 
+// Apply a mode-card expand/collapse. Because the app re-renders by replacing innerHTML (which has
+// no exit animation), a panel that's going from open → closed is first animated out in place, then
+// the state is applied and the view re-rendered (the newly-opened panel gets its mount animation).
+// At most one panel closes per toggle. Falls back to an immediate apply if there's nothing to
+// close, the user prefers reduced motion, or the animation never fires.
+function toggleModeCard(next) {
+  const apply = () => {
+    appState.drillsExpanded = Boolean(next.drillsExpanded);
+    appState.walkthroughExpanded = Boolean(next.walkthroughExpanded);
+    // Mark the card that just opened (if any) so only a fresh open plays the expand animation.
+    appState.animateCard = next.drillsExpanded ? 'drills' : (next.walkthroughExpanded ? 'walkthroughs' : null);
+    render();
+  };
+  let closingKey = null;
+  if (appState.drillsExpanded && !next.drillsExpanded) closingKey = 'drills';
+  else if (appState.walkthroughExpanded && !next.walkthroughExpanded) closingKey = 'walkthroughs';
+  const panel = closingKey ? root.querySelector(`.mode-card-group[data-card="${closingKey}"] .mode-expand`) : null;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!panel || reduceMotion) { apply(); return; }
+  let done = false;
+  const finish = () => { if (done) return; done = true; apply(); };
+  panel.classList.add('collapsing');
+  panel.addEventListener('animationend', finish, { once: true });
+  setTimeout(finish, 260); // safety net if animationend doesn't arrive
+}
+
 function bindSharedControls() {
   root.querySelectorAll('[data-home]').forEach((button) => button.addEventListener('click', () => {
     appState.screen = 'home';
@@ -375,14 +409,10 @@ function bindSharedControls() {
   }));
   // Home mode cards expand in place; opening one collapses the other.
   root.querySelectorAll('[data-toggle-drills]').forEach((button) => button.addEventListener('click', () => {
-    appState.drillsExpanded = !appState.drillsExpanded;
-    appState.walkthroughExpanded = false;
-    render();
+    toggleModeCard({ drillsExpanded: !appState.drillsExpanded, walkthroughExpanded: false });
   }));
   root.querySelectorAll('[data-toggle-walkthroughs]').forEach((button) => button.addEventListener('click', () => {
-    appState.walkthroughExpanded = !appState.walkthroughExpanded;
-    appState.drillsExpanded = false;
-    render();
+    toggleModeCard({ walkthroughExpanded: !appState.walkthroughExpanded, drillsExpanded: false });
   }));
   root.querySelectorAll('[data-drills-random]').forEach((button) => button.addEventListener('click', () => startDrills()));
   root.querySelectorAll('[data-drills-pick]').forEach((button) => button.addEventListener('click', () => {
