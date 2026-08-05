@@ -143,19 +143,34 @@ async function seedFromBundle(client, rich) {
 // directly in the DB is preserved across restarts because it does not change the version.
 export async function ensureSeeded() {
   const pool = await getPool();
-  const client = await pool.connect();
-  try {
-    await client.query(SCHEMA_SQL);
-    const rich = assembleBundle();
-    const { rows } = await client.query('SELECT version FROM content_meta WHERE id = 1');
-    if (rows.length && rows[0].version === rich.version) {
-      return { seeded: false, version: rich.version };
+  // On a cold Cloud Run start the private VPC path to the e2-micro Postgres can take longer than the
+  // 5s connect timeout to warm up, so a single attempt intermittently fails with a connection
+  // timeout and the new content never seeds. Retry the connect with backoff (later user reads
+  // succeed once warm, so a handful of attempts is plenty).
+  let lastError;
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    let client;
+    try {
+      client = await pool.connect();
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => { setTimeout(resolve, attempt * 2500); });
+      continue;
     }
-    await seedFromBundle(client, rich);
-    return { seeded: true, version: rich.version };
-  } finally {
-    client.release();
+    try {
+      await client.query(SCHEMA_SQL);
+      const rich = assembleBundle();
+      const { rows } = await client.query('SELECT version FROM content_meta WHERE id = 1');
+      if (rows.length && rows[0].version === rich.version) {
+        return { seeded: false, version: rich.version };
+      }
+      await seedFromBundle(client, rich);
+      return { seeded: true, version: rich.version };
+    } finally {
+      client.release();
+    }
   }
+  throw lastError;
 }
 
 // Per-step review decisions live in the DB (not source), so they survive re-seeds and take effect
