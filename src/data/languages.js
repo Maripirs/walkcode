@@ -259,8 +259,8 @@ export const pythonExercises = {
 };
 
 // Whole-line Python variants for the Built walkthrough lessons. The JavaScript versions live in
-// walkthrough-upgrades.js; here we blank one line of the Python reference solution so the two
-// languages stay parallel. Specs are { prompt, correct, choices, why }.
+// lesson-records.js (the upgraded records); here we blank one line of the Python reference solution
+// so the two languages stay parallel. Specs are { prompt, correct, choices, why }.
 function pyEx(title, spec) {
   return {
     prompt: spec.prompt,

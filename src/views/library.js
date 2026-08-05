@@ -1,17 +1,16 @@
 import { difficultyTag, escapeText, filtersLink, topBar } from '../lib/ui.js';
-
-const DIFFICULTY_BANDS = ['Easy', 'Medium', 'Hard'];
+import { DIFFICULTIES as DIFFICULTY_BANDS } from '../lib/state.js';
+import { reviewStatus } from './review.js';
 
 // Compact, right-floated review status for a library row (fuller wording lives on the /review
 // screen). `· live` marks a problem that's already published; a rejected stage shows "blocked".
 function reviewStatusPill(problem) {
-  const total = problem.steps.length;
-  const blocked = problem.steps.some((s) => s.status === 'rejected');
+  const { total, blocked, approvedCount, allApproved, hasNewVersion, isLive } = reviewStatus(problem);
   // A revision landed after the last decision — nudge a re-review (esp. a blocked problem you fixed).
-  const newVersion = problem.hasNewVersion ? '<span class="pill pill-newversion">🔄 new</span>' : '';
+  const newVersion = hasNewVersion ? '<span class="pill pill-newversion">🔄 new</span>' : '';
   if (blocked) return `<span class="pill pill-warn">blocked</span>${newVersion}`;
-  if (problem.approvedCount === total) return `<span class="pill pill-live">✓ reviewed</span>${newVersion}`;
-  return `<span class="pill ${problem.isLive ? 'pill-live' : ''}">${problem.approvedCount}/${total}${problem.isLive ? ' · live' : ''}</span>${newVersion}`;
+  if (allApproved) return `<span class="pill pill-live">✓ reviewed</span>${newVersion}`;
+  return `<span class="pill ${isLive ? 'pill-live' : ''}">${approvedCount}/${total}${isLive ? ' · live' : ''}</span>${newVersion}`;
 }
 
 // A colored progress pill: green ✓ Done, amber In progress, muted Not started.

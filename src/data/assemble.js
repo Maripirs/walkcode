@@ -8,9 +8,8 @@
 // during seeding.
 import { curriculum } from './curriculum.js';
 import { easyWalkthroughTitles, hardWalkthroughTitles } from './difficulty.js';
-import { codeExercises, drillContext, drillDifficultyByTitle, extraCodeDrills } from './drills.js';
+import { codeExercises, drillContext, extraCodeDrills } from './drills.js';
 import { supplementalCodeDrills } from './supplemental-drills.js';
-import { walkthroughUpgrades } from './walkthrough-upgrades.js';
 import { pythonExercises, pythonSolutions } from './languages.js';
 import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
 import { descriptionsByTitle, examplesByTitle } from './examples.js';
@@ -68,7 +67,6 @@ function baseCards() {
 }
 
 function difficultyFor(title) {
-  if (drillDifficultyByTitle[title]) return drillDifficultyByTitle[title];
   if (hardWalkthroughTitles.includes(title)) return 'Hard';
   return easyWalkthroughTitles.includes(title) ? 'Easy' : 'Medium';
 }
@@ -80,7 +78,7 @@ function localizedExercise(title, index, exercise, language) {
 
 // Assembled lesson for one card in one language — same shape the views consume today.
 function lessonFor(card, language) {
-  const authored = featured[card.title] || walkthroughUpgrades[card.title];
+  const authored = featured[card.title];
   const profile = profiles[card.topic] || fallback;
   const base = authored || {
     brief: problemExplanations[card.title] || `Solve ${card.title}.`,
@@ -108,6 +106,25 @@ function lessonFor(card, language) {
     complexityGuide: authored?.complexityGuide || complexityLessons[card.title] || null,
     drillContext: drillContext[card.title] || null,
   };
+  // The algorithm is an ordered sequence of steps, but authors can mark structure the reorder builder
+  // should accept flexibly: a nested array is an interchangeable group (its members may be in any
+  // order), and a member can itself be an ordered block (`{ seq: [...] }`) that moves as a unit, or a
+  // nested group (`{ any: [...] }`). Flatten to a plain `algorithm` (used by display/coach/drills)
+  // plus an `algorithmTree` whose leaves are step indices; the builder validates order against it.
+  // Omitted for a plain flat sequence, which stays strict-order (unchanged behaviour).
+  const flatAlgorithm = [];
+  let grouped = false;
+  const buildNode = (node) => {
+    if (typeof node === 'string') { const index = flatAlgorithm.length; flatAlgorithm.push(node); return index; }
+    if (Array.isArray(node)) { grouped = true; return { any: node.map(buildNode) }; }
+    if (node && node.seq) { grouped = true; return { seq: node.seq.map(buildNode) }; }
+    if (node && node.any) { grouped = true; return { any: node.any.map(buildNode) }; }
+    const index = flatAlgorithm.length; flatAlgorithm.push(String(node)); return index;
+  };
+  const algorithmTree = { seq: (Array.isArray(base.algorithm) ? base.algorithm : []).map(buildNode) };
+  lesson.algorithm = flatAlgorithm;
+  if (grouped) lesson.algorithmTree = algorithmTree;
+
   lesson.isComplete = isComplete(lesson);
   // Built (shown to learners) requires BOTH completeness and certification (human review).
   lesson.isBuilt = lesson.isComplete && certifiedTitles.has(card.title);
@@ -179,16 +196,19 @@ function rawDrillItems() {
   return [...lessonDrills, ...extraCodeDrills, ...supplementalCodeDrills, ...predictions, ...debugs, ...edgeCases];
 }
 
-// Deterministic, dependency-free content hash (djb2). Runs identically in Node and the
-// browser (no crypto). Used to auto-detect content changes so a redeploy reseeds only when
-// the bundled content actually changed.
-function hashContent(value) {
-  const str = JSON.stringify(value);
+// Deterministic, dependency-free djb2 string hash (base36, unsigned). Runs identically in Node and
+// the browser (no crypto) — the single primitive behind both the content version and the server's
+// per-problem review fingerprint (server/db.js imports this).
+export function djb2(str) {
   let hash = 5381;
-  for (let i = 0; i < str.length; i += 1) {
-    hash = (hash * 33) ^ str.charCodeAt(i);
-  }
-  return `v${(hash >>> 0).toString(36)}`;
+  for (let i = 0; i < str.length; i += 1) hash = (hash * 33) ^ str.charCodeAt(i);
+  return (hash >>> 0).toString(36);
+}
+
+// Content hash used to auto-detect content changes so a redeploy reseeds only when the bundled
+// content actually changed.
+function hashContent(value) {
+  return `v${djb2(JSON.stringify(value))}`;
 }
 
 // The rich bundle the seeder consumes: every problem (cards + synthetic drill-only problems),

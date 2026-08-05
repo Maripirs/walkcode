@@ -1,5 +1,6 @@
 import { difficultyTag, escapeCode, escapeText, feedback, highlightBlank, richText, shuffle, topBar } from '../lib/ui.js';
 import { sourceLink } from '../lib/problem-source.js';
+import { TYPE_LABELS } from '../lib/state.js';
 
 // Full solutions shown in drills stay short so the whole thing fits on screen with one line
 // blanked out. This is a content guideline (enforced by review), not a runtime gate.
@@ -49,12 +50,7 @@ function choiceButton(choice) {
 //   fill-blank — the solution with one line blanked; choices are candidate lines. (default)
 //   predict    — a complete function + a call; choices are candidate return values.
 // `type` is absent on legacy drills, so it defaults to fill-blank and they render unchanged.
-export const TYPE_LABELS = {
-  'fill-blank': 'Fill the blank',
-  predict: 'Predict the output',
-  debug: 'Find the bug',
-  'edge-case': 'Spot the edge case',
-};
+// TYPE_LABELS is the single source in state.js (imported above).
 
 // Debug drill (M10): a two-step card — spot the buggy line, then pick its replacement. Step 2
 // stays hidden until step 1 is answered correctly (revealed in bindDebug). Both steps carry their

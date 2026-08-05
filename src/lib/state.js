@@ -1,3 +1,5 @@
+import { DIFFICULTIES } from '../data/difficulty.js';
+
 const STATE_KEY = 'walkcode-states';
 const LANGUAGE_KEY = 'walkcode-language';
 const DRILL_KEY = 'walkcode-drills';
@@ -17,8 +19,18 @@ function loadReducedMotion() {
 // SELECTED values (a drill passes when its type AND difficulty are both selected); an empty set
 // therefore matches nothing. Default: everything selected. `includeCompleted` governs whether random
 // drills AND random walkthroughs reuse already-completed items.
-export const DRILL_TYPES = ['fill-blank', 'predict', 'debug', 'edge-case'];
-export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
+// Drill types (single source): the ordered meta drives the id list, the labels, and the sort rank.
+const DRILL_TYPE_META = [
+  { id: 'fill-blank', label: 'Fill the blank' },
+  { id: 'predict', label: 'Predict the output' },
+  { id: 'debug', label: 'Find the bug' },
+  { id: 'edge-case', label: 'Spot the edge case' },
+];
+export const DRILL_TYPES = DRILL_TYPE_META.map((t) => t.id);
+export const TYPE_LABELS = Object.fromEntries(DRILL_TYPE_META.map((t) => [t.id, t.label]));
+export const TYPE_RANK = Object.fromEntries(DRILL_TYPE_META.map((t, i) => [t.id, i]));
+// Difficulty vocabulary is the pure data module's single source; re-export for state/view use.
+export { DIFFICULTIES };
 function loadFilters() {
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem(FILTERS_KEY)) || {}; } catch { stored = {}; }

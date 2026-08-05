@@ -15,17 +15,6 @@ export const drillContext = {
   "Invert Binary Tree": "root is the current tree node. root.left and root.right are child subtrees; the task is to swap them at every node while preserving both references."
 };
 
-export const drillDifficultyByTitle = {
-  "Contains Duplicate": "Easy",
-  "Two Sum II": "Medium",
-  "Longest Substring Without Repeating Characters": "Medium",
-  "Valid Parentheses": "Easy",
-  "Binary Search": "Easy",
-  "Reverse Linked List": "Easy",
-  "Number of Islands": "Medium",
-  "Invert Binary Tree": "Easy"
-};
-
 export const extraCodeDrills = [
   {
     title: "Trapping Rain Water",

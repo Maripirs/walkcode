@@ -1,6 +1,8 @@
 import { difficultyTag, escapeCode, escapeText, feedback, highlightBlank, richText, shuffle, topBar } from '../lib/ui.js';
 import { sourceLink } from '../lib/problem-source.js';
-import { draftKey } from './review.js';
+import { indentOf, isBlank } from '../data/blank-line.js';
+import { REVIEW_STEP_LABELS } from '../data/review-stages.js';
+import { draftKey, reviewStatus } from './review.js';
 
 const STAGE_BADGE = {
   approved: '<span class="rev-badge live">✓ approved</span>',
@@ -10,7 +12,7 @@ const STAGE_BADGE = {
 
 // Technical tab labels (the interview vocabulary a learner should internalize) paired with a
 // friendly, plain-language header shown above each step's content.
-const stepTabs = ['Understand', 'Algorithm', 'Code', 'Complexity', 'Review'];
+const stepTabs = REVIEW_STEP_LABELS; // single source: src/data/review-stages.js
 const stepHeaders = [
   'Understand the problem, then spot the pattern',
   'Plan the algorithm step by step',
@@ -22,6 +24,27 @@ const stepHeaders = [
 function conceptOptions(lesson) {
   const choices = lesson.conceptChoices || [lesson.topic, 'Hash map', 'Two pointers', 'Dynamic programming'];
   return { correct: choices[0], choices: shuffle([...new Set(choices)]) };
+}
+
+// The algorithm's accepted-order structure. Leaves are step indices; a `seq` node's children must
+// appear in order, an `any` node's children may be in any order — and a child can itself be a `seq`
+// block that must stay together. A plain flat sequence (no authored groups) defaults to strict order.
+function algorithmTreeFor(lesson) {
+  return lesson.algorithmTree || { seq: lesson.algorithm.map((_, i) => i) };
+}
+function treeLeaves(node) {
+  return typeof node === 'number' ? [node] : (node.seq || node.any).flatMap(treeLeaves);
+}
+// The valid ordering closest to the learner's current arrangement: `seq` keeps authored order, `any`
+// adopts the learner's order (children sorted by their earliest position). A learner arrangement is
+// correct exactly when it equals this; comparing position-by-position also drives the hint highlight.
+function intendedOrder(node, posOf) {
+  if (typeof node === 'number') return [node];
+  const children = node.seq || node.any;
+  const ordered = node.any
+    ? [...children].sort((a, b) => Math.min(...treeLeaves(a).map(posOf)) - Math.min(...treeLeaves(b).map(posOf)))
+    : children;
+  return ordered.flatMap((child) => intendedOrder(child, posOf));
 }
 
 function ensureAlgorithmState(state, lesson) {
@@ -123,7 +146,7 @@ function dragDropPanel(state, lesson) {
   return `${backToCoach}<p>These are the steps of the solution, shuffled. Drag the ⠿ handle to put them in the right order, then check.</p>
     <section class="algorithm-builder">
       <div class="answer-bank" data-answer-bank>
-        ${answer.map((item, index) => `<div class="answer-step" data-answer-step="${item.id}"><span class="drag-handle" aria-hidden="true">⠿</span><span class="answer-step-label">${index + 1}. ${escapeText(item.label)}</span></div>`).join('') || '<p class="empty-answer">No steps to order for this problem.</p>'}
+        ${answer.map((item, index) => `<div class="answer-step" data-answer-step="${item.id}"><span class="drag-handle" aria-hidden="true">⠿</span><span class="answer-step-label">${escapeText(item.label)}</span></div>`).join('') || '<p class="empty-answer">No steps to order for this problem.</p>'}
       </div>
     </section>
     <button class="primary" data-check-algorithm>Check the order</button><div data-algorithm-feedback aria-live="polite"></div>`;
@@ -157,9 +180,8 @@ export function codeBlanks(lesson) {
   if (!exercises.length) return null;
   const first = exercises[0];
   const fullLines = first.code.split('\n').map((line) => {
-    if (line.trim() !== '___') return line;
-    const indent = line.slice(0, line.length - line.trimStart().length);
-    return indent + first.correct;
+    if (!isBlank(line)) return line;
+    return indentOf(line) + first.correct;
   });
   const seen = new Set();
   const blanks = [];
@@ -198,8 +220,7 @@ function codePanel(state, lesson) {
   const codeHtml = built.fullLines.map((line, idx) => {
     const blank = built.blanks.find((b) => b.idx === idx);
     if (!blank) return escapeCode(line);
-    const indent = line.slice(0, line.length - line.trimStart().length);
-    return `${escapeCode(indent)}<mark class="code-blank" data-blank-mark="${blank.n}">${comment} Blank ${blank.n} — pick below</mark>`;
+    return `${escapeCode(indentOf(line))}<mark class="code-blank" data-blank-mark="${blank.n}">${comment} Blank ${blank.n} — pick below</mark>`;
   }).join('\n');
   const many = built.blanks.length > 1;
   return `<p>The solution below has ${built.blanks.length} blank${many ? 's' : ''}. Answer ${many ? 'each question' : 'the question'} to fill ${many ? 'them' : 'it'} in.</p>
@@ -249,12 +270,11 @@ function reviewStagePanel(state, card, step) {
   if (!stage) return '';
   const draft = state.review.drafts[draftKey(card.title, stage.step)];
   const value = draft !== undefined ? draft : stage.feedback;
-  const total = problem.steps.length;
-  const blocked = problem.steps.some((s) => s.status === 'rejected');
-  const newVersionNote = problem.hasNewVersion ? ' · 🔄 revised since your last review — take another look' : '';
-  const summary = (problem.approvedCount === total
+  const { total, blocked, approvedCount, allApproved, hasNewVersion } = reviewStatus(problem);
+  const newVersionNote = hasNewVersion ? ' · 🔄 revised since your last review — take another look' : '';
+  const summary = (allApproved
     ? '✓ All five stages approved — this problem is live.'
-    : `${problem.approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`) + newVersionNote;
+    : `${approvedCount}/${total} stages approved${blocked ? ' · blocked by a rejected stage' : ''}`) + newVersionNote;
   // On the final (Review) stage, if you walked the whole thing without rejecting anything, offer a
   // one-tap approve-all instead of approving each remaining stage individually.
   const approveAll = (step === total - 1 && !blocked && problem.approvedCount < total)
@@ -448,20 +468,29 @@ export function bindLesson(root, { state, card, lesson, rerender, finishLesson, 
   enableStepSorting(root, state, rerender);
   // Mark each step green if it's in its correct slot, amber if it's out of place — offered as an
   // opt-in hint after a wrong check so it nudges without giving the order away outright.
+  // Correctness + hint both come from the nearest valid ordering (intendedOrder): a step is "in
+  // place" when its index matches the intended index at that position — so any valid arrangement of
+  // an interchangeable group (or a whole ordered block moved as a unit) reads as correct.
+  const tree = algorithmTreeFor(lesson);
+  const idIndex = (id) => Number(id.slice('required-'.length));
+  const intendedFor = (orderIds) => intendedOrder(tree, (index) => orderIds.indexOf(`required-${index}`));
   const highlightMisplaced = () => {
-    root.querySelectorAll('[data-answer-bank] .answer-step').forEach((el, index) => {
-      const correctHere = el.dataset.answerStep === `required-${index}`;
+    const els = [...root.querySelectorAll('[data-answer-bank] .answer-step')];
+    const orderIds = els.map((el) => el.dataset.answerStep);
+    const intended = intendedFor(orderIds);
+    els.forEach((el, index) => {
+      const correctHere = idIndex(orderIds[index]) === intended[index];
       el.classList.toggle('step-right', correctHere);
       el.classList.toggle('step-wrong', !correctHere);
     });
   };
   root.querySelector('[data-check-algorithm]')?.addEventListener('click', () => {
-    const correct = lesson.algorithm.map((_, index) => `required-${index}`);
-    const answer = state.algorithm.answer;
-    const rightOrder = answer.length === correct.length && answer.every((id, index) => id === correct[index]);
+    const orderIds = state.algorithm.answer;
+    const intended = intendedFor(orderIds);
+    const rightOrder = orderIds.length === intended.length && orderIds.every((id, index) => idIndex(id) === intended[index]);
     root.querySelector('[data-algorithm-feedback]').innerHTML = rightOrder
       ? feedback('✓ Correct — that’s the right order.', true)
-      : `${feedback('Not quite — some steps are out of order.', false)}<button class="algorithm-highlight" data-highlight-wrong>Highlight what’s out of place</button>`;
+      : `<div class="answer-feedback bad">Not quite — some steps are out of order. <button class="algorithm-highlight" data-highlight-wrong>Highlight what’s out of place</button></div>`;
     root.querySelector('[data-highlight-wrong]')?.addEventListener('click', highlightMisplaced);
   });
 

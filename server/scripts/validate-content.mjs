@@ -9,8 +9,8 @@
 //
 // Usage: `node server/scripts/validate-content.mjs` — exits non-zero if anything fails.
 import { assembleBundle, certifiedTitles } from '../../src/data/assemble.js';
+import { BLANK, indentOf } from '../../src/data/blank-line.js';
 
-const BLANK = '___';
 const errors = [];
 
 // Shared across all drill types: the answer is offered, choices are distinct, and every wrong
@@ -96,7 +96,7 @@ function verifyDebugExecution(where, exercise, lines) {
   catch (error) { errors.push(`${where}: buggy code threw when run — ${error.message}`); return; }
   const idx = lines.findIndex((line) => line.trim() === String(exercise.buggyLine).trim());
   if (idx < 0) return;
-  const indent = lines[idx].slice(0, lines[idx].length - lines[idx].trimStart().length);
+  const indent = indentOf(lines[idx]);
   const fixedLines = [...lines];
   fixedLines[idx] = indent + String(exercise.fix).trim();
   let fixed;

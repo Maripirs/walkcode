@@ -4,6 +4,8 @@
 // initContent(). The public interface below is unchanged, so the views/app.js keep consuming
 // `cards`, `lessonFor`, `drillItems`, etc. exactly as before.
 
+import { DIFFICULTY_RANK } from './difficulty.js';
+
 let bundle = { version: '', cards: [], lessons: {}, drills: [] };
 
 // Live bindings: reassigned by initContent() and observed by importers (app.js).
@@ -73,7 +75,6 @@ export function groupedCards() {
 // Library browse order: a single flat list from easier to harder. We deliberately do NOT group
 // by topic — the category names the very pattern the Recognize step asks the learner to spot.
 // Ties (same difficulty) keep the curriculum/roadmap order via `position`.
-const DIFFICULTY_RANK = { Easy: 0, Medium: 1, Hard: 2 };
 
 export function orderedCards() {
   return [...cards].sort((a, b) =>

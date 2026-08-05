@@ -1,4 +1,11 @@
 // Walkthrough difficulty overrides; Medium is the fallback.
+
+// The canonical difficulty vocabulary (single source): the ordered set and its rank map, imported by
+// state/views (filters, bands) and model.js (ordering). Kept in this pure, localStorage-free module
+// so both the browser and Node (assemble/validate) can import it.
+export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
+export const DIFFICULTY_RANK = { Easy: 0, Medium: 1, Hard: 2 };
+
 export const easyWalkthroughTitles = [
   "Contains Duplicate",
   "Valid Anagram",

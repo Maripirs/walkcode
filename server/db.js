@@ -2,7 +2,8 @@
 // auto-seed (from the content bundled with the app), and the read that rebuilds the
 // /api/content bundle. `pg` is imported lazily so the static server still boots when the DB
 // or DATABASE_URL is absent.
-import { assembleBundle, certifiedTitles, clientBundleFrom, LANGUAGES } from '../src/data/assemble.js';
+import { assembleBundle, certifiedTitles, clientBundleFrom, djb2, LANGUAGES } from '../src/data/assemble.js';
+import { REVIEW_STEP_LABELS, REVIEW_STEPS } from '../src/data/review-stages.js';
 
 let poolPromise;
 
@@ -78,16 +79,12 @@ ALTER TABLE reviews ADD COLUMN IF NOT EXISTS content_hash text;
 export function problemContentHash(bodiesByLanguage) {
   const bodies = bodiesByLanguage || {};
   const normalized = Object.keys(bodies).sort().map((lang) => [lang, bodies[lang]]);
-  const str = JSON.stringify(normalized);
-  let hash = 5381;
-  for (let i = 0; i < str.length; i += 1) hash = (hash * 33) ^ str.charCodeAt(i);
-  return `c${(hash >>> 0).toString(36)}`;
+  return `c${djb2(JSON.stringify(normalized))}`;
 }
 
-// The five walkthrough stages a problem is reviewed by. A problem publishes only when all five
-// are approved; a rejected stage blocks it.
-export const REVIEW_STEPS = ['understand', 'algorithm', 'code', 'complexity', 'review'];
-export const REVIEW_STEP_LABELS = ['Understand', 'Algorithm', 'Code', 'Complexity', 'Review'];
+// The five walkthrough stages a problem is reviewed by come from the shared review-stages module,
+// re-exported here so existing importers of db.js keep working.
+export { REVIEW_STEPS, REVIEW_STEP_LABELS };
 
 // Unique topics in card order — the order the library renders groups in.
 function topicsFrom(rich) {

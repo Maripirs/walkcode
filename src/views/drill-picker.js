@@ -1,13 +1,11 @@
 import { difficultyTag, escapeText, filtersLink, topBar } from '../lib/ui.js';
-import { TYPE_LABELS } from './drill.js';
-import { DRILL_TYPES, DIFFICULTIES } from '../lib/state.js';
+import { DRILL_TYPES, DIFFICULTIES, TYPE_LABELS, TYPE_RANK } from '../lib/state.js';
+import { DIFFICULTY_RANK } from '../data/difficulty.js';
 
 function typeOf(drill) {
   return drill.exercise?.type || 'fill-blank';
 }
 
-const DIFFICULTY_RANK = { Easy: 0, Medium: 1, Hard: 2 };
-const TYPE_RANK = { 'fill-blank': 0, predict: 1, debug: 2, 'edge-case': 3 };
 const SORT_OPTIONS = [
   ['default', 'Featured order'],
   ['name', 'Name (A–Z)'],

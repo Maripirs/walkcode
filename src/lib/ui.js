@@ -1,3 +1,5 @@
+import { indentOf, isBlank } from '../data/blank-line.js';
+
 // Escape code so it renders literally inside HTML (drills show real source lines that can
 // contain <, >, &, ").
 export function escapeCode(value) {
@@ -25,9 +27,8 @@ export function richText(value) {
 export function highlightBlank(code, language) {
   const comment = language === 'Python' ? '#' : '//';
   return escapeCode(code).split('\n').map((line) => {
-    if (line.trim() !== '___') return line;
-    const indent = line.slice(0, line.length - line.trimStart().length);
-    return `${indent}<mark class="code-blank">${comment} Pick the right code to go here</mark>`;
+    if (!isBlank(line)) return line;
+    return `${indentOf(line)}<mark class="code-blank">${comment} Pick the right code to go here</mark>`;
   }).join('\n');
 }
 

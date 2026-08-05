@@ -6,19 +6,31 @@ export function draftKey(title, step) {
   return `${title}::${step}`;
 }
 
-// A problem publishes only once all five stages are approved; a rejected stage blocks it. Some
-// problems are already live via the `certifiedTitles` code allowlist without having been reviewed —
-// `isLive` marks those so they read as "live · not yet reviewed" rather than plain pending.
-export function reviewBadge(problem) {
+// Single derivation of a problem's review state, so the three places that render review status
+// (this screen's badge, the library pill, the lesson stage panel) don't each recompute
+// `total`/`blocked`. A problem publishes only once all stages are approved; a rejected stage blocks
+// it. `isLive` marks problems already live via the `certifiedTitles` allowlist without a review.
+export function reviewStatus(problem) {
   const total = problem.steps.length;
-  const blocked = problem.steps.some((s) => s.status === 'rejected');
+  return {
+    total,
+    blocked: problem.steps.some((s) => s.status === 'rejected'),
+    approvedCount: problem.approvedCount,
+    allApproved: problem.approvedCount === total,
+    hasNewVersion: Boolean(problem.hasNewVersion),
+    isLive: Boolean(problem.isLive),
+  };
+}
+
+export function reviewBadge(problem) {
+  const { total, blocked, approvedCount, allApproved, hasNewVersion, isLive } = reviewStatus(problem);
   // Flag a problem whose content was revised after your last decision — most useful on a blocked
   // problem you fixed, so you know to re-review rather than assume it is still the version you saw.
-  const newVersion = problem.hasNewVersion ? '<span class="rev-badge newversion">🔄 new version — re-review</span>' : '';
-  if (blocked) return `<span class="rev-badge rejected">blocked · ${problem.approvedCount}/${total}</span>${newVersion}`;
-  if (problem.approvedCount === total) return `<span class="rev-badge live">✓ all approved — live</span>${newVersion}`;
-  if (problem.isLive) return `<span class="rev-badge live">live · not yet reviewed (${problem.approvedCount}/${total})</span>${newVersion}`;
-  return `<span class="rev-badge pending">${problem.approvedCount}/${total} approved</span>${newVersion}`;
+  const newVersion = hasNewVersion ? '<span class="rev-badge newversion">🔄 new version — re-review</span>' : '';
+  if (blocked) return `<span class="rev-badge rejected">blocked · ${approvedCount}/${total}</span>${newVersion}`;
+  if (allApproved) return `<span class="rev-badge live">✓ all approved — live</span>${newVersion}`;
+  if (isLive) return `<span class="rev-badge live">live · not yet reviewed (${approvedCount}/${total})</span>${newVersion}`;
+  return `<span class="rev-badge pending">${approvedCount}/${total} approved</span>${newVersion}`;
 }
 
 function problemCard(problem) {

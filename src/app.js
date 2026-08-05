@@ -1,10 +1,10 @@
 import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
-import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setReviewMode, setTheme, setUiScale, THEMES, toggleFilterValue } from './lib/state.js';
+import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setReviewMode, setTheme, setUiScale, THEMES, toggleFilterValue, TYPE_LABELS } from './lib/state.js';
 import { gearGlyph, shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
 import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
 import { renderReview, bindReview, draftKey } from './views/review.js';
-import { renderDrill, bindDrillAnswer, TYPE_LABELS } from './views/drill.js';
+import { renderDrill, bindDrillAnswer } from './views/drill.js';
 import { renderDrillPicker } from './views/drill-picker.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
