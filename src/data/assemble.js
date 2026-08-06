@@ -8,10 +8,10 @@
 // during seeding.
 import { curriculum } from './curriculum.js';
 import { easyWalkthroughTitles, hardWalkthroughTitles } from './difficulty.js';
-import { codeExercises, drillContext, extraCodeDrills } from './drills.js';
+import { drillContext, extraCodeDrills } from './drills.js';
 import { supplementalCodeDrills } from './supplemental-drills.js';
-import { pythonExercises, pythonSolutions } from './languages.js';
-import { briefs, complexityLessons, conceptChoices, fallback, featured, problemExplanations, profiles } from './lesson-records.js';
+import { pythonExercises } from './languages.js';
+import { fallback, featured, problemExplanations, profiles } from './lesson-records.js';
 import { descriptionsByTitle, examplesByTitle } from './examples.js';
 import { predictionDrills } from './prediction-drills.js';
 import { debugDrills } from './debug-drills.js';
@@ -92,18 +92,16 @@ function lessonFor(card, language) {
     title: card.title,
     topic: card.topic,
     explanation: problemExplanations[card.title] || base.brief,
-    code: language === 'Python' && (authored?.pythonCode || pythonSolutions[card.title])
-      ? authored?.pythonCode || pythonSolutions[card.title]
-      : base.code,
-    inputOutput: authored?.inputOutput || briefs[card.title] || null,
+    code: language === 'Python' && authored?.pythonCode ? authored.pythonCode : base.code,
+    inputOutput: authored?.inputOutput || null,
     // Extra worked examples + an optional fuller statement (enrichment; not part of isComplete).
     examples: authored?.examples || examplesByTitle[card.title] || null,
     description: authored?.description || descriptionsByTitle[card.title] || null,
-    conceptChoices: authored?.conceptChoices || conceptChoices[card.title] || null,
+    conceptChoices: authored?.conceptChoices || null,
     // Problem-specific "aha" shown on the Recognize step (authored lessons only).
     intuition: authored?.intuition || null,
-    exercises: (authored?.exercises || codeExercises[card.title] || []).map((exercise, index) => localizedExercise(card.title, index, exercise, language)),
-    complexityGuide: authored?.complexityGuide || complexityLessons[card.title] || null,
+    exercises: (authored?.exercises || []).map((exercise, index) => localizedExercise(card.title, index, exercise, language)),
+    complexityGuide: authored?.complexityGuide || null,
     drillContext: drillContext[card.title] || null,
   };
   // The algorithm is an ordered sequence of steps, but authors can mark structure the reorder builder
@@ -181,10 +179,19 @@ function edgeCaseItem(title, spec, index) {
   };
 }
 
+// The problems whose walkthrough Code-step exercises are ALSO surfaced as standalone fill-blank
+// drills (historically the featuredCore set, minus Two Sum). The exercises themselves now live
+// inline on each problem's authored record; this list is just which of them double as drills.
+const drillFillBlankTitles = [
+  'Contains Duplicate', 'Reverse Linked List', 'Two Sum II',
+  'Longest Substring Without Repeating Characters', 'Valid Parentheses',
+  'Binary Search', 'Number of Islands', 'Invert Binary Tree',
+];
+
 // Raw drill queue. Whole-line fill-blank drills (the default type) plus the typed drills (M10).
 // The app shuffles this list, so the new types interleave with the fill-blank ones automatically.
 function rawDrillItems() {
-  const lessonDrills = Object.entries(codeExercises).flatMap(([title, exercises]) => exercises.map((exercise, index) => ({
+  const lessonDrills = drillFillBlankTitles.flatMap((title) => (featured[title]?.exercises || []).map((exercise, index) => ({
     title,
     exercise,
     index,

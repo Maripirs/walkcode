@@ -487,6 +487,22 @@ commands I prepare or run.
 - [ ] **Done when:** the gear opens a two-tab panel; theme (incl. Auto) works and persists; the Filters panel is the only place those filters live and it drives random / pick / library; the four extras work; and every preference persists per device — all with **no server changes**.
 - **Out of scope:** server changes, per-topic filters. *(Sort order was moved into scope at the owner's request during review.)*
 
+### M12 — Data-layer consolidation (one self-contained record per problem) — PLANNED (not started, 2026-08)
+- [ ] **Status: Planned, not started** (2026-08). Design approved & documented here; no code changes yet. This is a pure internal restructure — the assembled `/api/content` bundle must be **byte-identical before/after** (golden-parity test), so there is **no** user-facing, DB, or API change.
+- [ ] **Why:** walkthrough content ("the data layer is the product") is authored in **two divergent, disjoint styles**, so a single problem is hard to find and edit:
+  - **`featuredCore`** (9 titles, object literals, `lesson-records.js`) externalizes its interactive fields — one problem is scattered across up to **5–8** title-keyed maps: `featuredCore` + `briefs` (→`inputOutput`) + `conceptChoices` + `complexityLessons` (→`complexityGuide`) + `codeExercises` + `pythonSolutions` + `pythonExercises` + `problemExplanations`.
+  - **`lesson()`** (41 titles, `walkthroughUpgrades`) is **self-contained** — all narrative + interactive fields inline; `code`/`pythonCode`/`exercises` from `supplementalFullCode[title]`.
+  - **Duplication to remove:** the 9 featuredCore statements exist in **3 forms** (inline `brief` + `briefs` example + `problemExplanations` paragraph); **all 41** `lesson()` titles *also* carry a redundant `problemExplanations` paragraph; **two** long-form statement stores (`problemExplanations` + `descriptionsByTitle`); **two** Python-solution stores (`pythonSolutions` (8) + `supplementalFullCode` (62)).
+- [ ] **Target:** converge on the `lesson()` self-contained format for **all** authored problems — one record, one home per field.
+  1. Migrate the 9 `featuredCore` records into `lesson()` (mechanical copy of the exact strings — no rewording, so output is unchanged): solution → `supplementalFullCode`; `conceptChoices`/`inputOutput`/`complexityGuide`/`exercises` **inline**; Python exercises → `walkthroughPythonExercises`.
+  2. **One statement home:** add an inline `statement` field; `assemble.js` prefers `authored.statement || problemExplanations[title] || brief`; strip the ~50 authored keys from `problemExplanations` + `descriptionsByTitle`, leaving both **only** as the WIP fallback for the ~100 unauthored titles.
+  3. Delete the now-empty side maps (`featuredCore`, `briefs`, `conceptChoices`, `complexityLessons`, `codeExercises`, `pythonSolutions`, the 16 featuredCore `pythonExercises`); rename `walkthroughUpgrades` → `authoredLessons`.
+  4. Simplify `assemble.js:lessonFor` (interactive fields become `authored?.X || null`; the WIP path `authored || { problemExplanations-brief, ...profiles[topic]||fallback, stub }` stays).
+  5. **Keep as-is** (separate concerns): `curriculum`, `profiles`/`fallback`, `difficulty.js`, `examplesByTitle`, `supplementalFullCode` (single solution store), and the typed standalone-drill files (prediction/debug/edge-case/supplemental).
+- [ ] **Verify:** **golden parity** — dump `assembleBundle()` to JSON before, deep-equal after every phase (final lessons must be identical; dedup only drops redundant *sources*). Plus `node --check`, `validate-content.mjs` green (210 drills; certified complete; JS drills execute), execute the 9 migrated JS+Python solutions against their examples, re-seed & spot-check a migrated + a WIP problem.
+- [ ] **Risks:** `explanation` is sourced from `problemExplanations` — the inline `statement` + assemble preference preserves its value (caught by parity). `lesson()` dereferences `supplementalFullCode[title]` unconditionally — add solutions **before** converting a record. Migrate + parity-check **one problem at a time** before deleting any map.
+- [ ] **Done when:** every authored problem is one self-contained record; the removed side maps are gone (survivors are WIP-only); `assembleBundle()` byte-identical to today; validator green; docs (`CLAUDE.md`, `CONTRIBUTING.md`, `authoring-new-problems` memory) updated.
+
 ## UI/UX & quality review — mostly resolved by M6/M10 (captured 2026-08)
 
 The 2026-08 diagnostic that drove M6 and the drill work is now **largely done**:

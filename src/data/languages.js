@@ -2,16 +2,6 @@
 import { supplementalFullCode } from './supplemental-solutions.js';
 import { blankLine, genericWrong } from './blank-line.js';
 
-export const pythonSolutions = {
-  "Contains Duplicate": "seen = set()\nfor n in nums:\n    if n in seen:\n        return True\n    seen.add(n)\nreturn False",
-  "Two Sum II": "left, right = 0, len(numbers) - 1\nwhile left < right:\n    total = numbers[left] + numbers[right]\n    if total == target:\n        return [left + 1, right + 1]\n    if total < target:\n        left += 1\n    else:\n        right -= 1",
-  "Longest Substring Without Repeating Characters": "seen = set()\nleft = best = 0\nfor right in range(len(s)):\n    while s[right] in seen:\n        seen.remove(s[left])\n        left += 1\n    seen.add(s[right])\n    best = max(best, right - left + 1)\nreturn best",
-  "Valid Parentheses": "pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\nstack = []\nfor char in s:\n    if char in pairs:\n        if not stack:\n            return False\n        if stack.pop() != pairs[char]:\n            return False\n    else:\n        stack.append(char)\nreturn len(stack) == 0",
-  "Binary Search": "left, right = 0, len(nums) - 1\nwhile left <= right:\n    mid = (left + right) // 2\n    if nums[mid] == target:\n        return mid\n    if nums[mid] < target:\n        left = mid + 1\n    else:\n        right = mid - 1\nreturn -1",
-  "Reverse Linked List": "prev, current = None, head\nwhile current:\n    next_node = current.next\n    current.next = prev\n    prev = current\n    current = next_node\nreturn prev",
-  "Number of Islands": "def visit(r, c):\n    if r < 0 or c < 0 or r == rows or c == cols or grid[r][c] != \"1\":\n        return\n    grid[r][c] = \"0\"\n    visit(r + 1, c); visit(r - 1, c)\n    visit(r, c + 1); visit(r, c - 1)",
-  "Invert Binary Tree": "def invert_tree(root):\n    if root is None:\n        return None\n    old_left = root.left\n    root.left = invert_tree(root.right)\n    root.right = invert_tree(old_left)\n    return root"
-};
 
 // Python whole-line drill variants. Each fully overrides the JS exercise at the same index:
 // `code` is the full Python solution with one line blanked, `choices` are complete lines.
@@ -273,6 +263,10 @@ function pyEx(title, spec) {
 }
 
 const walkthroughPythonExercises = {
+  'Two Sum': [
+    {"prompt":"Which line detects that the complement was already seen?","correct":"if need in seen:","choices":["if need in seen:","if nums[i] in seen:","if need not in seen:"],"why":"A stored complement means the pair is complete, so its index and the current index are the answer.","wrong":{"if nums[i] in seen:":"That checks the current value, not the value that completes the pair.","if need not in seen:":"The inverted test returns before a real match is ever found."}},
+    {"prompt":"Which line remembers the current value for a future match?","correct":"seen[nums[i]] = i","choices":["seen[nums[i]] = i","seen[i] = nums[i]","seen[need] = i"],"why":"Map value → index so a later element can look this value up as its complement.","wrong":{"seen[i] = nums[i]":"This maps index → value, but lookups are by value.","seen[need] = i":"Storing the complement instead of the value corrupts later lookups."}},
+  ],
   'Valid Anagram': [
     { prompt: 'Which line rejects strings that can’t be anagrams before counting?', correct: 'if len(s) != len(t):', choices: ['if len(s) != len(t):', 'if len(s) == len(t):', 'if s != t:'], why: 'Unequal lengths cannot have equal character counts.' },
     { prompt: 'Each character of t consumes one available count. Which line?', correct: 'counts[char] = counts.get(char, 0) - 1', choices: ['counts[char] = counts.get(char, 0) - 1', 'counts[char] = counts.get(char, 0) + 1', 'counts[char] = counts.get(char, 0)'], why: 'Subtracting consumes one matching character; a later negative count signals a mismatch.' },
@@ -387,6 +381,26 @@ const walkthroughPythonExercises = {
   'Remove Nth Node From End of List': [
     { prompt: 'Which line opens the n-node gap between the two pointers?', correct: 'for _ in range(n):', choices: ['for _ in range(n):', 'for _ in range(n + 1):', 'for _ in range(n - 1):'], why: 'Advancing fast exactly n times opens the gap that leaves slow just before the target.', wrong: { 'for _ in range(n + 1):': 'That advances fast one time too many, so slow ends up past the target.', 'for _ in range(n - 1):': 'One step short leaves slow on the target instead of before it.' } },
     { prompt: 'Which line splices the target node out of the list?', correct: 'slow.next = slow.next.next', choices: ['slow.next = slow.next.next', 'slow = slow.next.next', 'slow.next = slow.next'], why: 'Pointing slow.next past the target node removes it from the chain.', wrong: { 'slow = slow.next.next': 'That just moves the pointer; the target is still linked in.', 'slow.next = slow.next': 'Assigning next to itself changes nothing, so the node stays.' } },
+  ],
+  'Subsets': [
+    { prompt: 'Which line records the current subset so later changes cannot corrupt it?', correct: 'result.append(current[:])', choices: ['result.append(current[:])', 'result.append(current)', 'current.append(result[:])'], why: 'current[:] copies the list, freezing this subset; appending current itself stores a reference the later append/pop mutate.', wrong: { 'result.append(current)': 'This stores a live reference, so every later append and pop rewrites the saved subset.', 'current.append(result[:])': 'This mutates current with a copy of result — backwards, and it never records an answer.' } },
+    { prompt: 'Which line recurses so each element is used at most once?', correct: 'backtrack(i + 1)', choices: ['backtrack(i + 1)', 'backtrack(i)', 'backtrack(start + 1)'], why: 'Starting the next call at i + 1 considers only later elements, so no element repeats and no subset is duplicated.', wrong: { 'backtrack(i)': 'Passing i lets the same element be chosen again, producing duplicates and infinite recursion.', 'backtrack(start + 1)': 'start does not advance with the loop, so it skips and repeats the wrong elements.' } },
+  ],
+  'Maximum Subarray': [
+    { prompt: 'Which line makes the extend-or-restart choice at each element?', correct: 'current = max(nums[i], current + nums[i])', choices: ['current = max(nums[i], current + nums[i])', 'current = max(best, current + nums[i])', 'current = current + nums[i]'], why: 'The best subarray ending here is either this element alone (a restart) or the previous run extended by it.', wrong: { 'current = max(best, current + nums[i])': 'best is the global answer, not the restart option — compare against nums[i] alone.', 'current = current + nums[i]': 'Always extending never lets a negative running sum reset.' } },
+    { prompt: 'Which line records the best subarray sum seen so far?', correct: 'best = max(best, current)', choices: ['best = max(best, current)', 'best = max(best, nums[i])', 'best = current'], why: 'best keeps the largest current value reached across the whole scan.', wrong: { 'best = max(best, nums[i])': 'That compares against a single element, not the running subarray sum.', 'best = current': 'Overwriting drops earlier peaks when current later shrinks.' } },
+  ],
+  'Merge Intervals': [
+    { prompt: 'On an overlap, which line extends the kept interval correctly?', correct: 'merged[-1][1] = max(merged[-1][1], end)', choices: ['merged[-1][1] = max(merged[-1][1], end)', 'merged[-1][1] = end', 'merged[-1][1] = min(merged[-1][1], end)'], why: 'The merged interval must cover both, so its end is the larger of the two ends.', wrong: { 'merged[-1][1] = end': 'The current interval can end earlier (e.g. [1,6] then [2,3]), which would shrink the range.', 'merged[-1][1] = min(merged[-1][1], end)': 'Taking the min shrinks the interval instead of covering both.' } },
+    { prompt: 'Which line detects that the current interval overlaps the last kept one?', correct: 'if merged and start <= merged[-1][1]:', choices: ['if merged and start <= merged[-1][1]:', 'if merged and start < merged[-1][1]:', 'if merged and start <= merged[-1][0]:'], why: 'Sorted by start, an overlap means the current start reaches the last end; touching endpoints count, so use ≤.', wrong: { 'if merged and start < merged[-1][1]:': 'A strict < fails to merge touching intervals like [1,4] and [4,5].', 'if merged and start <= merged[-1][0]:': 'Comparing against the start, not the end, is the wrong boundary.' } },
+  ],
+  'Implement Trie (Prefix Tree)': [
+    { prompt: 'After inserting every character, which line marks a complete word?', correct: 'node.is_end = True', choices: ['node.is_end = True', 'node.is_end = False', 'self.root.is_end = True'], why: 'Only the node reached after the last character represents the end of that word.', wrong: { 'node.is_end = False': 'That leaves the word unmarked, so search would never find it.', 'self.root.is_end = True': 'Marking the root claims the empty string is a word, not this one.' } },
+    { prompt: 'During lookup, which line reports that the path is missing?', correct: 'return None', choices: ['return None', 'continue', 'return node'], why: 'A missing character means the string was never inserted, so stop and report absence.', wrong: { 'continue': 'Skipping the character keeps walking as if it matched, giving false positives.', 'return node': 'Returning the current node claims a match on a path that does not exist.' } },
+  ],
+  'Network Delay Time': [
+    { prompt: 'Which line relaxes an edge — improving a neighbor’s arrival time?', correct: 'if dist[u] + w < dist[v]:', choices: ['if dist[u] + w < dist[v]:', 'if dist[u] + w > dist[v]:', 'if dist[u] + w == dist[v]:'], why: 'Only lower the neighbor’s time when the route through u is shorter than its current best.', wrong: { 'if dist[u] + w > dist[v]:': 'That would overwrite a shorter path with a longer one.', 'if dist[u] + w == dist[v]:': 'Equal distance is no improvement, so nothing should change.' } },
+    { prompt: 'Which line picks the next node to finalize?', correct: 'if i not in visited and (u == -1 or dist[i] < dist[u]):', choices: ['if i not in visited and (u == -1 or dist[i] < dist[u]):', 'if i not in visited and (u == -1 or dist[i] > dist[u]):', 'if i not in visited:'], why: 'Dijkstra always finalizes the unvisited node with the smallest tentative distance.', wrong: { 'if i not in visited and (u == -1 or dist[i] > dist[u]):': 'Choosing the largest breaks the greedy invariant and gives wrong distances.', 'if i not in visited:': 'Taking any unvisited node ignores distance, so finalized values are not minimal.' } },
   ],
 };
 

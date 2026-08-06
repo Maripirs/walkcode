@@ -4,6 +4,41 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Two Sum': solution(
+    lines("const seen = new Map();", "for (let i = 0; i < nums.length; i++) {", "  const need = target - nums[i];", "  if (seen.has(need)) return [seen.get(need), i];", "  seen.set(nums[i], i);", "}"),
+    lines("seen = {}", "for i in range(len(nums)):", "    need = target - nums[i]", "    if need in seen:", "        return [seen[need], i]", "    seen[nums[i]] = i")),
+
+  'Valid Parentheses': solution(
+    lines("const pairs = { \")\": \"(\", \"]\": \"[\", \"}\": \"{\" };", "const stack = [];", "for (const ch of s) {", "  if (ch in pairs) {", "    if (stack.pop() !== pairs[ch]) return false;", "  } else {", "    stack.push(ch);", "  }", "}", "return stack.length === 0;"),
+    lines("pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}", "stack = []", "for char in s:", "    if char in pairs:", "        if not stack:", "            return False", "        if stack.pop() != pairs[char]:", "            return False", "    else:", "        stack.append(char)", "return len(stack) == 0")),
+
+  'Number of Islands': solution(
+    lines("function visit(r, c) {", "  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;", "  grid[r][c] = \"0\";", "  visit(r + 1, c);", "  visit(r - 1, c);", "  visit(r, c + 1);", "  visit(r, c - 1);", "}"),
+    lines("def visit(r, c):", "    if r < 0 or c < 0 or r == rows or c == cols or grid[r][c] != \"1\":", "        return", "    grid[r][c] = \"0\"", "    visit(r + 1, c)", "    visit(r - 1, c)", "    visit(r, c + 1)", "    visit(r, c - 1)")),
+
+  'Reverse Linked List': solution(
+    lines("let prev = null;", "let current = head;", "while (current) {", "  const next = current.next;", "  current.next = prev;", "  prev = current;", "  current = next;", "}", "return prev;"),
+    lines("prev, current = None, head", "while current:", "    next_node = current.next", "    current.next = prev", "    prev = current", "    current = next_node", "return prev")),
+
+  'Invert Binary Tree': solution(
+    lines("function invertTree(root) {", "  if (!root) return null;", "  const oldLeft = root.left;", "  root.left = invertTree(root.right);", "  root.right = invertTree(oldLeft);", "  return root;", "}"),
+    lines("def invert_tree(root):", "    if root is None:", "        return None", "    old_left = root.left", "    root.left = invert_tree(root.right)", "    root.right = invert_tree(old_left)", "    return root")),
+
+  'Two Sum II': solution(
+    lines("let left = 0, right = numbers.length - 1;", "while (left < right) {", "  const sum = numbers[left] + numbers[right];", "  if (sum === target) return [left + 1, right + 1];", "  if (sum < target) left++; else right--;", "}"),
+    lines("left, right = 0, len(numbers) - 1", "while left < right:", "    total = numbers[left] + numbers[right]", "    if total == target:", "        return [left + 1, right + 1]", "    if total < target:", "        left += 1", "    else:", "        right -= 1")),
+
+  'Longest Substring Without Repeating Characters': solution(
+    lines("const seen = new Set();", "let left = 0, best = 0;", "for (let right = 0; right < s.length; right++) {", "  while (seen.has(s[right])) seen.delete(s[left++]);", "  seen.add(s[right]);", "  best = Math.max(best, right - left + 1);", "}"),
+    lines("seen = set()", "left = best = 0", "for right in range(len(s)):", "    while s[right] in seen:", "        seen.remove(s[left])", "        left += 1", "    seen.add(s[right])", "    best = max(best, right - left + 1)", "return best")),
+
+  'Binary Search': solution(
+    lines("let left = 0, right = nums.length - 1;", "while (left <= right) {", "  const mid = Math.floor((left + right) / 2);", "  if (nums[mid] === target) return mid;", "  if (nums[mid] < target) left = mid + 1;", "  else right = mid - 1;", "}", "return -1;"),
+    lines("left, right = 0, len(nums) - 1", "while left <= right:", "    mid = (left + right) // 2", "    if nums[mid] == target:", "        return mid", "    if nums[mid] < target:", "        left = mid + 1", "    else:", "        right = mid - 1", "return -1")),
+  'Contains Duplicate': solution(
+    lines("const seen = new Set();", "for (const n of nums) {", "  if (seen.has(n)) return true;", "  seen.add(n);", "}", "return false;"),
+    lines("seen = set()", "for n in nums:", "    if n in seen:", "        return True", "    seen.add(n)", "return False")),
+
   'Evaluate Reverse Polish Notation': solution(
     lines('function evalRPN(tokens) {', '  const stack = [];', '  const ops = {', "    '+': (a, b) => a + b,", "    '-': (a, b) => a - b,", "    '*': (a, b) => a * b,", "    '/': (a, b) => Math.trunc(a / b),", '  };', '  for (const token of tokens) {', '    if (token in ops) {', '      const b = stack.pop();', '      const a = stack.pop();', '      stack.push(ops[token](a, b));', '    } else {', '      stack.push(Number(token));', '    }', '  }', '  return stack.pop();', '}'),
     lines('def eval_rpn(tokens):', '    stack = []', '    ops = {', "        '+': lambda a, b: a + b,", "        '-': lambda a, b: a - b,", "        '*': lambda a, b: a * b,", "        '/': lambda a, b: int(a / b),", '    }', '    for token in tokens:', '        if token in ops:', '            b = stack.pop()', '            a = stack.pop()', '            stack.append(ops[token](a, b))', '        else:', '            stack.append(int(token))', '    return stack.pop()')),
@@ -231,4 +266,24 @@ export const supplementalFullCode = {
   'Remove Nth Node From End of List': solution(
     lines('function removeNthFromEnd(head, n) {', '  const dummy = new ListNode(0, head);', '  let fast = dummy;', '  let slow = dummy;', '  for (let i = 0; i < n; i++) fast = fast.next;', '  while (fast.next) {', '    fast = fast.next;', '    slow = slow.next;', '  }', '  slow.next = slow.next.next;', '  return dummy.next;', '}'),
     lines('def remove_nth_from_end(head, n):', '    dummy = ListNode(0, head)', '    fast = dummy', '    slow = dummy', '    for _ in range(n):', '        fast = fast.next', '    while fast.next:', '        fast = fast.next', '        slow = slow.next', '    slow.next = slow.next.next', '    return dummy.next')),
+
+  'Subsets': solution(
+    lines('function subsets(nums) {', '  const result = [];', '  const current = [];', '  function backtrack(start) {', '    result.push([...current]);', '    for (let i = start; i < nums.length; i++) {', '      current.push(nums[i]);', '      backtrack(i + 1);', '      current.pop();', '    }', '  }', '  backtrack(0);', '  return result;', '}'),
+    lines('def subsets(nums):', '    result = []', '    current = []', '    def backtrack(start):', '        result.append(current[:])', '        for i in range(start, len(nums)):', '            current.append(nums[i])', '            backtrack(i + 1)', '            current.pop()', '    backtrack(0)', '    return result')),
+
+  'Maximum Subarray': solution(
+    lines('function maxSubArray(nums) {', '  let best = nums[0];', '  let current = nums[0];', '  for (let i = 1; i < nums.length; i++) {', '    current = Math.max(nums[i], current + nums[i]);', '    best = Math.max(best, current);', '  }', '  return best;', '}'),
+    lines('def max_sub_array(nums):', '    best = nums[0]', '    current = nums[0]', '    for i in range(1, len(nums)):', '        current = max(nums[i], current + nums[i])', '        best = max(best, current)', '    return best')),
+
+  'Merge Intervals': solution(
+    lines('function merge(intervals) {', '  intervals.sort((a, b) => a[0] - b[0]);', '  const merged = [];', '  for (const [start, end] of intervals) {', '    const last = merged[merged.length - 1];', '    if (last && start <= last[1]) {', '      last[1] = Math.max(last[1], end);', '    } else {', '      merged.push([start, end]);', '    }', '  }', '  return merged;', '}'),
+    lines('def merge(intervals):', '    intervals.sort(key=lambda interval: interval[0])', '    merged = []', '    for start, end in intervals:', '        if merged and start <= merged[-1][1]:', '            merged[-1][1] = max(merged[-1][1], end)', '        else:', '            merged.append([start, end])', '    return merged')),
+
+  'Implement Trie (Prefix Tree)': solution(
+    lines('class TrieNode {', '  constructor() {', '    this.children = {};', '    this.isEnd = false;', '  }', '}', 'class Trie {', '  constructor() {', '    this.root = new TrieNode();', '  }', '  insert(word) {', '    let node = this.root;', '    for (const char of word) {', '      if (!node.children[char]) node.children[char] = new TrieNode();', '      node = node.children[char];', '    }', '    node.isEnd = true;', '  }', '  search(word) {', '    const node = this.find(word);', '    return node !== null && node.isEnd;', '  }', '  startsWith(prefix) {', '    return this.find(prefix) !== null;', '  }', '  find(str) {', '    let node = this.root;', '    for (const char of str) {', '      if (!node.children[char]) return null;', '      node = node.children[char];', '    }', '    return node;', '  }', '}'),
+    lines('class TrieNode:', '    def __init__(self):', '        self.children = {}', '        self.is_end = False', 'class Trie:', '    def __init__(self):', '        self.root = TrieNode()', '    def insert(self, word):', '        node = self.root', '        for char in word:', '            if char not in node.children:', '                node.children[char] = TrieNode()', '            node = node.children[char]', '        node.is_end = True', '    def search(self, word):', '        node = self._find(word)', '        return node is not None and node.is_end', '    def starts_with(self, prefix):', '        return self._find(prefix) is not None', '    def _find(self, s):', '        node = self.root', '        for char in s:', '            if char not in node.children:', '                return None', '            node = node.children[char]', '        return node')),
+
+  'Network Delay Time': solution(
+    lines('function networkDelayTime(times, n, k) {', '  const adj = Array.from({ length: n + 1 }, () => []);', '  for (const [u, v, w] of times) adj[u].push([v, w]);', '  const dist = new Array(n + 1).fill(Infinity);', '  dist[k] = 0;', '  const visited = new Set();', '  while (visited.size < n) {', '    let u = -1;', '    for (let i = 1; i <= n; i++) {', '      if (!visited.has(i) && (u === -1 || dist[i] < dist[u])) u = i;', '    }', '    if (u === -1 || dist[u] === Infinity) break;', '    visited.add(u);', '    for (const [v, w] of adj[u]) {', '      if (dist[u] + w < dist[v]) dist[v] = dist[u] + w;', '    }', '  }', '  const ans = Math.max(...dist.slice(1));', '  return ans === Infinity ? -1 : ans;', '}'),
+    lines('def network_delay_time(times, n, k):', '    adj = [[] for _ in range(n + 1)]', '    for u, v, w in times:', '        adj[u].append((v, w))', '    dist = [float("inf")] * (n + 1)', '    dist[k] = 0', '    visited = set()', '    while len(visited) < n:', '        u = -1', '        for i in range(1, n + 1):', '            if i not in visited and (u == -1 or dist[i] < dist[u]):', '                u = i', '        if u == -1 or dist[u] == float("inf"):', '            break', '        visited.add(u)', '        for v, w in adj[u]:', '            if dist[u] + w < dist[v]:', '                dist[v] = dist[u] + w', '    ans = max(dist[1:])', '    return -1 if ans == float("inf") else ans')),
 };

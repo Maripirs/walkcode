@@ -2,222 +2,6 @@ import { supplementalFullCode } from './supplemental-solutions.js';
 import { blankLine, genericWrong } from './blank-line.js';
 
 // Lesson explanations and five-step walkthrough records.
-const featuredCore = {
-  "Contains Duplicate": {
-    "brief": "Given an array of integers, return true if any value appears at least twice; otherwise return false.",
-    "concepts": [
-      "One pass through the array",
-      "Set membership"
-    ],
-    "algorithm": [
-      "Keep a set of the values seen so far.",
-      "Iterate over the numbers one at a time.",
-      "Check whether the set already contains the current number.",
-      "A number already in the set means the array has a duplicate, so return true.",
-      "A number not yet in the set is added to it.",
-      "If the iteration completes with no match, return false."
-    ],
-    "code": "const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;",
-    "fixes": [
-      "Check membership before adding the current value.",
-      "A Set stores prior values directly, so it is enough for a duplicate check."
-    ],
-    "complexity": "Time O(n); space O(n) in the worst case.",
-    "intuition": "You never need to compare every pair — the instant you meet a value you have already met, you have your answer. So carry a memory of everything you have passed and let each new number check itself against that memory."
-  },
-  "Reverse Linked List": {
-    "brief": "Given the head of a singly linked list, reverse its links in place and return the new head.",
-    "concepts": [
-      "Pointer rewiring",
-      "The prev / current / next invariant"
-    ],
-    "algorithm": [
-      [
-        "Initialize prev to null.",
-        "Initialize current to the head."
-      ],
-      "Loop while current is not null.",
-      "Save current.next in a temporary before rewiring any link.",
-      "Point current.next back to prev.",
-      "Advance prev to current.",
-      "Advance current to the saved next node.",
-      "Return prev as the new head once current is null."
-    ],
-    "code": "let prev = null;\nlet current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;",
-    "fixes": [
-      "Save next before overwriting current.next, or the unreversed list is lost.",
-      "Return prev, not head: the original head becomes the final node."
-    ],
-    "complexity": "Time O(n); space O(1) for the iterative version.",
-    "intuition": "Reversing the list is just flipping one arrow at a time, but each flip destroys your way forward — so grab the next node before you rewire, and drag a 'previous' marker along behind you as you go."
-  },
-  "Invert Binary Tree": {
-    "brief": "Given a binary tree, swap the left and right child of every node and return the same root.",
-    "concepts": [
-      "Tree DFS",
-      "Recursive child swapping"
-    ],
-    "algorithm": [
-      "Return null for an empty node - the base case.",
-      "Save the original left child before overwriting it.",
-      [
-        "Recursively invert the right subtree and assign it to root.left.",
-        "Recursively invert the saved left subtree and assign it to root.right."
-      ],
-      "Return root after both child links are replaced."
-    ],
-    "code": "function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}",
-    "fixes": [
-      "Save one child before its reference is overwritten.",
-      "Handle the null base case before reading a child."
-    ],
-    "complexity": "Time O(n); space O(h) for the recursion stack, where h is the tree height.",
-    "intuition": "Inverting the whole tree is the same tiny action repeated everywhere: swap a node's two children, then ask each child to do the same to itself. The full mirror image falls out of that one local swap."
-  },
-  "Two Sum": {
-    "brief": "Given an array of integers and a target, return the indices of two different numbers whose values add up to that target.",
-    "concepts": [
-      "Complement lookup",
-      "Hash map: value → index"
-    ],
-    "algorithm": [
-      "Walk through the array once.",
-      "For the current value n, calculate target − n.",
-      "If that complement is already saved, return its saved index and the current index.",
-      "Otherwise save n and its index for a future match."
-    ],
-    "code": "const seen = new Map();\nfor (let i = 0; i < nums.length; i++) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  seen.set(nums[i], i);\n}",
-    "fixes": [
-      "Save after checking, so you cannot use the same element twice.",
-      "Map values to indices—not booleans—because the result needs positions."
-    ],
-    "complexity": "Time O(n); space O(n) for the map.",
-    "intuition": "As you scan, the only thing that unlocks an answer is having already seen the number that completes the pair — so remember each value you pass and check for its complement, not future values."
-  },
-  "Two Sum II": {
-    "brief": "Given a sorted array and a target, return the two positions whose values add up to the target.",
-    "concepts": [
-      "Sorted order",
-      "Two pointers"
-    ],
-    "algorithm": [
-      "Initialize a left pointer at the first index and a right pointer at the last.",
-      "Loop while left is less than right.",
-      "Compute the sum of the values at left and right.",
-      [
-        "A sum equal to the target means left and right are the answer — return them as 1-based indices.",
-        "A sum less than the target needs a larger value, so increment left.",
-        "A sum greater than the target needs a smaller value, so decrement right."
-      ]
-    ],
-    "code": "let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  if (sum < target) left++; else right--;\n}",
-    "fixes": [
-      "Move only one pointer per comparison.",
-      "The input is already sorted; do not sort it again."
-    ],
-    "complexity": "Time O(n); space O(1).",
-    "intuition": "Because the values are sorted, the outer pair's sum tells you everything: too small can never be fixed by shrinking, too large can never be fixed by growing — so each comparison lets you retire one end for good."
-  },
-  "Longest Substring Without Repeating Characters": {
-    "brief": "Given a string, find the length of its longest contiguous substring with no repeated characters.",
-    "concepts": [
-      "Sliding window",
-      "Set of characters inside the current window"
-    ],
-    "algorithm": [
-      [
-        "Keep a set of the characters currently in the window.",
-        "Track the window's left edge and the best length, both starting at zero."
-      ],
-      "Expand the window by moving right across the string one character at a time.",
-      "While the incoming character is already in the set, delete the leftmost character and advance left.",
-      "Add the incoming character to the set.",
-      "Update the best length with the current window size, right - left + 1."
-    ],
-    "code": "const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}",
-    "fixes": [
-      "Delete s[left], not the incoming duplicate.",
-      "Measure after the window is repaired."
-    ],
-    "complexity": "Time O(n); space O(min(n, alphabet size)).",
-    "intuition": "A repeat can only ever appear at the newest character you add, so instead of restarting you just pull the left edge forward until the clash is gone — and the window keeps sliding without ever rechecking old ground."
-  },
-  "Binary Search": {
-    "brief": "Given a sorted list and a target, return its index or -1 without checking every value.",
-    "concepts": [
-      "Sorted order",
-      "Binary search interval"
-    ],
-    "algorithm": [
-      "Set a left boundary at index 0 and a right boundary at the last index.",
-      "Loop while left is less than or equal to right.",
-      "Compute the middle index and read the value there.",
-      [
-        "A middle value equal to the target returns its index.",
-        "A middle value below the target discards the left half: set left to mid + 1.",
-        "A middle value above the target discards the right half: set right to mid - 1."
-      ],
-      "Return -1 once the boundaries cross with no match."
-    ],
-    "code": "let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  else right = mid - 1;\n}\nreturn -1;",
-    "fixes": [
-      "Use left <= right so a single remaining value is checked.",
-      "Move past mid; mid was already tested."
-    ],
-    "complexity": "Time O(log n); space O(1).",
-    "intuition": "Because the array is sorted, one comparison against the middle tells you which half the target cannot be in — so you can throw away half the remaining range every step."
-  },
-  "Valid Parentheses": {
-    "brief": "Given brackets, decide whether every opening bracket is closed in the correct order.",
-    "concepts": [
-      "Last-in, first-out order",
-      "Stack"
-    ],
-    "algorithm": [
-      "Keep a stack of opening brackets awaiting their match.",
-      "Iterate over the string one character at a time.",
-      [
-        "An opening bracket is pushed onto the stack.",
-        { "seq": [
-          "A closing bracket pops the opener off the top of the stack.",
-          "Check that popped opener is the correct partner for the closer.",
-          "An empty stack or a mismatched partner means the string is invalid."
-        ] }
-      ],
-      "After iterating, the string is valid only if the stack is empty."
-    ],
-    "code": "const pairs = { \")\":\"(\", \"]\":\"[\", \"}\":\"{\" };\nconst stack = [];\nfor (const ch of s) {\n  if (ch in pairs) { if (stack.pop() !== pairs[ch]) return false; }\n  else stack.push(ch);\n}\nreturn stack.length === 0;",
-    "fixes": [
-      "Check the result of pop; an empty stack is invalid.",
-      "Do not only compare counts—order matters."
-    ],
-    "complexity": "Time O(n); space O(n).",
-    "intuition": "Only the most recently opened bracket can be the next one legally closed — that 'last opened, first closed' rule is exactly what a stack enforces, so push every opener and match each closer against the top."
-  },
-  "Number of Islands": {
-    "brief": "Given a grid of land and water, count the distinct groups of connected land.",
-    "concepts": [
-      "Grid graph",
-      "DFS or BFS",
-      "Visited set / in-place marking"
-    ],
-    "algorithm": [
-      "Scan every cell of the grid.",
-      "On reaching unvisited land, increment the island count and start a flood fill from that cell.",
-      "The flood fill returns immediately for a cell out of bounds, on water, or already visited.",
-      "Otherwise mark the current land cell as visited.",
-      "Recurse the flood fill into the four neighboring cells - up, down, left, and right."
-    ],
-    "code": "function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  grid[r][c] = \"0\";\n  visit(r+1,c); visit(r-1,c); visit(r,c+1); visit(r,c-1);\n}",
-    "fixes": [
-      "Mark a cell visited when it is discovered, not later.",
-      "Check grid boundaries before indexing."
-    ],
-    "complexity": "Time O(rows × cols); space O(rows × cols) in the worst case.",
-    "intuition": "Each new patch of land you stumble on is the start of a fresh island — so count it once, then flood outward to erase every cell connected to it, guaranteeing you never count the same island twice."
-  }
-};
-
 export const profiles = {
   "Arrays & Hashing": {
     "concepts": [
@@ -535,399 +319,8 @@ export const problemExplanations = {
   "Reverse Integer": "You receive a signed 32-bit integer. Reverse its digits, returning zero if the reversed result overflows the 32-bit range."
 };
 
-export const briefs = {
-  "Two Sum": [
-    "nums: an integer array; target: an integer.",
-    "Return two indices whose values sum to target.",
-    "Input: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]"
-  ],
-  "Two Sum II": [
-    "numbers: a sorted integer array; target: an integer.",
-    "Return the two 1-indexed positions.",
-    "Input: [2, 7, 11, 15], target = 9\nOutput: [1, 2]"
-  ],
-  "Longest Substring Without Repeating Characters": [
-    "s: a string.",
-    "Return the longest valid substring length.",
-    "Input: \"abcabcbb\"\nOutput: 3, from \"abc\""
-  ],
-  "Binary Search": [
-    "nums: sorted integer array; target: an integer.",
-    "Return the target index or -1.",
-    "Input: [-1, 0, 3, 5, 9], target = 9\nOutput: 4"
-  ],
-  "Valid Parentheses": [
-    "s: a bracket string.",
-    "Return true when every opening bracket closes in order.",
-    "Input: \"([])\"\nOutput: true"
-  ],
-  "Number of Islands": [
-    "grid: a matrix of \"1\" land and \"0\" water.",
-    "Return the number of connected land groups.",
-    "Input: [[\"1\",\"1\",\"0\"],[\"0\",\"1\",\"0\"],[\"1\",\"0\",\"1\"]]\nOutput: 3"
-  ],
-  "Contains Duplicate": [
-    "nums: an array of integers.",
-    "Return true if any value appears at least twice; otherwise return false.",
-    "Input: nums = [1, 2, 3, 1]\nOutput: true, because 1 appears more than once."
-  ],
-  "Reverse Linked List": [
-    "head: the first node of a singly linked list. Each node has a value and a next pointer.",
-    "Return the head of the same nodes in reverse order.",
-    "Input: 1 → 2 → 3 → null\nOutput: 3 → 2 → 1 → null"
-  ],
-  "Invert Binary Tree": [
-    "root: the root node of a binary tree. Each node has left and right children.",
-    "Return the root after every node’s left and right subtrees have been swapped.",
-    "Input:    4\n       / \\ \n      2   7\nOutput:   4\n       / \\ \n      7   2"
-  ]
-};
 
-export const conceptChoices = {
-  "Two Sum": ["A hash map of complements", "Sort, then two pointers", "Check every pair"],
-  "Two Sum II": ["Two pointers from both ends", "A hash map of complements", "Binary search for each complement"],
-  "Longest Substring Without Repeating Characters": ["A sliding window with a seen-set", "Check every substring for repeats", "Sort the characters"],
-  "Binary Search": ["Halve the interval each step", "Scan left to right", "Jump in fixed-size blocks"],
-  "Valid Parentheses": ["A stack of open brackets", "Count each bracket type", "Delete matched pairs repeatedly"],
-  "Number of Islands": ["Flood-fill each new land cell", "Union-find over adjacent land", "Scan rows counting land"],
-  "Contains Duplicate": ["A hash set of seen values", "Sort, then check neighbors", "Compare every pair"],
-  "Reverse Linked List": ["Rewire next-pointers with a prev cursor", "Recurse to the tail, then relink", "Copy to an array and reverse"],
-  "Invert Binary Tree": ["Swap every node's children", "Swap only the leaf nodes", "Sort each level left to right"]
-};
 
-export const complexityLessons = {
-  "Contains Duplicate": {
-    "code": "const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;",
-    "work": "Across the for loop, how many times can one array value be checked and added to the set?",
-    "workChoices": [
-      ["once", "At most once"],
-      ["nested", "Once for every other array value"]
-    ],
-    "workCorrect": "once",
-    "workWhy": "The loop advances through nums once. Set membership and insertion are constant time on average, so each value contributes constant work.",
-    "memory": "In the worst case, what extra storage can grow with the array?",
-    "memoryChoices": [
-      ["set", "The set of distinct values seen so far"],
-      ["constant", "Only n and the loop index"]
-    ],
-    "memoryCorrect": "set",
-    "memoryWhy": "If no number repeats, seen stores every input value before the loop finishes.",
-    "final": [
-      ["linear-linear", "Time O(n), space O(n)"],
-      ["quadratic-linear", "Time O(n²), space O(n)"],
-      ["linear-constant", "Time O(n), space O(1)"]
-    ],
-    "finalCorrect": "linear-linear"
-  },
-  "Reverse Linked List": {
-    "code": "let prev = null, current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;",
-    "work": "During the while loop, how many times can a single node become current?",
-    "workChoices": [
-      [
-        "once",
-        "At most once"
-      ],
-      [
-        "revisit",
-        "Once for every other node"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "The current pointer moves to the saved next node and never moves backward, so each node is processed once.",
-    "memory": "Besides the input list, what storage can grow as the list gets longer?",
-    "memoryChoices": [
-      [
-        "constant",
-        "Only prev, current, and next"
-      ],
-      [
-        "nodes",
-        "A second list of all nodes"
-      ]
-    ],
-    "memoryCorrect": "constant",
-    "memoryWhy": "The algorithm changes links in the original list and holds only three node references.",
-    "final": [
-      [
-        "linear-constant",
-        "Time O(n), space O(1)"
-      ],
-      [
-        "quadratic-constant",
-        "Time O(n²), space O(1)"
-      ],
-      [
-        "linear-linear",
-        "Time O(n), space O(n)"
-      ]
-    ],
-    "finalCorrect": "linear-constant"
-  },
-  "Two Sum II": {
-    "code": "let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  if (sum < target) left++;\n  else right--;\n}",
-    "work": "Across the full search, how many times can either pointer move?",
-    "workChoices": [
-      [
-        "once",
-        "At most once per array position"
-      ],
-      [
-        "nested",
-        "Once for every other array position"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "left only moves right and right only moves left. Together they can cross the array only once.",
-    "memory": "Besides the input array, what storage can grow as the input gets longer?",
-    "memoryChoices": [
-      [
-        "constant",
-        "Only left, right, and sum"
-      ],
-      [
-        "map",
-        "A map of every value"
-      ]
-    ],
-    "memoryCorrect": "constant",
-    "memoryWhy": "The algorithm keeps a fixed number of variables and uses the sorted input directly.",
-    "final": [
-      [
-        "linear-constant",
-        "Time O(n), space O(1)"
-      ],
-      [
-        "quadratic-constant",
-        "Time O(n²), space O(1)"
-      ],
-      [
-        "linear-linear",
-        "Time O(n), space O(n)"
-      ]
-    ],
-    "finalCorrect": "linear-constant"
-  },
-  "Longest Substring Without Repeating Characters": {
-    "code": "const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}\nreturn best;",
-    "work": "Although there is a while loop inside the for loop, how many total times can one character leave the window?",
-    "workChoices": [
-      [
-        "once",
-        "At most once"
-      ],
-      [
-        "nested",
-        "Once for every later character"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "left only moves forward. Each character is added once and removed at most once, so the two pointers make one total pass.",
-    "memory": "In the worst case, what extra storage can grow with the input string?",
-    "memoryChoices": [
-      [
-        "set",
-        "The set of characters in the current window"
-      ],
-      [
-        "constant",
-        "Only left, right, and best"
-      ]
-    ],
-    "memoryCorrect": "set",
-    "memoryWhy": "When all characters are distinct, the current window and its set can contain the whole string.",
-    "final": [
-      [
-        "linear-linear",
-        "Time O(n), space O(n)"
-      ],
-      [
-        "quadratic-linear",
-        "Time O(n²), space O(n)"
-      ],
-      [
-        "linear-constant",
-        "Time O(n), space O(1)"
-      ]
-    ],
-    "finalCorrect": "linear-linear"
-  },
-  "Valid Parentheses": {
-    "code": "const pairs = { \")\":\"(\", \"]\":\"[\", \"}\":\"{\" };\nconst stack = [];\nfor (const char of s) {\n  if (char in pairs) {\n    if (stack.pop() !== pairs[char]) return false;\n  } else stack.push(char);\n}\nreturn stack.length === 0;",
-    "work": "How many times can one bracket be read by the for loop?",
-    "workChoices": [
-      [
-        "once",
-        "At most once"
-      ],
-      [
-        "nested",
-        "Once for every other bracket"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "The loop makes one pass through the string, and each stack push or pop is constant time.",
-    "memory": "In the worst case, what extra storage can grow with the string?",
-    "memoryChoices": [
-      [
-        "stack",
-        "The stack of unmatched opening brackets"
-      ],
-      [
-        "constant",
-        "Only the pairs object"
-      ]
-    ],
-    "memoryCorrect": "stack",
-    "memoryWhy": "A string of only opening brackets leaves every bracket on the stack, so the stack can hold n values.",
-    "final": [
-      [
-        "linear-linear",
-        "Time O(n), space O(n)"
-      ],
-      [
-        "quadratic-linear",
-        "Time O(n²), space O(n)"
-      ],
-      [
-        "linear-constant",
-        "Time O(n), space O(1)"
-      ]
-    ],
-    "finalCorrect": "linear-linear"
-  },
-  "Binary Search": {
-    "code": "let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  else right = mid - 1;\n}\nreturn -1;",
-    "work": "After each unsuccessful comparison, what happens to the remaining search interval?",
-    "workChoices": [
-      [
-        "halve",
-        "It is cut roughly in half"
-      ],
-      [
-        "one",
-        "It loses only one value"
-      ]
-    ],
-    "workCorrect": "halve",
-    "workWhy": "Each comparison proves an entire half of the sorted interval cannot contain the target.",
-    "memory": "Besides the input array, what storage can grow as the array gets longer?",
-    "memoryChoices": [
-      [
-        "constant",
-        "Only left, right, and mid"
-      ],
-      [
-        "copy",
-        "A copy of the remaining half"
-      ]
-    ],
-    "memoryCorrect": "constant",
-    "memoryWhy": "The active interval is represented by indexes; no new array is created.",
-    "final": [
-      [
-        "log-constant",
-        "Time O(log n), space O(1)"
-      ],
-      [
-        "linear-constant",
-        "Time O(n), space O(1)"
-      ],
-      [
-        "log-linear",
-        "Time O(log n), space O(n)"
-      ]
-    ],
-    "finalCorrect": "log-constant"
-  },
-  "Number of Islands": {
-    "code": "function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  grid[r][c] = \"0\";\n  visit(r + 1, c); visit(r - 1, c);\n  visit(r, c + 1); visit(r, c - 1);\n}\nfor (let r = 0; r < rows; r++)\n  for (let c = 0; c < cols; c++)\n    if (grid[r][c] === \"1\") { count++; visit(r, c); }",
-    "work": "Across the scan and all flood fills, how many times can one grid cell be visited as land?",
-    "workChoices": [
-      [
-        "once",
-        "At most once"
-      ],
-      [
-        "nested",
-        "Once for every other cell"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "Flood fill marks a land cell the first time it visits it, so later scans and calls skip it.",
-    "memory": "What extra storage can grow with the size of the grid in this recursive version?",
-    "memoryChoices": [
-      [
-        "callstack",
-        "The recursion call stack"
-      ],
-      [
-        "constant",
-        "Only the island counter"
-      ]
-    ],
-    "memoryCorrect": "callstack",
-    "memoryWhy": "A large connected island can create a recursive path containing many cells.",
-    "final": [
-      [
-        "grid-grid",
-        "Time O(rows × cols), space O(rows × cols)"
-      ],
-      [
-        "quadratic-constant",
-        "Time O((rows × cols)²), space O(1)"
-      ],
-      [
-        "grid-constant",
-        "Time O(rows × cols), space O(1)"
-      ]
-    ],
-    "finalCorrect": "grid-grid"
-  },
-  "Invert Binary Tree": {
-    "code": "function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}",
-    "work": "How many times does the recursive function process a real tree node?",
-    "workChoices": [
-      [
-        "once",
-        "At most once"
-      ],
-      [
-        "nested",
-        "Once for every other node"
-      ]
-    ],
-    "workCorrect": "once",
-    "workWhy": "Each call handles one node, swaps its two child references, and recurses into each child once.",
-    "memory": "What extra storage can grow as the tree gets taller?",
-    "memoryChoices": [
-      [
-        "stack",
-        "The recursion call stack"
-      ],
-      [
-        "constant",
-        "Only oldLeft"
-      ]
-    ],
-    "memoryCorrect": "stack",
-    "memoryWhy": "The recursive calls wait for child calls to finish. Their depth follows the tree height h.",
-    "final": [
-      [
-        "tree-height",
-        "Time O(n), space O(h)"
-      ],
-      [
-        "tree-constant",
-        "Time O(n), space O(1)"
-      ],
-      [
-        "quadratic-height",
-        "Time O(n²), space O(h)"
-      ]
-    ],
-    "finalCorrect": "tree-height"
-  }
-};
 
 
 // ---- Roadmap problems promoted WIP -> Built (consolidated from the former walkthrough-upgrades.js).
@@ -1083,13 +476,13 @@ const walkthroughUpgrades = {
   }),
   'Best Time to Buy and Sell Stock': lesson('Best Time to Buy and Sell Stock', {
     brief: 'Choose an earlier buy day and a later sell day to maximize profit, or return zero.',
-    concepts: ['Running minimum price', 'Best-so-far profit'],
+    concepts: ['Prefix minimum', 'Greedy best-so-far'],
     inputOutput: ['prices[i]: stock price on day i.', 'Return the greatest legal buy-then-sell profit.', 'Input: [7, 1, 5, 3, 6, 4]\nOutput: 5'],
     conceptChoices: ['Track the lowest price so far', 'Try every buy/sell pair', 'A prefix-max of later prices'],
     algorithm: [
       [
-        "Track the lowest price seen so far, initialized to infinity.",
-        "Track the best profit so far, initialized to zero."
+        "Set the lowest price so far to infinity, so the first day's price replaces it.",
+        "Set the best profit so far to zero."
       ],
       "Iterate over the prices, treating each as a potential sell day.",
       "Compute today's profit as the price minus the lowest price so far, keeping it if it beats the best.",
@@ -1137,13 +530,14 @@ const walkthroughUpgrades = {
     inputOutput: ['root: the root of a binary tree.', 'Return the maximum root-to-leaf node count.', 'Input: [3,9,20,null,null,15,7]\nOutput: 3'],
     conceptChoices: ['1 + the deeper subtree', 'Count all the nodes', 'Follow only the left spine'],
     algorithm: [
-      "Return depth zero for an empty node - the base case.",
+      "Define one call to return the depth of the subtree rooted at a node.",
+      "Base case: an empty node has depth 0.",
       [
-        "Recursively compute the left subtree's depth.",
-        "Recursively compute the right subtree's depth."
+        "Recursively compute the left child's depth.",
+        "Recursively compute the right child's depth."
       ],
-      "Take the larger of the two child depths.",
-      "Add one for the current node and return the result."
+      "Take the larger of the two child depths — the longer branch wins.",
+      "Add 1 for the current node and return this subtree's depth."
     ],
     fixes: ['Use zero for an empty subtree.', 'Recurse into both children before choosing the larger depth.'],
     complexity: 'Time O(n); space O(h) for recursion height h.',
@@ -1456,7 +850,19 @@ const walkthroughUpgrades = {
     intuition: 'Two trees match only if their roots match and, recursively, their left subtrees match and their right subtrees match — one local check repeated at every node.',
     inputOutput: ['p and q: the roots of two binary trees.', 'Return true when they have the same structure and the same values.', 'Input: p = [1, 2, 3], q = [1, 2, 3]\nOutput: true'],
     conceptChoices: ['Compare the trees node by node (DFS)', 'Compare their sorted value lists', 'Compare their heights'],
-    algorithm: ['If both nodes are null, this pair matches.', 'If exactly one is null, or the values differ, they do not match.', 'Otherwise recurse on the two left children and the two right children.', 'The trees match only when every recursive check matches.'],
+    algorithm: [
+      'Compare the trees as pairs of nodes — one pair per recursive call.',
+      'Base case: when both nodes in the pair are null, this pair matches.',
+      [
+        'If one node is null but the other is not, the shapes differ — not a match.',
+        'If both nodes exist but hold different values — not a match.',
+      ],
+      [
+        'Recurse to compare the two left children.',
+        'Recurse to compare the two right children.',
+      ],
+      'This pair matches only when both child comparisons return true.',
+    ],
     fixes: ['Handle the one-null case before reading .val, or it throws on a null node.', 'Both the left and right subtree checks must pass, so combine them with AND.'],
     complexity: 'Time O(n); space O(h) for the recursion stack (h = height).',
     exercises: [
@@ -1540,7 +946,18 @@ const walkthroughUpgrades = {
     intuition: 'Compute each height from the bottom up, and the moment any node is unbalanced, propagate a -1 sentinel so the whole tree fails fast without recomputing heights.',
     inputOutput: ['root: the root of a binary tree.', 'Return true if the tree is height-balanced.', 'Input: root = [3, 9, 20, null, null, 15, 7]\nOutput: true'],
     conceptChoices: ['Bottom-up height with a -1 balance sentinel', 'Measure each node height independently (top-down)', 'Compare the node counts on each side'],
-    algorithm: ['Recurse to compute each subtree height.', 'If either child already reported -1, this node is unbalanced too.', 'If the two child heights differ by more than 1, report -1.', 'Otherwise report 1 plus the taller child; the tree is balanced when the root is not -1.'],
+    algorithm: [
+      'Write one helper that returns a subtree height, reusing -1 to mean "already unbalanced".',
+      'Base case: an empty node has height 0.',
+      [
+        'Recurse to get the left child height.',
+        'Recurse to get the right child height.',
+      ],
+      'If either child came back -1, this subtree is unbalanced too — return -1.',
+      'If the two child heights differ by more than 1, this node is unbalanced — return -1.',
+      'Otherwise return 1 plus the taller child height.',
+      'The whole tree is balanced when the helper on the root does not return -1.',
+    ],
     fixes: ['Use -1 as an "unbalanced" signal so a bad subtree short-circuits the whole tree.', 'Compare the ABSOLUTE height difference against 1.'],
     complexity: 'Time O(n); space O(h) for the recursion (h = height).',
     exercises: [
@@ -1554,7 +971,17 @@ const walkthroughUpgrades = {
     intuition: 'At every node ask one question: is the tree hanging from here identical to subRoot? Walk every node of root and reuse a strict same-tree comparison to answer it.',
     inputOutput: ['root: a binary tree; subRoot: a smaller binary tree.', 'Return true if subRoot matches some subtree of root exactly.', 'Input: root = [3, 4, 5, 1, 2], subRoot = [4, 1, 2]\nOutput: true'],
     conceptChoices: ['Try a same-tree check at every node', 'Compare the two in-order traversals', 'Count the nodes on each side and compare'],
-    algorithm: ['If subRoot is empty, it matches trivially.', 'If root runs out first, there is nothing left to match.', 'At the current node, test whether the whole subtree equals subRoot.', 'Otherwise search the left and right children for a match.'],
+    algorithm: [
+      'At each node of root, ask one question: is the subtree rooted here identical to subRoot?',
+      'Base case: an empty subRoot matches anything, so report a match.',
+      'If root is exhausted but subRoot is not, there is nothing left to match.',
+      'Run a strict same-tree check between the current node and subRoot; a full match succeeds here.',
+      [
+        'Otherwise recurse into the left child, looking for the subtree.',
+        'Otherwise recurse into the right child, looking for the subtree.',
+      ],
+      'A match in either child (OR) is enough to succeed.',
+    ],
     fixes: ['An empty subRoot is a subtree of anything, so return true first.', 'Use a strict node-by-node equality, not just a root-value check.'],
     complexity: 'Time O(n·m) worst case; space O(h).',
     exercises: [
@@ -1594,7 +1021,7 @@ const walkthroughUpgrades = {
     complexityGuide: { work: 'How many iterations does the loop run?', workChoices: [['fixed', 'Exactly 32, regardless of input'], ['variable', 'As many as there are set bits']], workCorrect: 'fixed', workWhy: 'It always processes all 32 bit positions, so the time is constant.', memory: 'What extra storage is needed?', memoryChoices: [['constant', 'Just the result accumulator'], ['linear', 'An array of the bits']], memoryCorrect: 'constant', memoryWhy: 'Only a single result number is maintained.', final: [['constant-constant', 'Time O(1), space O(1)'], ['linear-constant', 'Time O(n), space O(1)'], ['constant-linear', 'Time O(1), space O(n)']], finalCorrect: 'constant-constant' },
   }),
   'Container With Most Water': lesson('Container With Most Water', {
-    brief: 'Pick two lines that with the x-axis hold the most water, and return that maximum area.',
+    brief: 'Each array value is a vertical line’s height; pick the two lines that trap the most water between them and return that area.',
     concepts: ['Two pointers', 'Move the shorter wall'],
     intuition: 'Start as wide as possible; since the shorter wall caps the area, moving the taller wall inward can never help — so always advance the shorter side, hunting for a taller wall.',
     inputOutput: ['height: an array of non-negative wall heights.', 'Return the largest area of water trapped between any two walls.', 'Input: height = [1, 8, 6, 2, 5, 4, 8, 3, 7]\nOutput: 49'],
@@ -1638,7 +1065,235 @@ const walkthroughUpgrades = {
     ],
     complexityGuide: { work: 'How many passes over the list does it take?', workChoices: [['one', 'A single pass with both pointers'], ['nested', 'A pass for each node']], workCorrect: 'one', workWhy: 'Fast walks the list once while slow trails, so it is one linear pass.', memory: 'What extra space is used?', memoryChoices: [['constant', 'A dummy node and two pointers'], ['linear', 'An array of all the nodes']], memoryCorrect: 'constant', memoryWhy: 'Only the dummy and the two pointers are kept, regardless of length.', final: [['linear-constant', 'Time O(L), space O(1)'], ['quadratic-constant', 'Time O(L²), space O(1)'], ['linear-linear', 'Time O(L), space O(L)']], finalCorrect: 'linear-constant' },
   }),
+  'Subsets': lesson('Subsets', {
+    brief: 'Return every possible subset (the power set) of an array of distinct integers.',
+    concepts: ['Backtracking', 'Include-or-skip choice tree'],
+    intuition: 'Each element is either in a subset or not, so walk a decision tree: record where you are, add an element and recurse, then remove it and try the next — that choose / recurse / un-choose rhythm lists every subset exactly once.',
+    inputOutput: ['nums: an array of distinct integers.', 'Return a list of every subset, including the empty set and nums itself.', 'Input: nums = [1, 2, 3]\nOutput: [[], [1], [1,2], [1,2,3], [1,3], [2], [2,3], [3]]'],
+    conceptChoices: ['Build a choice tree, adding then removing each element', 'Greedily keep the largest elements first', 'Two pointers from both ends of the array'],
+    algorithm: [
+      'Keep a growing "current" subset and a "result" list of finished subsets.',
+      'At the start of each recursive call, add a COPY of current to result — every node of the search is a valid subset.',
+      'Loop i from the start index up to the end of nums.',
+      'Choose nums[i] by pushing it onto current.',
+      'Recurse with start = i + 1 so only later elements can be added.',
+      'Un-choose by popping nums[i] before the next i.',
+      'Begin the recursion at start = 0 and return result once it finishes.',
+    ],
+    fixes: ['Store a COPY of current (e.g. [...current]); pushing current itself saves a reference that later changes overwrite.', 'Recurse from i + 1, not i, so each element is used at most once and no subset repeats.'],
+    complexity: 'Time O(n · 2ⁿ) — 2ⁿ subsets, each up to n long to copy; space O(n) for the recursion depth, beyond the output.',
+    exercises: [
+      { prompt: 'Which line records the current subset so later changes cannot corrupt it?', correct: 'result.push([...current]);', choices: ['result.push([...current]);', 'result.push(current);', 'current.push([...result]);'], why: 'Copying current freezes this subset; pushing current itself stores a reference that the later push/pop mutate.', wrong: { 'result.push(current);': 'This stores a live reference, so every later push and pop rewrites the saved subset.', 'current.push([...result]);': 'This mutates current with a copy of result — backwards, and it never records an answer.' } },
+      { prompt: 'Which line recurses so each element is used at most once?', correct: 'backtrack(i + 1);', choices: ['backtrack(i + 1);', 'backtrack(i);', 'backtrack(start + 1);'], why: 'Starting the next call at i + 1 considers only later elements, so no element repeats and no subset is duplicated.', wrong: { 'backtrack(i);': 'Passing i lets the same element be chosen again, producing duplicates and infinite recursion.', 'backtrack(start + 1);': 'start does not advance with the loop, so it skips and repeats the wrong elements.' } },
+    ],
+    complexityGuide: { work: 'How many subsets are generated?', workChoices: [['exp', 'Two to the n'], ['quadratic', 'About n squared']], workCorrect: 'exp', workWhy: 'Each element is independently in or out, giving 2ⁿ subsets.', memory: 'What sets the extra space beyond the output?', memoryChoices: [['depth', 'The recursion depth, up to n'], ['exp', 'Two to the n at once']], memoryCorrect: 'depth', memoryWhy: 'Only one root-to-node path (length ≤ n) is active at a time; finished subsets go to the output.', final: [['n2n-n', 'Time O(n · 2ⁿ), space O(n)'], ['exp-exp', 'Time O(2ⁿ), space O(2ⁿ)'], ['quad-const', 'Time O(n²), space O(1)']], finalCorrect: 'n2n-n' },
+  }),
+  'Maximum Subarray': lesson('Maximum Subarray', {
+    brief: 'Find the contiguous subarray with the largest sum and return that sum.',
+    concepts: ['Kadane’s algorithm', 'Best sum ending here'],
+    intuition: 'At each position make one choice: extend the subarray you have been building, or start fresh at the current element — whichever sum is larger. Track the best total seen and a single pass finds the answer.',
+    inputOutput: ['nums: an array of integers, which may be negative.', 'Return the largest sum of any one contiguous subarray.', 'Input: nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]\nOutput: 6, from [4, -1, 2, 1]'],
+    conceptChoices: ['Track the best sum ending at each position', 'Sort the values and add the largest ones', 'Two pointers from both ends'],
+    algorithm: [
+      'Keep two values: "current" = the best sum ending at the position you are on, and "best" = the largest sum seen anywhere.',
+      'Seed both with the first element, then scan from the second element onward.',
+      'At each element, extend or restart: current = max(nums[i], current + nums[i]).',
+      'Taking nums[i] alone is what discards a running sum that has gone negative.',
+      'After updating current, update best = max(best, current).',
+      'Return best once the scan finishes.',
+    ],
+    fixes: ['Compare nums[i] alone against current + nums[i] — a negative running sum should be dropped.', 'Update best after current each step, so a new peak is never missed.'],
+    complexity: 'Time O(n); space O(1).',
+    exercises: [
+      { prompt: 'Which line makes the extend-or-restart choice at each element?', correct: 'current = Math.max(nums[i], current + nums[i]);', choices: ['current = Math.max(nums[i], current + nums[i]);', 'current = Math.max(best, current + nums[i]);', 'current = current + nums[i];'], why: 'The best subarray ending here is either this element alone (a restart) or the previous run extended by it.', wrong: { 'current = Math.max(best, current + nums[i]);': 'best is the global answer, not the option to restart from — compare against nums[i] alone.', 'current = current + nums[i];': 'Always extending never lets a negative running sum reset, so it underperforms.' } },
+      { prompt: 'Which line records the best subarray sum seen so far?', correct: 'best = Math.max(best, current);', choices: ['best = Math.max(best, current);', 'best = Math.max(best, nums[i]);', 'best = current;'], why: 'best keeps the largest current value ever reached across the whole scan.', wrong: { 'best = Math.max(best, nums[i]);': 'That compares against a single element, not the running subarray sum.', 'best = current;': 'Overwriting drops earlier peaks when current later shrinks.' } },
+    ],
+    complexityGuide: { work: 'How many passes over the array are needed?', workChoices: [['once', 'A single pass'], ['nested', 'A pass for each element']], workCorrect: 'once', workWhy: 'One scan does constant work per element.', memory: 'What extra storage grows with the input?', memoryChoices: [['constant', 'Only current and best'], ['linear', 'A sum for every prefix']], memoryCorrect: 'constant', memoryWhy: 'Two running values are enough.', final: [['linear-constant', 'Time O(n), space O(1)'], ['quadratic-constant', 'Time O(n²), space O(1)'], ['linear-linear', 'Time O(n), space O(n)']], finalCorrect: 'linear-constant' },
+  }),
+  'Merge Intervals': lesson('Merge Intervals', {
+    brief: 'Merge all overlapping intervals and return the non-overlapping set covering the same ranges.',
+    concepts: ['Sort by start', 'Sweep and merge'],
+    intuition: 'Once intervals are sorted by start, an overlap can only be with the interval you just kept — so sweep left to right, extending the last kept interval whenever the next one overlaps it, and otherwise beginning a new one.',
+    inputOutput: ['intervals: a list of [start, end] pairs in any order.', 'Return the merged, non-overlapping intervals sorted by start.', 'Input: [[1,3],[2,6],[8,10],[15,18]]\nOutput: [[1,6],[8,10],[15,18]]'],
+    conceptChoices: ['Sort by start, then merge overlaps in one pass', 'Compare every pair of intervals', 'Sort by end, then use two pointers'],
+    algorithm: [
+      'Sort the intervals by their start value.',
+      'Keep a "merged" list of the intervals decided so far.',
+      'Scan the sorted intervals; for each, look at the last interval in merged.',
+      [
+        { seq: [
+          'If the current start is ≤ the last interval’s end, the two overlap.',
+          'Extend that last interval’s end to the larger of its end and the current end.',
+        ] },
+        'Otherwise they are disjoint — append the current interval as a new entry.',
+      ],
+      'Return merged after the scan.',
+    ],
+    fixes: ['Take the MAX of the two ends when merging — the current interval may end earlier than the kept one.', 'An overlap includes touching endpoints, so test start ≤ last end (not strictly <).'],
+    complexity: 'Time O(n log n) for the sort; space O(n) for the output.',
+    exercises: [
+      { prompt: 'On an overlap, which line extends the kept interval correctly?', correct: 'last[1] = Math.max(last[1], end);', choices: ['last[1] = Math.max(last[1], end);', 'last[1] = end;', 'last[1] = Math.min(last[1], end);'], why: 'The merged interval must cover both, so its end is the larger of the two ends.', wrong: { 'last[1] = end;': 'The current interval can end earlier (e.g. [1,6] then [2,3]), which would shrink the range.', 'last[1] = Math.min(last[1], end);': 'Taking the min shrinks the interval instead of covering both.' } },
+      { prompt: 'Which line detects that the current interval overlaps the last kept one?', correct: 'if (last && start <= last[1]) {', choices: ['if (last && start <= last[1]) {', 'if (last && start < last[1]) {', 'if (last && start <= last[0]) {'], why: 'Sorted by start, an overlap means the current start reaches the last interval’s end; touching endpoints count, so use ≤.', wrong: { 'if (last && start < last[1]) {': 'A strict < fails to merge touching intervals like [1,4] and [4,5].', 'if (last && start <= last[0]) {': 'Comparing against the start, not the end, is the wrong boundary.' } },
+    ],
+    complexityGuide: { work: 'What dominates the running time?', workChoices: [['sort', 'Sorting the intervals'], ['scan', 'The single merge pass']], workCorrect: 'sort', workWhy: 'The one merge pass is linear; sorting is the O(n log n) part.', memory: 'What grows with the input?', memoryChoices: [['output', 'The merged output list'], ['constant', 'Only a couple of variables']], memoryCorrect: 'output', memoryWhy: 'In the worst case nothing merges, so the output holds all n intervals.', final: [['nlogn-linear', 'Time O(n log n), space O(n)'], ['linear-constant', 'Time O(n), space O(1)'], ['quadratic-linear', 'Time O(n²), space O(n)']], finalCorrect: 'nlogn-linear' },
+  }),
+  'Implement Trie (Prefix Tree)': lesson('Implement Trie (Prefix Tree)', {
+    brief: 'Build a prefix tree supporting insert, exact-word search, and prefix search.',
+    concepts: ['Prefix tree (trie)', 'End-of-word marker'],
+    intuition: 'Words that share a prefix should share a path — store one node per character, branching only where words diverge, and mark the node where a whole word ends so a complete word is distinguishable from a mere prefix.',
+    inputOutput: ['Operations: insert(word), search(word), startsWith(prefix).', 'search is true only for whole inserted words; startsWith is true for any inserted prefix.', 'Input: insert("apple"); search("apple"); search("app"); startsWith("app")\nOutput: true; false; true'],
+    conceptChoices: ['A tree of nodes keyed by character, with an end-of-word flag', 'A hash set of every inserted word', 'A sorted list searched with binary search'],
+    algorithm: [
+      'Represent each node as a map from a character to a child node, plus an is-end flag.',
+      'To insert, start at the root and walk the word one character at a time.',
+      'Create a child node when the character has no branch yet, then step into it.',
+      'After the final character, mark that node as the end of a word.',
+      'To look up a string, walk the same way; a missing character means it is absent.',
+      [
+        'search succeeds only when the walk lands on a node whose is-end flag is set.',
+        'startsWith succeeds whenever the walk completes at all, end flag or not.',
+      ],
+    ],
+    fixes: ['Set the is-end flag on the node reached after the LAST character, not the root.', 'A found prefix node only counts as a whole word when its is-end flag is set.'],
+    complexity: 'Each operation is O(L) in the word length L; space O(total characters inserted).',
+    exercises: [
+      { prompt: 'After inserting every character, which line marks a complete word?', correct: 'node.isEnd = true;', choices: ['node.isEnd = true;', 'node.isEnd = false;', 'this.root.isEnd = true;'], why: 'Only the node reached after the last character represents the end of that word.', wrong: { 'node.isEnd = false;': 'That leaves the word unmarked, so search would never find it.', 'this.root.isEnd = true;': 'Marking the root claims the empty string is a word, not this one.' } },
+      { prompt: 'In the shared lookup, which line reports a missing path?', correct: 'if (!node.children[char]) return null;', choices: ['if (!node.children[char]) return null;', 'if (!node.children[char]) node.children[char] = new TrieNode();', 'if (!node.children[char]) continue;'], why: 'During a lookup a missing character means the string is not stored, so stop and report absence.', wrong: { 'if (!node.children[char]) node.children[char] = new TrieNode();': 'That is insert behavior — creating nodes while searching would store strings never inserted.', 'if (!node.children[char]) continue;': 'Skipping the character keeps walking as if it matched, giving false positives.' } },
+    ],
+    complexityGuide: { work: 'How long does insert or search take for a word of length L?', workChoices: [['len', 'About L steps, one per character'], ['count', 'It scans every stored word']], workCorrect: 'len', workWhy: 'Each operation walks one node per character, so O(L).', memory: 'What grows as more words are stored?', memoryChoices: [['chars', 'One node per new character on a path'], ['const', 'A fixed amount']], memoryCorrect: 'chars', memoryWhy: 'Every new character on a fresh path adds a node.', final: [['l-chars', 'Time O(L) per op, space O(total characters)'], ['n-n', 'Time O(n), space O(n)'], ['l2-const', 'Time O(L²) per op, space O(1)']], finalCorrect: 'l-chars' },
+  }),
+  'Network Delay Time': lesson('Network Delay Time', {
+    brief: 'Find how long a signal from node k takes to reach every node, or -1 if some node is unreachable.',
+    concepts: ['Dijkstra shortest paths', 'Greedy nearest-unvisited node'],
+    intuition: 'The time for all nodes to receive the signal is the longest of the shortest arrival times — so run Dijkstra from k to get each node’s earliest arrival, then the answer is the largest of those (or -1 if any node never arrives).',
+    inputOutput: ['times: directed edges [u, v, w]; n nodes labeled 1..n; k the source node.', 'Return the time for every node to receive the signal, or -1 if impossible.', 'Input: times = [[2,1,1],[2,3,1],[3,4,1]], n = 4, k = 2\nOutput: 2'],
+    conceptChoices: ['Dijkstra from the source, then take the farthest arrival', 'One breadth-first pass ignoring the weights', 'Sort the edges and take the largest weight'],
+    algorithm: [
+      'Build an adjacency list: for each node, its outgoing (neighbor, weight) edges.',
+      'Set every node’s best arrival time to infinity, except the source k which is 0.',
+      'Repeat until every reachable node is finalized:',
+      'Pick the unvisited node with the smallest current arrival time.',
+      'Mark it visited — its arrival time is now final (the greedy step).',
+      'Relax each outgoing edge: if arriving through this node is faster, lower the neighbor’s time.',
+      'The answer is the largest finalized time, or -1 if any node stayed at infinity.',
+    ],
+    fixes: ['Always finalize the unvisited node with the SMALLEST tentative time, not the largest.', 'Lower a neighbor’s time only when the path through the current node is shorter.'],
+    complexity: 'Time O(V²) with this scan-based selection (O(E log V) with a heap); space O(V + E).',
+    exercises: [
+      { prompt: 'Which line relaxes an edge — improving a neighbor’s arrival time?', correct: 'if (dist[u] + w < dist[v]) dist[v] = dist[u] + w;', choices: ['if (dist[u] + w < dist[v]) dist[v] = dist[u] + w;', 'if (dist[u] + w > dist[v]) dist[v] = dist[u] + w;', 'dist[v] = dist[u] + w;'], why: 'Only lower the neighbor’s time when the route through u is shorter than its current best.', wrong: { 'if (dist[u] + w > dist[v]) dist[v] = dist[u] + w;': 'That would overwrite a shorter path with a longer one.', 'dist[v] = dist[u] + w;': 'Overwriting unconditionally can replace an already-shorter arrival.' } },
+      { prompt: 'Which line picks the next node to finalize?', correct: 'if (!visited.has(i) && (u === -1 || dist[i] < dist[u])) u = i;', choices: ['if (!visited.has(i) && (u === -1 || dist[i] < dist[u])) u = i;', 'if (!visited.has(i) && (u === -1 || dist[i] > dist[u])) u = i;', 'if (!visited.has(i)) u = i;'], why: 'Dijkstra always finalizes the unvisited node with the smallest tentative distance.', wrong: { 'if (!visited.has(i) && (u === -1 || dist[i] > dist[u])) u = i;': 'Choosing the largest breaks the greedy invariant and gives wrong distances.', 'if (!visited.has(i)) u = i;': 'Taking any unvisited node ignores distance, so finalized values are not minimal.' } },
+    ],
+    complexityGuide: { work: 'How is the next node to finalize chosen here?', workChoices: [['scan', 'Scan all nodes each round → about V² total'], ['const', 'In constant time']], workCorrect: 'scan', workWhy: 'Selecting the minimum by scanning is O(V) per round across V rounds.', memory: 'What storage grows with the graph?', memoryChoices: [['graph', 'Adjacency list plus one distance per node'], ['const', 'A fixed amount']], memoryCorrect: 'graph', memoryWhy: 'Edges live in the adjacency list and each node keeps a distance.', final: [['v2', 'Time O(V²), space O(V + E)'], ['e-const', 'Time O(E), space O(1)'], ['v3', 'Time O(V³), space O(V)']], finalCorrect: 'v2' },
+  }),
+  'Contains Duplicate': lesson('Contains Duplicate', {
+    brief: "Given an array of integers, return true if any value appears at least twice; otherwise return false.",
+    concepts: ["One pass through the array","Set membership"],
+    intuition: "You never need to compare every pair — the instant you meet a value you have already met, you have your answer. So carry a memory of everything you have passed and let each new number check itself against that memory.",
+    inputOutput: ["nums: an array of integers.","Return true if any value appears at least twice; otherwise return false.","Input: nums = [1, 2, 3, 1]\nOutput: true, because 1 appears more than once."],
+    conceptChoices: ["A hash set of seen values","Sort, then check neighbors","Compare every pair"],
+    algorithm: ["Keep a set of the values seen so far.","Iterate over the numbers one at a time.","Check whether the set already contains the current number.","A number already in the set means the array has a duplicate, so return true.","A number not yet in the set is added to it.","If the iteration completes with no match, return false."],
+    fixes: ["Check membership before adding the current value.","A Set stores prior values directly, so it is enough for a duplicate check."],
+    complexity: "Time O(n); space O(n) in the worst case.",
+    exercises: [{"prompt":"Which line returns as soon as the current number was already seen?","correct":"if (seen.has(n)) return true;","choices":["if (seen.has(n)) return true;","if (seen.add(n)) return true;","if (!seen.has(n)) return true;"],"why":"seen.has(n) tests membership without changing the set, so a value from an earlier position ends the scan.","wrong":{"if (seen.add(n)) return true;":"add returns the Set itself, which is always truthy, so this returns true on the first number.","if (!seen.has(n)) return true;":"This fires for brand-new values — the opposite of a duplicate."}},{"prompt":"Which line records the current number so a later repeat can be caught?","correct":"seen.add(n);","choices":["seen.add(n);","seen.has(n);","seen.delete(n);"],"why":"Storing n now lets a later occurrence be found by the membership check.","wrong":{"seen.has(n);":"This only checks membership; it saves nothing, so no duplicate is ever detected.","seen.delete(n);":"This removes n instead of remembering it."}}],
+    complexityGuide: {"code":"const seen = new Set();\nfor (const n of nums) {\n  if (seen.has(n)) return true;\n  seen.add(n);\n}\nreturn false;","work":"Across the for loop, how many times can one array value be checked and added to the set?","workChoices":[["once","At most once"],["nested","Once for every other array value"]],"workCorrect":"once","workWhy":"The loop advances through nums once. Set membership and insertion are constant time on average, so each value contributes constant work.","memory":"In the worst case, what extra storage can grow with the array?","memoryChoices":[["set","The set of distinct values seen so far"],["constant","Only n and the loop index"]],"memoryCorrect":"set","memoryWhy":"If no number repeats, seen stores every input value before the loop finishes.","final":[["linear-linear","Time O(n), space O(n)"],["quadratic-linear","Time O(n²), space O(n)"],["linear-constant","Time O(n), space O(1)"]],"finalCorrect":"linear-linear"},
+  }),
+  'Reverse Linked List': lesson('Reverse Linked List', {
+    brief: "Given the head of a singly linked list, reverse its links in place and return the new head.",
+    concepts: ["Pointer rewiring","The prev / current / next invariant"],
+    intuition: "Reversing the list is just flipping one arrow at a time, but each flip destroys your way forward — so grab the next node before you rewire, and drag a 'previous' marker along behind you as you go.",
+    inputOutput: ["head: the first node of a singly linked list. Each node has a value and a next pointer.","Return the head of the same nodes in reverse order.","Input: 1 → 2 → 3 → null\nOutput: 3 → 2 → 1 → null"],
+    conceptChoices: ["Rewire next-pointers with a prev cursor","Recurse to the tail, then relink","Copy to an array and reverse"],
+    algorithm: [["Initialize prev to null.","Initialize current to the head."],"Loop while current is not null.","Save current.next in a temporary before rewiring any link.","Point current.next back to prev.","Advance prev to current.","Advance current to the saved next node.","Return prev as the new head once current is null."],
+    fixes: ["Save next before overwriting current.next, or the unreversed list is lost.","Return prev, not head: the original head becomes the final node."],
+    complexity: "Time O(n); space O(1) for the iterative version.",
+    exercises: [{"prompt":"Which line saves the rest of the list before the next link is overwritten?","correct":"const next = current.next;","choices":["const next = current.next;","const next = current.prev;","const next = prev;"],"why":"current.next still points at the unvisited remainder; saving it keeps that list reachable after the link flips.","wrong":{"const next = current.prev;":"A singly linked node has no prev pointer.","const next = prev;":"prev is the already-reversed side, not the remaining nodes."}},{"prompt":"Which line moves prev forward to the node just reversed?","correct":"prev = current;","choices":["prev = current;","prev = next;","prev = head;"],"why":"current is now the front of the reversed portion, so it becomes prev for the next iteration.","wrong":{"prev = next;":"next is still unprocessed; using it skips the node just reversed.","prev = head;":"head never advances, so it cannot track the growing reversed list."}}],
+    complexityGuide: {"code":"let prev = null, current = head;\nwhile (current) {\n  const next = current.next;\n  current.next = prev;\n  prev = current;\n  current = next;\n}\nreturn prev;","work":"During the while loop, how many times can a single node become current?","workChoices":[["once","At most once"],["revisit","Once for every other node"]],"workCorrect":"once","workWhy":"The current pointer moves to the saved next node and never moves backward, so each node is processed once.","memory":"Besides the input list, what storage can grow as the list gets longer?","memoryChoices":[["constant","Only prev, current, and next"],["nodes","A second list of all nodes"]],"memoryCorrect":"constant","memoryWhy":"The algorithm changes links in the original list and holds only three node references.","final":[["linear-constant","Time O(n), space O(1)"],["quadratic-constant","Time O(n²), space O(1)"],["linear-linear","Time O(n), space O(n)"]],"finalCorrect":"linear-constant"},
+  }),
+  'Invert Binary Tree': lesson('Invert Binary Tree', {
+    brief: "Given a binary tree, swap the left and right child of every node and return the same root.",
+    concepts: ["Tree DFS","Recursive child swapping"],
+    intuition: "Inverting the whole tree is the same tiny action repeated everywhere: swap a node's two children, then ask each child to do the same to itself. The full mirror image falls out of that one local swap.",
+    inputOutput: ["root: the root node of a binary tree. Each node has left and right children.","Return the root after every node’s left and right subtrees have been swapped.","Input:    4\n       / \\ \n      2   7\nOutput:   4\n       / \\ \n      7   2"],
+    conceptChoices: ["Swap every node's children","Swap only the leaf nodes","Sort each level left to right"],
+    algorithm: ["Base case: an empty node inverts to null, so return null.","Stash the original left child in a temp — you are about to overwrite root.left, and root.right still needs it.","Recursively invert the ORIGINAL right subtree.","Assign that inverted right subtree to root.left.","Recursively invert the STASHED left subtree.","Assign that inverted left subtree to root.right.","Return root, now holding both inverted subtrees swapped."],
+    fixes: ["Save one child before its reference is overwritten.","Handle the null base case before reading a child."],
+    complexity: "Time O(n); space O(h) for the recursion stack, where h is the tree height.",
+    exercises: [{"prompt":"Which line handles the empty subtree that ends the recursion?","correct":"if (!root) return null;","choices":["if (!root) return null;","if (!root) return root;","if (!root) return [];"],"why":"A missing child stays missing; returning null stops recursion at the edge of the tree.","wrong":{"if (!root) return root;":"There is no node to return when this branch is empty.","if (!root) return [];":"The function returns tree nodes or null, not an array."}},{"prompt":"Which line preserves the original left child before it is overwritten?","correct":"const oldLeft = root.left;","choices":["const oldLeft = root.left;","const oldLeft = root.right;","const oldLeft = root.val;"],"why":"The original left subtree must be saved so it can become the new right after both sides invert.","wrong":{"const oldLeft = root.right;":"Saving right loses the original left subtree, which still needs to move.","const oldLeft = root.val;":"val is the node’s payload, not a child subtree."}}],
+    complexityGuide: {"code":"function invertTree(root) {\n  if (!root) return null;\n  const oldLeft = root.left;\n  root.left = invertTree(root.right);\n  root.right = invertTree(oldLeft);\n  return root;\n}","work":"How many times does the recursive function process a real tree node?","workChoices":[["once","At most once"],["nested","Once for every other node"]],"workCorrect":"once","workWhy":"Each call handles one node, swaps its two child references, and recurses into each child once.","memory":"What extra storage can grow as the tree gets taller?","memoryChoices":[["stack","The recursion call stack"],["constant","Only oldLeft"]],"memoryCorrect":"stack","memoryWhy":"The recursive calls wait for child calls to finish. Their depth follows the tree height h.","final":[["tree-height","Time O(n), space O(h)"],["tree-constant","Time O(n), space O(1)"],["quadratic-height","Time O(n²), space O(h)"]],"finalCorrect":"tree-height"},
+  }),
+  'Two Sum': lesson('Two Sum', {
+    brief: "Given an array of integers and a target, return the indices of two different numbers whose values add up to that target.",
+    concepts: ["Complement lookup","Hash map: value → index"],
+    intuition: "As you scan, the only thing that unlocks an answer is having already seen the number that completes the pair — so remember each value you pass and check for its complement, not future values.",
+    inputOutput: ["nums: an integer array; target: an integer.","Return two indices whose values sum to target.","Input: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]"],
+    conceptChoices: ["A hash map of complements","Sort, then two pointers","Check every pair"],
+    algorithm: ["Walk through the array once.","For the current value n, calculate target − n.","If that complement is already saved, return its saved index and the current index.","Otherwise save n and its index for a future match."],
+    fixes: ["Save after checking, so you cannot use the same element twice.","Map values to indices—not booleans—because the result needs positions."],
+    complexity: "Time O(n); space O(n) for the map.",
+    exercises: [{"prompt":"Which line returns the two indices the moment the complement is found?","correct":"if (seen.has(need)) return [seen.get(need), i];","choices":["if (seen.has(need)) return [seen.get(need), i];","if (seen.has(nums[i])) return [seen.get(need), i];","if (seen.has(need)) return [i, seen.get(need)];"],"why":"When the complement need is already stored, its saved index and the current index are the answer.","wrong":{"if (seen.has(nums[i])) return [seen.get(need), i];":"Looking up nums[i] checks whether the current value was seen, not the value that completes the pair.","if (seen.has(need)) return [i, seen.get(need)];":"The saved index comes first (it is the earlier position), so the order is reversed here."}},{"prompt":"Which line remembers the current value so a later element can find it?","correct":"seen.set(nums[i], i);","choices":["seen.set(nums[i], i);","seen.set(i, nums[i]);","seen.set(need, i);"],"why":"Store value → index so a future element can look up this value as its complement.","wrong":{"seen.set(i, nums[i]);":"This maps index → value, but the lookup is by value, so the complement check would never hit.","seen.set(need, i);":"Storing the complement instead of the actual value corrupts later lookups."}}],
+    complexityGuide: {"code":"const seen = new Map();\nfor (let i = 0; i < nums.length; i++) {\n  const need = target - nums[i];\n  if (seen.has(need)) return [seen.get(need), i];\n  seen.set(nums[i], i);\n}","work":"How many times is each array value examined?","workChoices":[["once","At most once"],["nested","Once for every other value"]],"workCorrect":"once","workWhy":"One pass over the array; each map lookup and insert is constant time on average.","memory":"What extra storage can grow with the array?","memoryChoices":[["map","The map of values seen so far"],["constant","Only need and i"]],"memoryCorrect":"map","memoryWhy":"Up to n values are stored before a matching pair is found.","final":[["linear-linear","Time O(n), space O(n)"],["quadratic-constant","Time O(n²), space O(1)"],["linear-constant","Time O(n), space O(1)"]],"finalCorrect":"linear-linear"},
+  }),
+  'Two Sum II': lesson('Two Sum II', {
+    brief: "Given a sorted array and a target, return the two positions whose values add up to the target.",
+    concepts: ["Sorted order","Two pointers"],
+    intuition: "Because the values are sorted, the outer pair's sum tells you everything: too small can never be fixed by shrinking, too large can never be fixed by growing — so each comparison lets you retire one end for good.",
+    inputOutput: ["numbers: a sorted integer array; target: an integer.","Return the two 1-indexed positions.","Input: [2, 7, 11, 15], target = 9\nOutput: [1, 2]"],
+    conceptChoices: ["Two pointers from both ends","A hash map of complements","Binary search for each complement"],
+    algorithm: ["Initialize a left pointer at the first index and a right pointer at the last.","Loop while left is less than right.","Compute the sum of the values at left and right.",["A sum equal to the target means left and right are the answer — return them as 1-based indices.","A sum less than the target needs a larger value, so increment left.","A sum greater than the target needs a smaller value, so decrement right."]],
+    fixes: ["Move only one pointer per comparison.","The input is already sorted; do not sort it again."],
+    complexity: "Time O(n); space O(1).",
+    exercises: [{"prompt":"The array is sorted ascending. Which line moves the right pointer inward from a match?","correct":"if (sum < target) left++; else right--;","choices":["if (sum < target) left++; else right--;","if (sum < target) right--; else left++;","if (sum < target) left--; else right++;"],"why":"A too-small sum needs a larger value (left++); a too-large sum needs a smaller value (right--).","wrong":{"if (sum < target) right--; else left++;":"Lowering right on a too-small sum makes it even smaller.","if (sum < target) left--; else right++;":"Both moves leave the active window and can run out of bounds."}},{"prompt":"Positions must be 1-indexed. Which line returns the correct answer on a match?","correct":"if (sum === target) return [left + 1, right + 1];","choices":["if (sum === target) return [left + 1, right + 1];","if (sum === target) return [left, right];","if (sum === target) return [left + 1, right];"],"why":"left and right are zero-indexed, and the problem wants 1-indexed positions, so both need + 1.","wrong":{"if (sum === target) return [left, right];":"These are zero-indexed positions, off by one on both.","if (sum === target) return [left + 1, right];":"This corrects only the left index."}}],
+    complexityGuide: {"code":"let left = 0, right = numbers.length - 1;\nwhile (left < right) {\n  const sum = numbers[left] + numbers[right];\n  if (sum === target) return [left + 1, right + 1];\n  if (sum < target) left++;\n  else right--;\n}","work":"Across the full search, how many times can either pointer move?","workChoices":[["once","At most once per array position"],["nested","Once for every other array position"]],"workCorrect":"once","workWhy":"left only moves right and right only moves left. Together they can cross the array only once.","memory":"Besides the input array, what storage can grow as the input gets longer?","memoryChoices":[["constant","Only left, right, and sum"],["map","A map of every value"]],"memoryCorrect":"constant","memoryWhy":"The algorithm keeps a fixed number of variables and uses the sorted input directly.","final":[["linear-constant","Time O(n), space O(1)"],["quadratic-constant","Time O(n²), space O(1)"],["linear-linear","Time O(n), space O(n)"]],"finalCorrect":"linear-constant"},
+  }),
+  'Longest Substring Without Repeating Characters': lesson('Longest Substring Without Repeating Characters', {
+    brief: "Given a string, find the length of its longest contiguous substring with no repeated characters.",
+    concepts: ["Sliding window","Set of characters inside the current window"],
+    intuition: "A repeat can only ever appear at the newest character you add, so instead of restarting you just pull the left edge forward until the clash is gone — and the window keeps sliding without ever rechecking old ground.",
+    inputOutput: ["s: a string.","Return the longest valid substring length.","Input: \"abcabcbb\"\nOutput: 3, from \"abc\""],
+    conceptChoices: ["A sliding window with a seen-set","Check every substring for repeats","Sort the characters"],
+    algorithm: [["Keep a set of the characters currently in the window.","Track the window's left edge and the best length, both starting at zero."],"Expand the window by moving right across the string one character at a time.","While the incoming character is already in the set, delete the leftmost character and advance left.","Add the incoming character to the set.","Update the best length with the current window size, right - left + 1."],
+    fixes: ["Delete s[left], not the incoming duplicate.","Measure after the window is repaired."],
+    complexity: "Time O(n); space O(min(n, alphabet size)).",
+    exercises: [{"prompt":"The incoming character is already inside the window. Which line repairs the window from the left?","correct":"while (seen.has(s[right])) seen.delete(s[left++]);","choices":["while (seen.has(s[right])) seen.delete(s[left++]);","while (seen.has(s[right])) seen.delete(s[right++]);","while (seen.has(s[right])) seen.add(s[left++]);"],"why":"The duplicate must leave from the left edge, so remove s[left] and advance left until the window is valid.","wrong":{"while (seen.has(s[right])) seen.delete(s[right++]);":"This removes the incoming character and skips input, leaving the earlier duplicate inside.","while (seen.has(s[right])) seen.add(s[left++]);":"Adding instead of deleting never makes the window valid, so the loop never ends."}},{"prompt":"The window is valid again. Which line records its length?","correct":"best = Math.max(best, right - left + 1);","choices":["best = Math.max(best, right - left + 1);","best = Math.max(best, right - left);","best = Math.max(best, best + 1);"],"why":"Both ends are inside the window, so its length is right − left + 1.","wrong":{"best = Math.max(best, right - left);":"This drops one endpoint, undercounting every window.","best = Math.max(best, best + 1);":"The window can change by more than one; measure it from its bounds."}}],
+    complexityGuide: {"code":"const seen = new Set();\nlet left = 0, best = 0;\nfor (let right = 0; right < s.length; right++) {\n  while (seen.has(s[right])) seen.delete(s[left++]);\n  seen.add(s[right]);\n  best = Math.max(best, right - left + 1);\n}\nreturn best;","work":"Although there is a while loop inside the for loop, how many total times can one character leave the window?","workChoices":[["once","At most once"],["nested","Once for every later character"]],"workCorrect":"once","workWhy":"left only moves forward. Each character is added once and removed at most once, so the two pointers make one total pass.","memory":"In the worst case, what extra storage can grow with the input string?","memoryChoices":[["set","The set of characters in the current window"],["constant","Only left, right, and best"]],"memoryCorrect":"set","memoryWhy":"When all characters are distinct, the current window and its set can contain the whole string.","final":[["linear-linear","Time O(n), space O(n)"],["quadratic-linear","Time O(n²), space O(n)"],["linear-constant","Time O(n), space O(1)"]],"finalCorrect":"linear-linear"},
+  }),
+  'Binary Search': lesson('Binary Search', {
+    brief: "Given a sorted list and a target, return its index or -1 without checking every value.",
+    concepts: ["Sorted order","Binary search interval"],
+    intuition: "Because the array is sorted, one comparison against the middle tells you which half the target cannot be in — so you can throw away half the remaining range every step.",
+    inputOutput: ["nums: sorted integer array; target: an integer.","Return the target index or -1.","Input: [-1, 0, 3, 5, 9], target = 9\nOutput: 4"],
+    conceptChoices: ["Halve the interval each step","Scan left to right","Jump in fixed-size blocks"],
+    algorithm: ["Set a left boundary at index 0 and a right boundary at the last index.","Loop while left is less than or equal to right.","Compute the middle index and read the value there.",["A middle value equal to the target returns its index.","A middle value below the target discards the left half: set left to mid + 1.","A middle value above the target discards the right half: set right to mid - 1."],"Return -1 once the boundaries cross with no match."],
+    fixes: ["Use left <= right so a single remaining value is checked.","Move past mid; mid was already tested."],
+    complexity: "Time O(log n); space O(1).",
+    exercises: [{"prompt":"mid is too small and already tested. Which line keeps only the values that could still match?","correct":"if (nums[mid] < target) left = mid + 1;","choices":["if (nums[mid] < target) left = mid + 1;","if (nums[mid] < target) left = mid - 1;","if (nums[mid] < target) left = mid;"],"why":"mid was checked and is too small, so the next possible answer starts right after it.","wrong":{"if (nums[mid] < target) left = mid - 1;":"That moves toward even smaller values, which cannot help.","if (nums[mid] < target) left = mid;":"Leaving mid in the range can repeat the same midpoint forever."}},{"prompt":"mid is too large and already tested. Which line ends the interval just before it?","correct":"else right = mid - 1;","choices":["else right = mid - 1;","else right = mid + 1;","else right = mid;"],"why":"mid was checked and is too large, so the remaining interval ends one before it.","wrong":{"else right = mid + 1;":"That keeps values above an already too-large midpoint.","else right = mid;":"Leaving mid in the range can stop the bounds from shrinking."}}],
+    complexityGuide: {"code":"let left = 0, right = nums.length - 1;\nwhile (left <= right) {\n  const mid = Math.floor((left + right) / 2);\n  if (nums[mid] === target) return mid;\n  if (nums[mid] < target) left = mid + 1;\n  else right = mid - 1;\n}\nreturn -1;","work":"After each unsuccessful comparison, what happens to the remaining search interval?","workChoices":[["halve","It is cut roughly in half"],["one","It loses only one value"]],"workCorrect":"halve","workWhy":"Each comparison proves an entire half of the sorted interval cannot contain the target.","memory":"Besides the input array, what storage can grow as the array gets longer?","memoryChoices":[["constant","Only left, right, and mid"],["copy","A copy of the remaining half"]],"memoryCorrect":"constant","memoryWhy":"The active interval is represented by indexes; no new array is created.","final":[["log-constant","Time O(log n), space O(1)"],["linear-constant","Time O(n), space O(1)"],["log-linear","Time O(log n), space O(n)"]],"finalCorrect":"log-constant"},
+  }),
+  'Valid Parentheses': lesson('Valid Parentheses', {
+    brief: "Given brackets, decide whether every opening bracket is closed in the correct order.",
+    concepts: ["Last-in, first-out order","Stack"],
+    intuition: "Only the most recently opened bracket can be the next one legally closed — that 'last opened, first closed' rule is exactly what a stack enforces, so push every opener and match each closer against the top.",
+    inputOutput: ["s: a bracket string.","Return true when every opening bracket closes in order.","Input: \"([])\"\nOutput: true"],
+    conceptChoices: ["A stack of open brackets","Count each bracket type","Delete matched pairs repeatedly"],
+    algorithm: ["Keep a stack of opening brackets awaiting their match.","Iterate over the string one character at a time.",["An opening bracket is pushed onto the stack.",{"seq":["A closing bracket pops the opener off the top of the stack.","Check that popped opener is the correct partner for the closer.","An empty stack or a mismatched partner means the string is invalid."]}],"After iterating, the string is valid only if the stack is empty."],
+    fixes: ["Check the result of pop; an empty stack is invalid.","Do not only compare counts—order matters."],
+    complexity: "Time O(n); space O(n).",
+    exercises: [{"prompt":"A closing bracket must resolve the most recent opener. Which line checks that?","correct":"if (stack.pop() !== pairs[ch]) return false;","choices":["if (stack.pop() !== pairs[ch]) return false;","if (stack.shift() !== pairs[ch]) return false;","if (stack.push(ch) !== pairs[ch]) return false;"],"why":"pop() removes the most recently pushed opener, the only one this closing bracket may match.","wrong":{"if (stack.shift() !== pairs[ch]) return false;":"shift() removes the oldest opener, breaking nested last-in, first-out order.","if (stack.push(ch) !== pairs[ch]) return false;":"push adds another item and returns the new length; it resolves nothing."}},{"prompt":"Which line reports whether every opener was matched?","correct":"return stack.length === 0;","choices":["return stack.length === 0;","return stack.length === 1;","return stack.length === s.length;"],"why":"An empty stack means every opening bracket found its match.","wrong":{"return stack.length === 1;":"One leftover opener is still unmatched, so the string is invalid.","return stack.length === s.length;":"The stack holds only unresolved openers, not every character."}}],
+    complexityGuide: {"code":"const pairs = { \")\":\"(\", \"]\":\"[\", \"}\":\"{\" };\nconst stack = [];\nfor (const char of s) {\n  if (char in pairs) {\n    if (stack.pop() !== pairs[char]) return false;\n  } else stack.push(char);\n}\nreturn stack.length === 0;","work":"How many times can one bracket be read by the for loop?","workChoices":[["once","At most once"],["nested","Once for every other bracket"]],"workCorrect":"once","workWhy":"The loop makes one pass through the string, and each stack push or pop is constant time.","memory":"In the worst case, what extra storage can grow with the string?","memoryChoices":[["stack","The stack of unmatched opening brackets"],["constant","Only the pairs object"]],"memoryCorrect":"stack","memoryWhy":"A string of only opening brackets leaves every bracket on the stack, so the stack can hold n values.","final":[["linear-linear","Time O(n), space O(n)"],["quadratic-linear","Time O(n²), space O(n)"],["linear-constant","Time O(n), space O(1)"]],"finalCorrect":"linear-linear"},
+  }),
+  'Number of Islands': lesson('Number of Islands', {
+    brief: "Given a grid of land and water, count the distinct groups of connected land.",
+    concepts: ["Grid graph","DFS or BFS","Visited set / in-place marking"],
+    intuition: "Each new patch of land you stumble on is the start of a fresh island — so count it once, then flood outward to erase every cell connected to it, guaranteeing you never count the same island twice.",
+    inputOutput: ["grid: a matrix of \"1\" land and \"0\" water.","Return the number of connected land groups.","Input: [[\"1\",\"1\",\"0\"],[\"0\",\"1\",\"0\"],[\"1\",\"0\",\"1\"]]\nOutput: 3"],
+    conceptChoices: ["Flood-fill each new land cell","Union-find over adjacent land","Scan rows counting land"],
+    algorithm: ["Scan every cell of the grid.","On reaching unvisited land, increment the island count and start a flood fill from that cell.","The flood fill returns immediately for a cell out of bounds, on water, or already visited.","Otherwise mark the current land cell as visited.","Recurse the flood fill into the four neighboring cells - up, down, left, and right."],
+    fixes: ["Mark a cell visited when it is discovered, not later.","Check grid boundaries before indexing."],
+    complexity: "Time O(rows × cols); space O(rows × cols) in the worst case.",
+    exercises: [{"prompt":"Flood fill has just reached land. Which line marks it so it is not counted again?","correct":"grid[r][c] = \"0\";","choices":["grid[r][c] = \"0\";","grid[r][c] = \"1\";","grid[r][c] = r + 1;"],"why":"Turning visited land into water records that this cell already belongs to the current island.","wrong":{"grid[r][c] = \"1\";":"Leaving it as land lets a later scan or call visit it again.","grid[r][c] = r + 1;":"A grid cell holds a value, not a coordinate."}},{"prompt":"Three neighbors are already visited. Which line explores the left neighbor?","correct":"visit(r, c - 1);","choices":["visit(r, c - 1);","visit(c, c - 1);","visit(r + 1, c - 1);"],"why":"Keeping r and decreasing c reaches the cell immediately to the left.","wrong":{"visit(c, c - 1);":"This passes a column where the row is expected.","visit(r + 1, c - 1);":"This moves diagonally, skipping the direct left cell."}}],
+    complexityGuide: {"code":"function visit(r, c) {\n  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] !== \"1\") return;\n  grid[r][c] = \"0\";\n  visit(r + 1, c); visit(r - 1, c);\n  visit(r, c + 1); visit(r, c - 1);\n}\nfor (let r = 0; r < rows; r++)\n  for (let c = 0; c < cols; c++)\n    if (grid[r][c] === \"1\") { count++; visit(r, c); }","work":"Across the scan and all flood fills, how many times can one grid cell be visited as land?","workChoices":[["once","At most once"],["nested","Once for every other cell"]],"workCorrect":"once","workWhy":"Flood fill marks a land cell the first time it visits it, so later scans and calls skip it.","memory":"What extra storage can grow with the size of the grid in this recursive version?","memoryChoices":[["callstack","The recursion call stack"],["constant","Only the island counter"]],"memoryCorrect":"callstack","memoryWhy":"A large connected island can create a recursive path containing many cells.","final":[["grid-grid","Time O(rows × cols), space O(rows × cols)"],["quadratic-constant","Time O((rows × cols)²), space O(1)"],["grid-constant","Time O(rows × cols), space O(1)"]],"finalCorrect":"grid-grid"},
+  }),
 };
 
-// Single source of authored lesson records: core + upgraded (core wins on any title collision).
-export const featured = { ...walkthroughUpgrades, ...featuredCore };
+// Single source of authored lesson records (all self-contained; migrated from the former featuredCore).
+export const featured = { ...walkthroughUpgrades };
