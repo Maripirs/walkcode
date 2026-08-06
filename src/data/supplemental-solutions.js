@@ -4,6 +4,46 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'House Robber II': solution(
+    lines("function rob(arr) {", "  let rob1 = 0, rob2 = 0;", "  for (const n of arr) {", "    const temp = Math.max(rob1 + n, rob2);", "    rob1 = rob2;", "    rob2 = temp;", "  }", "  return rob2;", "}", "if (nums.length === 1) return nums[0];", "return Math.max(rob(nums.slice(0, -1)), rob(nums.slice(1)));"),
+    lines("def rob(arr):", "    rob1, rob2 = 0, 0", "    for n in arr:", "        temp = max(rob1 + n, rob2)", "        rob1 = rob2", "        rob2 = temp", "    return rob2", "if len(nums) == 1:", "    return nums[0]", "return max(rob(nums[:-1]), rob(nums[1:]))")),
+
+  'Max Area of Island': solution(
+    lines("const rows = grid.length, cols = grid[0].length;", "let best = 0;", "function area(r, c) {", "  if (r < 0 || c < 0 || r === rows || c === cols || grid[r][c] === 0) return 0;", "  grid[r][c] = 0;", "  return 1 + area(r + 1, c) + area(r - 1, c) + area(r, c + 1) + area(r, c - 1);", "}", "for (let r = 0; r < rows; r++) {", "  for (let c = 0; c < cols; c++) {", "    best = Math.max(best, area(r, c));", "  }", "}", "return best;"),
+    lines("rows, cols = len(grid), len(grid[0])", "best = 0", "def area(r, c):", "    if r < 0 or c < 0 or r == rows or c == cols or grid[r][c] == 0:", "        return 0", "    grid[r][c] = 0", "    return 1 + area(r + 1, c) + area(r - 1, c) + area(r, c + 1) + area(r, c - 1)", "for r in range(rows):", "    for c in range(cols):", "        best = max(best, area(r, c))", "return best")),
+
+  'K Closest Points to Origin': solution(
+    lines("function dist(p) {", "  return p[0] * p[0] + p[1] * p[1];", "}", "points.sort((a, b) => dist(a) - dist(b));", "return points.slice(0, k);"),
+    lines("def dist(p):", "    return p[0] * p[0] + p[1] * p[1]", "points.sort(key=dist)", "return points[:k]")),
+
+  'Permutation in String': solution(
+    lines("if (s1.length > s2.length) return false;", "const need = new Array(26).fill(0);", "const win = new Array(26).fill(0);", "const code = (ch) => ch.charCodeAt(0) - 97;", "for (let i = 0; i < s1.length; i++) {", "  need[code(s1[i])]++;", "  win[code(s2[i])]++;", "}", "for (let i = s1.length; i < s2.length; i++) {", "  if (need.every((v, j) => v === win[j])) return true;", "  win[code(s2[i])]++;", "  win[code(s2[i - s1.length])]--;", "}", "return need.every((v, j) => v === win[j]);"),
+    lines("if len(s1) > len(s2):", "    return False", "need = [0] * 26", "win = [0] * 26", "def code(ch):", "    return ord(ch) - 97", "for i in range(len(s1)):", "    need[code(s1[i])] += 1", "    win[code(s2[i])] += 1", "for i in range(len(s1), len(s2)):", "    if need == win:", "        return True", "    win[code(s2[i])] += 1", "    win[code(s2[i - len(s1)])] -= 1", "return need == win")),
+
+  'Add Two Numbers': solution(
+    lines("const dummy = new ListNode(0);", "let tail = dummy, carry = 0;", "while (l1 || l2 || carry) {", "  const sum = (l1 ? l1.val : 0) + (l2 ? l2.val : 0) + carry;", "  carry = Math.floor(sum / 10);", "  tail.next = new ListNode(sum % 10);", "  tail = tail.next;", "  if (l1) l1 = l1.next;", "  if (l2) l2 = l2.next;", "}", "return dummy.next;"),
+    lines("dummy = ListNode(0)", "tail = dummy", "carry = 0", "while l1 or l2 or carry:", "    total = (l1.val if l1 else 0) + (l2.val if l2 else 0) + carry", "    carry = total // 10", "    tail.next = ListNode(total % 10)", "    tail = tail.next", "    if l1:", "        l1 = l1.next", "    if l2:", "        l2 = l2.next", "return dummy.next")),
+
+  'Non-overlapping Intervals': solution(
+    lines("intervals.sort((a, b) => a[1] - b[1]);", "let count = 0, prevEnd = -Infinity;", "for (const [start, end] of intervals) {", "  if (start >= prevEnd) {", "    prevEnd = end;", "  } else {", "    count++;", "  }", "}", "return count;"),
+    lines("intervals.sort(key=lambda iv: iv[1])", "count = 0", "prev_end = float(\"-inf\")", "for start, end in intervals:", "    if start >= prev_end:", "        prev_end = end", "    else:", "        count += 1", "return count")),
+
+  'Jump Game': solution(
+    lines("let reach = 0;", "for (let i = 0; i < nums.length; i++) {", "  if (i > reach) return false;", "  reach = Math.max(reach, i + nums[i]);", "}", "return true;"),
+    lines("reach = 0", "for i in range(len(nums)):", "    if i > reach:", "        return False", "    reach = max(reach, i + nums[i])", "return True")),
+
+  'Unique Paths': solution(
+    lines("const row = new Array(n).fill(1);", "for (let r = 1; r < m; r++) {", "  for (let c = 1; c < n; c++) {", "    row[c] = row[c] + row[c - 1];", "  }", "}", "return row[n - 1];"),
+    lines("row = [1] * n", "for r in range(1, m):", "    for c in range(1, n):", "        row[c] = row[c] + row[c - 1]", "return row[n - 1]")),
+
+  'Koko Eating Bananas': solution(
+    lines("let lo = 1, hi = Math.max(...piles);", "while (lo < hi) {", "  const mid = Math.floor((lo + hi) / 2);", "  let hours = 0;", "  for (const p of piles) hours += Math.ceil(p / mid);", "  if (hours <= h) hi = mid;", "  else lo = mid + 1;", "}", "return lo;"),
+    lines("lo, hi = 1, max(piles)", "while lo < hi:", "    mid = (lo + hi) // 2", "    hours = sum((p + mid - 1) // mid for p in piles)", "    if hours <= h:", "        hi = mid", "    else:", "        lo = mid + 1", "return lo")),
+
+  'Combination Sum': solution(
+    lines("const result = [];", "const current = [];", "function backtrack(start, remaining) {", "  if (remaining === 0) {", "    result.push([...current]);", "    return;", "  }", "  if (remaining < 0) return;", "  for (let i = start; i < candidates.length; i++) {", "    current.push(candidates[i]);", "    backtrack(i, remaining - candidates[i]);", "    current.pop();", "  }", "}", "backtrack(0, target);", "return result;"),
+    lines("result = []", "current = []", "def backtrack(start, remaining):", "    if remaining == 0:", "        result.append(current[:])", "        return", "    if remaining < 0:", "        return", "    for i in range(start, len(candidates)):", "        current.append(candidates[i])", "        backtrack(i, remaining - candidates[i])", "        current.pop()", "backtrack(0, target)", "return result")),
+
   'Two Sum': solution(
     lines("const seen = new Map();", "for (let i = 0; i < nums.length; i++) {", "  const need = target - nums[i];", "  if (seen.has(need)) return [seen.get(need), i];", "  seen.set(nums[i], i);", "}"),
     lines("seen = {}", "for i in range(len(nums)):", "    need = target - nums[i]", "    if need in seen:", "        return [seen[need], i]", "    seen[nums[i]] = i")),
