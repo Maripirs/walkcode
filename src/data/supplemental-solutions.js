@@ -4,6 +4,14 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Largest Rectangle in Histogram': solution(
+    lines("const stack = [];", "let maxArea = 0;", "for (let i = 0; i <= heights.length; i++) {", "  const h = i === heights.length ? 0 : heights[i];", "  while (stack.length && heights[stack[stack.length - 1]] > h) {", "    const height = heights[stack.pop()];", "    const width = stack.length ? i - stack[stack.length - 1] - 1 : i;", "    maxArea = Math.max(maxArea, height * width);", "  }", "  stack.push(i);", "}", "return maxArea;"),
+    lines("stack = []", "max_area = 0", "for i in range(len(heights) + 1):", "    h = 0 if i == len(heights) else heights[i]", "    while stack and heights[stack[-1]] > h:", "        height = heights[stack.pop()]", "        width = i - stack[-1] - 1 if stack else i", "        max_area = max(max_area, height * width)", "    stack.append(i)", "return max_area")),
+
+  'Copy List with Random Pointer': solution(
+    lines("if (!head) return null;", "const clones = new Map();", "let current = head;", "while (current) {", "  clones.set(current, new Node(current.val));", "  current = current.next;", "}", "current = head;", "while (current) {", "  clones.get(current).next = clones.get(current.next) || null;", "  clones.get(current).random = clones.get(current.random) || null;", "  current = current.next;", "}", "return clones.get(head);"),
+    lines("if not head:", "    return None", "clones = {}", "current = head", "while current:", "    clones[current] = Node(current.val)", "    current = current.next", "current = head", "while current:", "    clones[current].next = clones.get(current.next)", "    clones[current].random = clones.get(current.random)", "    current = current.next", "return clones[head]")),
+
   'Merge Triplets to Form Target Triplet': solution(
     lines("const good = new Set();", "for (const [a, b, c] of triplets) {", "  if (a > target[0] || b > target[1] || c > target[2]) continue;", "  if (a === target[0]) good.add(0);", "  if (b === target[1]) good.add(1);", "  if (c === target[2]) good.add(2);", "}", "return good.size === 3;"),
     lines("good = set()", "for a, b, c in triplets:", "    if a > target[0] or b > target[1] or c > target[2]:", "        continue", "    if a == target[0]:", "        good.add(0)", "    if b == target[1]:", "        good.add(1)", "    if c == target[2]:", "        good.add(2)", "return len(good) == 3")),
