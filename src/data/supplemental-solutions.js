@@ -4,6 +4,86 @@ const lines = (...parts) => parts.join('\n');
 const solution = (JavaScript, Python) => ({ JavaScript, Python });
 
 export const supplementalFullCode = {
+  'Longest Increasing Subsequence': solution(
+    lines("const dp = new Array(nums.length).fill(1);", "let best = nums.length ? 1 : 0;", "for (let i = 1; i < nums.length; i++) {", "  for (let j = 0; j < i; j++) {", "    if (nums[j] < nums[i]) dp[i] = Math.max(dp[i], dp[j] + 1);", "  }", "  best = Math.max(best, dp[i]);", "}", "return best;"),
+    lines("dp = [1] * len(nums)", "best = 1 if nums else 0", "for i in range(1, len(nums)):", "    for j in range(i):", "        if nums[j] < nums[i]:", "            dp[i] = max(dp[i], dp[j] + 1)", "    best = max(best, dp[i])", "return best")),
+
+  'Word Break': solution(
+    lines("const wordSet = new Set(wordDict);", "const dp = new Array(s.length + 1).fill(false);", "dp[0] = true;", "for (let i = 1; i <= s.length; i++) {", "  for (let j = 0; j < i; j++) {", "    if (dp[j] && wordSet.has(s.slice(j, i))) {", "      dp[i] = true;", "      break;", "    }", "  }", "}", "return dp[s.length];"),
+    lines("word_set = set(word_dict)", "dp = [False] * (len(s) + 1)", "dp[0] = True", "for i in range(1, len(s) + 1):", "    for j in range(i):", "        if dp[j] and s[j:i] in word_set:", "            dp[i] = True", "            break", "return dp[len(s)]")),
+
+  'Maximum Product Subarray': solution(
+    lines("let best = nums[0], curMax = nums[0], curMin = nums[0];", "for (let i = 1; i < nums.length; i++) {", "  const n = nums[i];", "  const candidates = [n, curMax * n, curMin * n];", "  curMax = Math.max(...candidates);", "  curMin = Math.min(...candidates);", "  best = Math.max(best, curMax);", "}", "return best;"),
+    lines("best = cur_max = cur_min = nums[0]", "for i in range(1, len(nums)):", "    n = nums[i]", "    candidates = [n, cur_max * n, cur_min * n]", "    cur_max = max(candidates)", "    cur_min = min(candidates)", "    best = max(best, cur_max)", "return best")),
+
+  'Longest Common Subsequence': solution(
+    lines("const m = text1.length, n = text2.length;", "const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));", "for (let i = 1; i <= m; i++) {", "  for (let j = 1; j <= n; j++) {", "    if (text1[i - 1] === text2[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;", "    else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);", "  }", "}", "return dp[m][n];"),
+    lines("m, n = len(text1), len(text2)", "dp = [[0] * (n + 1) for _ in range(m + 1)]", "for i in range(1, m + 1):", "    for j in range(1, n + 1):", "        if text1[i - 1] == text2[j - 1]:", "            dp[i][j] = dp[i - 1][j - 1] + 1", "        else:", "            dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])", "return dp[m][n]")),
+
+  'Gas Station': solution(
+    lines("let total = 0, tank = 0, start = 0;", "for (let i = 0; i < gas.length; i++) {", "  const diff = gas[i] - cost[i];", "  total += diff;", "  tank += diff;", "  if (tank < 0) {", "    start = i + 1;", "    tank = 0;", "  }", "}", "return total >= 0 ? start : -1;"),
+    lines("total = 0", "tank = 0", "start = 0", "for i in range(len(gas)):", "    diff = gas[i] - cost[i]", "    total += diff", "    tank += diff", "    if tank < 0:", "        start = i + 1", "        tank = 0", "return start if total >= 0 else -1")),
+
+  'Partition Labels': solution(
+    lines("const last = {};", "for (let i = 0; i < s.length; i++) last[s[i]] = i;", "const result = [];", "let start = 0, end = 0;", "for (let i = 0; i < s.length; i++) {", "  end = Math.max(end, last[s[i]]);", "  if (i === end) {", "    result.push(end - start + 1);", "    start = i + 1;", "  }", "}", "return result;"),
+    lines("last = {}", "for i in range(len(s)):", "    last[s[i]] = i", "result = []", "start = 0", "end = 0", "for i in range(len(s)):", "    end = max(end, last[s[i]])", "    if i == end:", "        result.append(end - start + 1)", "        start = i + 1", "return result")),
+
+  'Insert Interval': solution(
+    lines("const result = [];", "let i = 0;", "const n = intervals.length;", "while (i < n && intervals[i][1] < newInterval[0]) {", "  result.push(intervals[i]);", "  i++;", "}", "while (i < n && intervals[i][0] <= newInterval[1]) {", "  newInterval[0] = Math.min(newInterval[0], intervals[i][0]);", "  newInterval[1] = Math.max(newInterval[1], intervals[i][1]);", "  i++;", "}", "result.push(newInterval);", "while (i < n) {", "  result.push(intervals[i]);", "  i++;", "}", "return result;"),
+    lines("result = []", "i = 0", "n = len(intervals)", "while i < n and intervals[i][1] < new_interval[0]:", "    result.append(intervals[i])", "    i += 1", "while i < n and intervals[i][0] <= new_interval[1]:", "    new_interval[0] = min(new_interval[0], intervals[i][0])", "    new_interval[1] = max(new_interval[1], intervals[i][1])", "    i += 1", "result.append(new_interval)", "while i < n:", "    result.append(intervals[i])", "    i += 1", "return result")),
+
+  'Spiral Matrix': solution(
+    lines("const result = [];", "let top = 0, bottom = matrix.length - 1;", "let left = 0, right = matrix[0].length - 1;", "while (top <= bottom && left <= right) {", "  for (let c = left; c <= right; c++) result.push(matrix[top][c]);", "  top++;", "  for (let r = top; r <= bottom; r++) result.push(matrix[r][right]);", "  right--;", "  if (top <= bottom) {", "    for (let c = right; c >= left; c--) result.push(matrix[bottom][c]);", "    bottom--;", "  }", "  if (left <= right) {", "    for (let r = bottom; r >= top; r--) result.push(matrix[r][left]);", "    left++;", "  }", "}", "return result;"),
+    lines("result = []", "top, bottom = 0, len(matrix) - 1", "left, right = 0, len(matrix[0]) - 1", "while top <= bottom and left <= right:", "    for c in range(left, right + 1):", "        result.append(matrix[top][c])", "    top += 1", "    for r in range(top, bottom + 1):", "        result.append(matrix[r][right])", "    right -= 1", "    if top <= bottom:", "        for c in range(right, left - 1, -1):", "            result.append(matrix[bottom][c])", "        bottom -= 1", "    if left <= right:", "        for r in range(bottom, top - 1, -1):", "            result.append(matrix[r][left])", "        left += 1", "return result")),
+
+  'Pow(x, n)': solution(
+    lines("function power(base, exp) {", "  if (exp === 0) return 1;", "  const half = power(base, Math.floor(exp / 2));", "  return exp % 2 === 0 ? half * half : half * half * base;", "}", "if (n < 0) return 1 / power(x, -n);", "return power(x, n);"),
+    lines("def power(base, exp):", "    if exp == 0:", "        return 1", "    half = power(base, exp // 2)", "    return half * half if exp % 2 == 0 else half * half * base", "if n < 0:", "    return 1 / power(x, -n)", "return power(x, n)")),
+
+  'Course Schedule II': solution(
+    lines("const adj = Array.from({ length: numCourses }, () => []);", "const indegree = new Array(numCourses).fill(0);", "for (const [course, prereq] of prerequisites) {", "  adj[prereq].push(course);", "  indegree[course]++;", "}", "const queue = [];", "for (let i = 0; i < numCourses; i++) {", "  if (indegree[i] === 0) queue.push(i);", "}", "const order = [];", "let head = 0;", "while (head < queue.length) {", "  const node = queue[head++];", "  order.push(node);", "  for (const next of adj[node]) {", "    indegree[next]--;", "    if (indegree[next] === 0) queue.push(next);", "  }", "}", "return order.length === numCourses ? order : [];"),
+    lines("adj = [[] for _ in range(num_courses)]", "indegree = [0] * num_courses", "for course, prereq in prerequisites:", "    adj[prereq].append(course)", "    indegree[course] += 1", "queue = []", "for i in range(num_courses):", "    if indegree[i] == 0:", "        queue.append(i)", "order = []", "head = 0", "while head < len(queue):", "    node = queue[head]", "    head += 1", "    order.append(node)", "    for nxt in adj[node]:", "        indegree[nxt] -= 1", "        if indegree[nxt] == 0:", "            queue.append(nxt)", "return order if len(order) == num_courses else []")),
+
+  'Lowest Common Ancestor of a Binary Search Tree': solution(
+    lines("let current = root;", "while (current) {", "  if (p.val < current.val && q.val < current.val) current = current.left;", "  else if (p.val > current.val && q.val > current.val) current = current.right;", "  else return current;", "}"),
+    lines("current = root", "while current:", "    if p.val < current.val and q.val < current.val:", "        current = current.left", "    elif p.val > current.val and q.val > current.val:", "        current = current.right", "    else:", "        return current")),
+
+  'Binary Tree Level Order Traversal': solution(
+    lines("const result = [];", "let level = root ? [root] : [];", "while (level.length) {", "  result.push(level.map((node) => node.val));", "  const next = [];", "  for (const node of level) {", "    if (node.left) next.push(node.left);", "    if (node.right) next.push(node.right);", "  }", "  level = next;", "}", "return result;"),
+    lines("result = []", "level = [root] if root else []", "while level:", "    result.append([node.val for node in level])", "    next_level = []", "    for node in level:", "        if node.left:", "            next_level.append(node.left)", "        if node.right:", "            next_level.append(node.right)", "    level = next_level", "return result")),
+
+  'Binary Tree Right Side View': solution(
+    lines("const result = [];", "let level = root ? [root] : [];", "while (level.length) {", "  result.push(level[level.length - 1].val);", "  const next = [];", "  for (const node of level) {", "    if (node.left) next.push(node.left);", "    if (node.right) next.push(node.right);", "  }", "  level = next;", "}", "return result;"),
+    lines("result = []", "level = [root] if root else []", "while level:", "    result.append(level[-1].val)", "    next_level = []", "    for node in level:", "        if node.left:", "            next_level.append(node.left)", "        if node.right:", "            next_level.append(node.right)", "    level = next_level", "return result")),
+
+  'Count Good Nodes in Binary Tree': solution(
+    lines("let count = 0;", "function dfs(node, maxSoFar) {", "  if (!node) return;", "  if (node.val >= maxSoFar) count++;", "  const nextMax = Math.max(maxSoFar, node.val);", "  dfs(node.left, nextMax);", "  dfs(node.right, nextMax);", "}", "dfs(root, -Infinity);", "return count;"),
+    lines("count = 0", "def dfs(node, max_so_far):", "    nonlocal count", "    if not node:", "        return", "    if node.val >= max_so_far:", "        count += 1", "    next_max = max(max_so_far, node.val)", "    dfs(node.left, next_max)", "    dfs(node.right, next_max)", "dfs(root, float(\"-inf\"))", "return count")),
+
+  'Kth Smallest Element in a BST': solution(
+    lines("const stack = [];", "let current = root;", "while (current || stack.length) {", "  while (current) {", "    stack.push(current);", "    current = current.left;", "  }", "  current = stack.pop();", "  k--;", "  if (k === 0) return current.val;", "  current = current.right;", "}"),
+    lines("stack = []", "current = root", "while current or stack:", "    while current:", "        stack.append(current)", "        current = current.left", "    current = stack.pop()", "    k -= 1", "    if k == 0:", "        return current.val", "    current = current.right")),
+
+  'Permutations': solution(
+    lines("const result = [];", "const used = new Array(nums.length).fill(false);", "const current = [];", "function backtrack() {", "  if (current.length === nums.length) {", "    result.push([...current]);", "    return;", "  }", "  for (let i = 0; i < nums.length; i++) {", "    if (used[i]) continue;", "    used[i] = true;", "    current.push(nums[i]);", "    backtrack();", "    current.pop();", "    used[i] = false;", "  }", "}", "backtrack();", "return result;"),
+    lines("result = []", "used = [False] * len(nums)", "current = []", "def backtrack():", "    if len(current) == len(nums):", "        result.append(current[:])", "        return", "    for i in range(len(nums)):", "        if used[i]:", "            continue", "        used[i] = True", "        current.append(nums[i])", "        backtrack()", "        current.pop()", "        used[i] = False", "backtrack()", "return result")),
+
+  'Generate Parentheses': solution(
+    lines("const result = [];", "function backtrack(current, open, close) {", "  if (current.length === 2 * n) {", "    result.push(current);", "    return;", "  }", "  if (open < n) backtrack(current + \"(\", open + 1, close);", "  if (close < open) backtrack(current + \")\", open, close + 1);", "}", "backtrack(\"\", 0, 0);", "return result;"),
+    lines("result = []", "def backtrack(current, open_count, close_count):", "    if len(current) == 2 * n:", "        result.append(current)", "        return", "    if open_count < n:", "        backtrack(current + \"(\", open_count + 1, close_count)", "    if close_count < open_count:", "        backtrack(current + \")\", open_count, close_count + 1)", "backtrack(\"\", 0, 0)", "return result")),
+
+  'Letter Combinations of a Phone Number': solution(
+    lines("if (digits.length === 0) return [];", "const map = { \"2\": \"abc\", \"3\": \"def\", \"4\": \"ghi\", \"5\": \"jkl\", \"6\": \"mno\", \"7\": \"pqrs\", \"8\": \"tuv\", \"9\": \"wxyz\" };", "const result = [];", "function backtrack(index, current) {", "  if (index === digits.length) {", "    result.push(current);", "    return;", "  }", "  for (const letter of map[digits[index]]) {", "    backtrack(index + 1, current + letter);", "  }", "}", "backtrack(0, \"\");", "return result;"),
+    lines("if len(digits) == 0:", "    return []", "mapping = {\"2\": \"abc\", \"3\": \"def\", \"4\": \"ghi\", \"5\": \"jkl\", \"6\": \"mno\", \"7\": \"pqrs\", \"8\": \"tuv\", \"9\": \"wxyz\"}", "result = []", "def backtrack(index, current):", "    if index == len(digits):", "        result.append(current)", "        return", "    for letter in mapping[digits[index]]:", "        backtrack(index + 1, current + letter)", "backtrack(0, \"\")", "return result")),
+
+  'Rotting Oranges': solution(
+    lines("const rows = grid.length, cols = grid[0].length;", "let queue = [], fresh = 0;", "for (let r = 0; r < rows; r++) {", "  for (let c = 0; c < cols; c++) {", "    if (grid[r][c] === 2) queue.push([r, c]);", "    if (grid[r][c] === 1) fresh++;", "  }", "}", "let minutes = 0;", "const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];", "while (queue.length && fresh > 0) {", "  const next = [];", "  for (const [r, c] of queue) {", "    for (const [dr, dc] of dirs) {", "      const nr = r + dr, nc = c + dc;", "      if (nr < 0 || nc < 0 || nr === rows || nc === cols || grid[nr][nc] !== 1) continue;", "      grid[nr][nc] = 2;", "      fresh--;", "      next.push([nr, nc]);", "    }", "  }", "  queue = next;", "  minutes++;", "}", "return fresh === 0 ? minutes : -1;"),
+    lines("rows, cols = len(grid), len(grid[0])", "queue = []", "fresh = 0", "for r in range(rows):", "    for c in range(cols):", "        if grid[r][c] == 2:", "            queue.append((r, c))", "        if grid[r][c] == 1:", "            fresh += 1", "minutes = 0", "dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]", "while queue and fresh > 0:", "    nxt = []", "    for r, c in queue:", "        for dr, dc in dirs:", "            nr, nc = r + dr, c + dc", "            if nr < 0 or nc < 0 or nr == rows or nc == cols or grid[nr][nc] != 1:", "                continue", "            grid[nr][nc] = 2", "            fresh -= 1", "            nxt.append((nr, nc))", "    queue = nxt", "    minutes += 1", "return minutes if fresh == 0 else -1")),
+
+  'Number of Connected Components in an Undirected Graph': solution(
+    lines("const parent = Array.from({ length: n }, (_, i) => i);", "function find(x) {", "  while (parent[x] !== x) {", "    parent[x] = parent[parent[x]];", "    x = parent[x];", "  }", "  return x;", "}", "let count = n;", "for (const [a, b] of edges) {", "  const ra = find(a), rb = find(b);", "  if (ra !== rb) {", "    parent[ra] = rb;", "    count--;", "  }", "}", "return count;"),
+    lines("parent = list(range(n))", "def find(x):", "    while parent[x] != x:", "        parent[x] = parent[parent[x]]", "        x = parent[x]", "    return x", "count = n", "for a, b in edges:", "    ra, rb = find(a), find(b)", "    if ra != rb:", "        parent[ra] = rb", "        count -= 1", "return count")),
+
   'House Robber II': solution(
     lines("function rob(arr) {", "  let rob1 = 0, rob2 = 0;", "  for (const n of arr) {", "    const temp = Math.max(rob1 + n, rob2);", "    rob1 = rob2;", "    rob2 = temp;", "  }", "  return rob2;", "}", "if (nums.length === 1) return nums[0];", "return Math.max(rob(nums.slice(0, -1)), rob(nums.slice(1)));"),
     lines("def rob(arr):", "    rob1, rob2 = 0, 0", "    for n in arr:", "        temp = max(rob1 + n, rob2)", "        rob1 = rob2", "        rob2 = temp", "    return rob2", "if len(nums) == 1:", "    return nums[0]", "return max(rob(nums[:-1]), rob(nums[1:]))")),
