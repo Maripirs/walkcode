@@ -20,10 +20,13 @@ function progressPill(label) {
   return `<span class="pill">${escapeText(label)}</span>`;
 }
 
-// A row shows the learner's progress by default; for the owner-reviewer (a review token is loaded)
-// it shows that problem's review status instead, so the library doubles as a review overview.
+// A row always shows the learner's own progress (Done / In progress); for the owner-reviewer (a
+// review token is loaded) it ALSO shows that problem's review status, so the library doubles as a
+// review overview without hiding your own progress. Pills float right, so review status (first in
+// source) sits rightmost with the progress pill to its left.
 function problemRow(card, progressLabel, reviewProblem) {
-  const status = reviewProblem ? reviewStatusPill(reviewProblem) : progressPill(progressLabel(card.id));
+  const progress = progressPill(progressLabel(card.id));
+  const status = reviewProblem ? `${reviewStatusPill(reviewProblem)}${progress}` : progress;
   return `<button class="problem" data-card-id="${card.id}">
     ${escapeText(card.title)}${difficultyTag(card.difficulty)}${status}
   </button>`;
@@ -74,7 +77,7 @@ function browseList(state, problems, progressLabel) {
     : '<p class="brief">No problems match your difficulty filter — widen it in Filters to see more.</p>';
 
   const brief = isReviewer
-    ? '<b>Reviewing as owner.</b> Each row shows its review status. Turn on <b>Review mode</b> in Settings to focus on problems still awaiting review.'
+    ? '<b>Reviewing as owner.</b> Each row shows its review status alongside your own progress. Turn on <b>Review mode</b> in Settings to focus on problems still awaiting review.'
     : 'Every problem is a complete five-step walkthrough, ordered from easier to harder.';
   return `<p class="brief">${brief}</p>${filterNote}${bandsHtml}`;
 }
