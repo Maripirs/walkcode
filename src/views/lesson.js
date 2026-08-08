@@ -308,7 +308,16 @@ function progressRail(step) {
 }
 
 // "Go to another problem" — the second, clearly separated navigation axis, demoted to a footer.
-function problemFooter(randomNavigation) {
+// In an interview track (trackNavigation) it steps through that track in order and shows the
+// position; otherwise it's the random-walkthrough or plain browse variant.
+function problemFooter(randomNavigation, trackNavigation) {
+  if (trackNavigation) {
+    return `<div class="lesson-footer"><span class="lesson-footer-label">${escapeText(trackNavigation.name)} · ${trackNavigation.position} of ${trackNavigation.total}</span>
+      <div class="lesson-footer-actions">
+        <button data-previous-problem ${trackNavigation.canGoBack ? '' : 'disabled'}>← Previous</button>
+        <button class="primary" data-next-problem ${trackNavigation.canGoNext ? '' : 'disabled'}>Next →</button>
+      </div></div>`;
+  }
   if (randomNavigation) {
     return `<div class="lesson-footer"><span class="lesson-footer-label">Practice another problem</span>
       <div class="lesson-footer-actions">
@@ -323,7 +332,7 @@ function problemFooter(randomNavigation) {
     </div></div>`;
 }
 
-export function renderLesson({ state, card, lesson, difficulty, randomNavigation = null }) {
+export function renderLesson({ state, card, lesson, difficulty, randomNavigation = null, trackNavigation = null }) {
   const panels = [
     () => recognitionPanel(lesson),
     () => algorithmPanel(state, lesson),
@@ -347,7 +356,7 @@ export function renderLesson({ state, card, lesson, difficulty, randomNavigation
       <section class="content"><h2 class="step-title">${escapeText(stepHeaders[step])}</h2>${panel}</section>
       ${reviewStagePanel(state, card, step)}
       <div class="bottom"><button data-previous-step ${step === 0 ? 'disabled' : ''}>← Previous step</button><button class="next" data-next-step>${lastStep ? 'Finish lesson ✓' : 'Next step →'}</button></div>
-      ${problemFooter(randomNavigation)}
+      ${problemFooter(randomNavigation, trackNavigation)}
       ${sourceLink(card.title)}
     </article>`;
 }

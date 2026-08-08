@@ -98,6 +98,9 @@ export const appState = {
   // Home mode cards expand in place into their start options (Random vs Pick), one at a time.
   drillsExpanded: false,
   walkthroughExpanded: false,
+  collectionsExpanded: false,
+  // Which interview track (collection id) is being viewed / walked through, if any.
+  currentCollectionId: null,
   // One-shot: which card ('drills'|'walkthroughs'|null) just opened, so only a fresh open plays the
   // expand animation — re-renders while open (e.g. toggling the checkbox) must not replay it.
   animateCard: null,

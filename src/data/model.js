@@ -82,6 +82,17 @@ export function orderedCards() {
     || (a.position ?? 0) - (b.position ?? 0));
 }
 
+// Resolve a list of problem titles (e.g. an interview-track collection) to their built cards,
+// sorted easy→hard. Titles that aren't built cards are dropped defensively — validate-content.mjs
+// is what guarantees a track never references a missing/uncertified problem. Author order is kept
+// within a difficulty band (Array.sort is stable).
+export function cardsForTitles(titles) {
+  return titles
+    .map((title) => cardsByTitle.get(title))
+    .filter((card) => card && card.isBuilt)
+    .sort((a, b) => (DIFFICULTY_RANK[a.difficulty] ?? 1) - (DIFFICULTY_RANK[b.difficulty] ?? 1));
+}
+
 export function drillItems() {
   return bundle.drills;
 }

@@ -1,13 +1,14 @@
-import { settingsGear } from '../lib/ui.js';
+import { escapeText, settingsGear } from '../lib/ui.js';
 
-// Both mode cards expand in place (no separate screen) into their two ways to start: a random one
-// — with the shared "include already completed" toggle — or the browse/pick path. `progress`
-// carries each card's { total, solved } so both show a "<solved>/<total> done" tally. Only a card
-// named by `state.animateCard` gets the `opening` class, so the expand animates on a fresh open but
-// not on re-renders while already open (e.g. toggling the checkbox).
+// The mode cards expand in place (no separate screen) into their ways to start. `progress` carries
+// each card's { total, solved } so they show a "<solved>/<total> done" tally; `collections` carries
+// the interview-track list, each with its own { total, solved }. Only a card named by
+// `state.animateCard` gets the `opening` class, so the expand animates on a fresh open but not on
+// re-renders while already open (e.g. toggling the checkbox).
 export function renderHome(state, progress = {}) {
   const drills = progress.drills || { total: 0, solved: 0 };
   const walkthroughs = progress.walkthroughs || { total: 0, solved: 0 };
+  const collections = progress.collections || [];
   const tally = (p) => (p.total ? ` <em class="mode-progress">${p.solved}/${p.total} done</em>` : '');
   const openClass = (name) => (state.animateCard === name ? ' opening' : '');
 
@@ -41,6 +42,18 @@ export function renderHome(state, progress = {}) {
     </div>` : ''}
   </div>`;
 
+  const collectionsCard = `<div class="mode-card-group ${state.collectionsExpanded ? 'expanded' : ''}" data-card="collections">
+    <button class="mode-card" data-toggle-collections aria-expanded="${state.collectionsExpanded}">
+      <b>Interview tracks</b>
+      <span>Curated sets of walkthroughs, ordered easier to harder, for focused interview prep.</span>
+    </button>
+    ${state.collectionsExpanded ? `<div class="mode-expand${openClass('collections')}">
+      ${collections.map((c) => `<button class="mode-sub" data-open-collection="${escapeText(c.id)}">
+        <b>${escapeText(c.name)} →</b><span>${escapeText(c.tagline)} · ${c.total} problems${c.total ? ` <em class="mode-progress">${c.solved}/${c.total} done</em>` : ''}</span>
+      </button>`).join('')}
+    </div>` : ''}
+  </div>`;
+
   return `<section class="home">
     <div class="home-top">${settingsGear()}</div>
     <h1>Small drills.<br><em>Stronger code.</em></h1>
@@ -48,6 +61,7 @@ export function renderHome(state, progress = {}) {
     <div class="mode-grid">
       ${drillCard}
       ${walkthroughCard}
+      ${collectionsCard}
     </div>
   </section>`;
 }

@@ -9,6 +9,7 @@
 //
 // Usage: `node server/scripts/validate-content.mjs` — exits non-zero if anything fails.
 import { assembleBundle, certifiedTitles } from '../../src/data/assemble.js';
+import { collections } from '../../src/data/collections.js';
 import { BLANK, indentOf } from '../../src/data/blank-line.js';
 
 const errors = [];
@@ -205,8 +206,23 @@ for (const card of cards) {
   if (card.isComplete && !certified) pending.push(card.title);
 }
 
+// (C) Interview tracks: every collection title must resolve to a certified/built problem, so a typo
+// can't silently drop a problem from a track (cardsForTitles filters non-built titles out at render).
+const builtTitles = new Set(cards.filter((c) => c.isBuilt).map((c) => c.title));
+const seenIds = new Set();
+for (const collection of collections) {
+  if (seenIds.has(collection.id)) errors.push(`TRACK "${collection.id}": duplicate collection id`);
+  seenIds.add(collection.id);
+  const seenTitles = new Set();
+  for (const title of collection.titles) {
+    if (!builtTitles.has(title)) errors.push(`TRACK "${collection.name}": "${title}" is not a certified/built problem`);
+    if (seenTitles.has(title)) errors.push(`TRACK "${collection.name}": "${title}" listed more than once`);
+    seenTitles.add(title);
+  }
+}
+
 const certifiedCount = cards.filter((c) => c.isBuilt).length;
-console.log(`Cards: ${cards.length} | certified/live: ${certifiedCount} | pending review (complete, uncertified): ${pending.length}`);
+console.log(`Cards: ${cards.length} | certified/live: ${certifiedCount} | pending review (complete, uncertified): ${pending.length} | tracks: ${collections.length}`);
 if (pending.length) {
   console.log('\nPending review — content-complete, awaiting certification:');
   for (const title of pending) console.log(`  • ${title}`);

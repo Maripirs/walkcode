@@ -177,6 +177,12 @@ textarea[data-coach-input]{width:100%;border:1px solid var(--line-soft);border-r
 .reset-progress{width:100%;border:1px solid var(--warn-line);border-radius:9px;background:var(--warn-bg);color:var(--warn-ink);padding:10px;font-weight:800;cursor:pointer}
 .reset-progress:hover{border-color:var(--coral)}
 
+/* Interview tracks (curated collections). Reuses .mode-sub/.problem/.band styling; these are the
+   only track-specific additions: a numbered problem prefix, the meta line, and Start button spacing. */
+.collection-meta{margin:-8px 0 14px;font-weight:700;color:var(--teal)}
+.collection-start{margin-bottom:16px}
+.collection-num{display:inline-block;min-width:1.6em;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}
+
 /* M11 explicit reduced-motion override (data-reduced-motion on <html>) — a broad kill-switch for
    animation/transition/scroll motion, on top of the existing @media(prefers-reduced-motion) rules. */
 :root[data-reduced-motion] *,:root[data-reduced-motion] *::before,:root[data-reduced-motion] *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}

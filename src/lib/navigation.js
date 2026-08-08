@@ -6,7 +6,8 @@
 // entries (it updates the current one in place; see historyAction).
 export function routeKey(state) {
   if (state.screen === 'lesson') return `lesson:${state.currentCardId}`;
-  return state.screen; // 'home' | 'library' | 'drill'
+  if (state.screen === 'collection') return `collection:${state.currentCollectionId}`;
+  return state.screen; // 'home' | 'library' | 'drill' | 'drill-picker'
 }
 
 // Minimal serialisable snapshot stored in history.state so a view can be restored on Back/Forward.
@@ -19,6 +20,8 @@ export function routeSnapshot(state) {
     walkthroughPickerOpen: state.walkthroughPickerOpen,
     drillsExpanded: state.drillsExpanded,
     walkthroughExpanded: state.walkthroughExpanded,
+    collectionsExpanded: state.collectionsExpanded,
+    currentCollectionId: state.currentCollectionId,
     filters: state.filters,
     randomWalkthroughHistory: state.randomWalkthroughHistory,
     randomWalkthroughIndex: state.randomWalkthroughIndex,

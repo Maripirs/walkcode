@@ -89,6 +89,12 @@ Drills are **typed** (M10). A drill's `type` picks how it renders/validates; abs
 - **Reset progress** clears `walkcode-states` + `walkcode-drills` behind a confirm and keeps every pref.
 - **The top bar is identical on every screen** (Home · title · gear). Don't hang per-screen controls off it — e.g. the random-drill **Skip** lives in the card head, and a completed drill is gated behind an "Already done — do it again?" prompt that reuses the *same* header and only swaps the content.
 
+## Interview tracks (curated collections)
+
+- A track is an ordered list of **existing built-problem titles** in `src/data/collections.js` — no per-track content, DB table, or API. To add/edit one, edit that file: give it a stable `id`, a generic `name`/`tagline`/`description` (don't name it after a real company), and a `titles` list. List titles roughly easy→hard; the UI re-sorts by difficulty anyway (`model.js:cardsForTitles`), so grouping stays correct if you reorder.
+- **Every title must be a certified/built problem.** `validate-content.mjs` fails on any title that isn't built and on duplicate ids/titles — so run it after editing a track. A title that isn't built is dropped from the track at render time; certify it (see the Built gate) to include it.
+- The track surfaces on the home **Interview tracks** card and the `collection` screen; opening a track problem walks the track in order via the lesson footer. No CSS/theme work is needed — the screen reuses existing tokens/classes.
+
 ## Before handing off changes
 
 - Run syntax checks for every file in `src/` and `server/` (`node --check`).

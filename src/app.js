@@ -1,4 +1,5 @@
-import { cards, cardsById, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
+import { cards, cardsById, cardsForTitles, difficultyFor, drillItems, initContent, isBuilt, lessonFor, orderedCards } from './data/model.js';
+import { collections, collectionsById } from './data/collections.js';
 import { appState, DEFAULT_UI_SCALE, DIFFICULTIES, DRILL_TYPES, drillSolvedCount, freshCoach, getProgress, isDrillSolved, markDrillSolved, progressLabel, resetLesson, resetProgress, setFilters, setLanguage, setProgress, setReducedMotion, setReviewMode, setTheme, setUiScale, THEMES, toggleFilterValue, TYPE_LABELS } from './lib/state.js';
 import { gearGlyph, shuffle } from './lib/ui.js';
 import { fetchAlgorithmFeedback, fetchReview, loadContent, loadFeatures, postReview } from './lib/content-loader.js';
@@ -6,6 +7,7 @@ import { historyAction, routeKey, routeSnapshot } from './lib/navigation.js';
 import { renderReview, bindReview, draftKey } from './views/review.js';
 import { renderDrill, bindDrillAnswer } from './views/drill.js';
 import { renderDrillPicker } from './views/drill-picker.js';
+import { renderCollection } from './views/collection.js';
 import { renderHome } from './views/home.js';
 import { renderLibrary } from './views/library.js';
 import { renderLesson, bindLesson } from './views/lesson.js';
@@ -56,6 +58,78 @@ function startRandomWalkthrough() {
   appState.randomWalkthroughHistory = [card.id];
   appState.randomWalkthroughIndex = 0;
   openWalkthrough(card);
+}
+
+// ---- Interview tracks (curated collections of existing walkthroughs) ----
+// A track's built cards, already sorted easier→harder (see model.cardsForTitles).
+function collectionCards(id) {
+  const collection = collectionsById.get(id);
+  return collection ? cardsForTitles(collection.titles) : [];
+}
+
+// Per-track { total, solved } tallies for the home card's expanded list.
+function collectionSummaries() {
+  return collections.map((collection) => {
+    const list = collectionCards(collection.id);
+    return {
+      id: collection.id,
+      name: collection.name,
+      tagline: collection.tagline,
+      total: list.length,
+      solved: list.filter((card) => getProgress(card.id) === 'Solved').length,
+    };
+  });
+}
+
+// Open a track's overview screen (its ordered problem list + Start/Continue).
+function openCollection(id) {
+  if (!collectionsById.get(id)) return;
+  appState.currentCollectionId = id;
+  appState.screen = 'collection';
+  render();
+}
+
+// Open one problem as part of a track, so the lesson footer steps through the track in order.
+function beginCollectionWalkthrough(collectionId, card) {
+  if (!card) return;
+  appState.walkthroughMode = 'collection';
+  appState.currentCollectionId = collectionId;
+  openWalkthrough(card);
+}
+
+// Start/Continue a track: jump to the first not-yet-solved problem (or the first if all are done).
+function startCollection(id) {
+  const list = collectionCards(id);
+  if (!list.length) return;
+  const next = list.find((card) => getProgress(card.id) !== 'Solved') || list[0];
+  beginCollectionWalkthrough(id, next);
+}
+
+// Step to the previous/next problem within the current track, clamped at the ends.
+function navigateCollectionWalkthrough(direction) {
+  const list = collectionCards(appState.currentCollectionId);
+  const index = list.findIndex((card) => card.id === appState.currentCardId);
+  if (index < 0) return;
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= list.length) return;
+  openWalkthrough(list[nextIndex]);
+}
+
+// Footer nav info for a lesson opened as part of a track (position + whether prev/next exist).
+function trackNavigationFor(card) {
+  if (appState.walkthroughMode !== 'collection') return null;
+  const collection = collectionsById.get(appState.currentCollectionId);
+  if (!collection) return null;
+  const list = collectionCards(collection.id);
+  const index = list.findIndex((item) => item.id === card.id);
+  if (index < 0) return null;
+  return {
+    name: collection.name,
+    position: index + 1,
+    total: list.length,
+    canGoBack: index > 0,
+    canGoNext: index < list.length - 1,
+  };
 }
 
 function drillSummary() {
@@ -225,8 +299,15 @@ function render() {
   applyReducedMotion();
   renderSettings();
   if (appState.screen === 'home') {
-    root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary() });
+    root.innerHTML = renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary(), collections: collectionSummaries() });
     appState.animateCard = null; // one-shot: consumed by this render so re-renders don't replay it
+  }
+  if (appState.screen === 'collection') {
+    const collection = collectionsById.get(appState.currentCollectionId);
+    root.innerHTML = collection
+      ? renderCollection({ state: appState, collection, cards: collectionCards(collection.id), progressLabel })
+      : renderHome(appState, { drills: drillSummary(), walkthroughs: walkthroughSummary(), collections: collectionSummaries() });
+    if (!collection) appState.screen = 'home'; // unknown id → fall back to home
   }
   if (appState.screen === 'drill-picker') root.innerHTML = renderDrillPicker({ state: appState, drills: drillItems(), isDrillSolved });
   if (appState.screen === 'library') root.innerHTML = renderLibrary({
@@ -349,6 +430,8 @@ function applyRouteSnapshot(snapshot) {
   appState.walkthroughPickerOpen = Boolean(snapshot.walkthroughPickerOpen);
   appState.drillsExpanded = Boolean(snapshot.drillsExpanded);
   appState.walkthroughExpanded = Boolean(snapshot.walkthroughExpanded);
+  appState.collectionsExpanded = Boolean(snapshot.collectionsExpanded);
+  appState.currentCollectionId = snapshot.currentCollectionId ?? null;
   // Filters persist in localStorage (loaded at startup), so appState.filters is already current;
   // adopt the snapshot's copy only if present, keeping Back/Forward consistent.
   if (snapshot.filters) appState.filters = snapshot.filters;
@@ -422,6 +505,7 @@ function renderLessonScreen() {
     randomNavigation: appState.walkthroughMode === 'random'
       ? { canGoBack: appState.randomWalkthroughIndex > 0 }
       : null,
+    trackNavigation: trackNavigationFor(card),
   });
   bindLesson(root, {
     state: appState,
@@ -430,7 +514,12 @@ function renderLessonScreen() {
     rerender: render,
     saveReviewStage: (step, status, feedback) => saveReviewDecision(card.title, step, status, feedback),
     approveAllStages: () => approveAllReview(card.title),
-    finishLesson: () => { setProgress(card.id, 'Solved'); appState.screen = 'library'; render(); },
+    finishLesson: () => {
+      setProgress(card.id, 'Solved');
+      // In a track, return to the track overview so the learner can pick the next problem; else the library.
+      appState.screen = appState.walkthroughMode === 'collection' && appState.currentCollectionId ? 'collection' : 'library';
+      render();
+    },
     requestFeedback: () => submitAlgorithmCoach(lesson),
     resetCoach: () => { appState.algorithmCoach = freshCoach(); render(); },
     useStepBuilder: () => { appState.stepBuilderFallback = true; render(); },
@@ -505,6 +594,10 @@ function navigateProblem(direction) {
     navigateRandomWalkthrough(direction);
     return;
   }
+  if (appState.walkthroughMode === 'collection') {
+    navigateCollectionWalkthrough(direction);
+    return;
+  }
   const index = cards.findIndex((card) => card.id === appState.currentCardId);
   openWalkthrough(cards[(index + direction + cards.length) % cards.length]);
 }
@@ -538,13 +631,17 @@ function toggleModeCard(next) {
   const apply = () => {
     appState.drillsExpanded = Boolean(next.drillsExpanded);
     appState.walkthroughExpanded = Boolean(next.walkthroughExpanded);
+    appState.collectionsExpanded = Boolean(next.collectionsExpanded);
     // Mark the card that just opened (if any) so only a fresh open plays the expand animation.
-    appState.animateCard = next.drillsExpanded ? 'drills' : (next.walkthroughExpanded ? 'walkthroughs' : null);
+    appState.animateCard = next.drillsExpanded ? 'drills'
+      : next.walkthroughExpanded ? 'walkthroughs'
+        : next.collectionsExpanded ? 'collections' : null;
     render();
   };
   let closingKey = null;
   if (appState.drillsExpanded && !next.drillsExpanded) closingKey = 'drills';
   else if (appState.walkthroughExpanded && !next.walkthroughExpanded) closingKey = 'walkthroughs';
+  else if (appState.collectionsExpanded && !next.collectionsExpanded) closingKey = 'collections';
   const panel = closingKey ? root.querySelector(`.mode-card-group[data-card="${closingKey}"] .mode-expand`) : null;
   const reduceMotion = appState.reducedMotion
     || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -566,13 +663,19 @@ function bindSharedControls() {
     appState.settingsOpen = !appState.settingsOpen;
     renderSettings();
   }));
-  // Home mode cards expand in place; opening one collapses the other.
+  // Home mode cards expand in place; opening one collapses the others.
   root.querySelectorAll('[data-toggle-drills]').forEach((button) => button.addEventListener('click', () => {
-    toggleModeCard({ drillsExpanded: !appState.drillsExpanded, walkthroughExpanded: false });
+    toggleModeCard({ drillsExpanded: !appState.drillsExpanded, walkthroughExpanded: false, collectionsExpanded: false });
   }));
   root.querySelectorAll('[data-toggle-walkthroughs]').forEach((button) => button.addEventListener('click', () => {
-    toggleModeCard({ walkthroughExpanded: !appState.walkthroughExpanded, drillsExpanded: false });
+    toggleModeCard({ walkthroughExpanded: !appState.walkthroughExpanded, drillsExpanded: false, collectionsExpanded: false });
   }));
+  root.querySelectorAll('[data-toggle-collections]').forEach((button) => button.addEventListener('click', () => {
+    toggleModeCard({ collectionsExpanded: !appState.collectionsExpanded, drillsExpanded: false, walkthroughExpanded: false });
+  }));
+  root.querySelectorAll('[data-open-collection]').forEach((button) => button.addEventListener('click', () => openCollection(button.dataset.openCollection)));
+  root.querySelectorAll('[data-collection-start]').forEach((button) => button.addEventListener('click', () => startCollection(button.dataset.collectionStart)));
+  root.querySelectorAll('[data-collection-card-id]').forEach((button) => button.addEventListener('click', () => beginCollectionWalkthrough(appState.currentCollectionId, cardsById.get(button.dataset.collectionCardId))));
   root.querySelectorAll('[data-drills-random]').forEach((button) => button.addEventListener('click', () => startDrills()));
   root.querySelectorAll('[data-drills-pick]').forEach((button) => button.addEventListener('click', () => {
     appState.screen = 'drill-picker';
@@ -634,7 +737,7 @@ loadContent().then((bundle) => {
   // same screen/problem (and step) instead of resetting to home. A missing card falls back to the
   // library via renderLessonScreen.
   const saved = window.history.state;
-  if (window.location.pathname !== '/review' && saved && ['home', 'library', 'drill', 'drill-picker', 'lesson', 'review'].includes(saved.screen)) {
+  if (window.location.pathname !== '/review' && saved && ['home', 'library', 'drill', 'drill-picker', 'lesson', 'collection', 'review'].includes(saved.screen)) {
     applyRouteSnapshot(saved);
     currentRouteKey = routeKey(appState);
   }
